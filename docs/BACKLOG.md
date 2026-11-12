@@ -36,9 +36,9 @@ Legend: ✅ done and covered by automated tests · 🟡 done, needs owner or sta
 | ID | Item | Status |
 |---|---|---|
 | B-23 | Logo on voucher header | ✅ (needs `php artisan storage:link` on server) |
-| B-24 | Dynamic "add line" button on request/receipt forms (currently 6–8 fixed rows) | ⬜ |
-| B-25 | E-mail notification to approver on submit (uses existing SMTP; no SMS) | ⬜ |
-| B-26 | CSV import template for opening balances (manual entry today) | ⬜ |
+| B-24 | "Add line" button on request and receipt forms | ✅ `test_forms_offer_add_line_button` |
+| B-25 | E-mail alerts along the chain: PM on submit, Overall after PM, storekeeper and requester after final approval, requester on rejection and on issue. Sent after commit; mail failure never blocks a decision. | ✅ `PolishFeaturesTest` (4 tests) |
+| B-26 | Opening-balance CSV template download and all-or-nothing import | ✅ `PolishFeaturesTest` (3 tests) |
 
 ## Owner decisions still open (defaults in effect, see MVP_SCOPE §5)
 1. Name the Overall Manager and the primary Storekeeper (D1).

@@ -1,6 +1,6 @@
 # UAT Test Cases
 
-Automated coverage: `php artisan test` (41 tests, 403 assertions; last run 12 Nov 2026, all passing on SQLite in-memory).
+Automated coverage: `php artisan test` (49 tests, 432 assertions; last run 12 Nov 2026, all passing on SQLite in-memory).
 Manual UAT uses the demo data (`php artisan migrate --seed` in a non-production environment). All demo accounts use password `Demo12345`.
 
 | Demo account | Role |

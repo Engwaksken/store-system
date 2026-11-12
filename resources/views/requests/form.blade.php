@@ -15,15 +15,17 @@
         <div class="field"><label>Needed on</label><input type="date" name="needed_on" value="{{ old('needed_on', $req->needed_on?->format('Y-m-d')) }}"></div>
     </div>
     <div class="field"><label>Purpose / work activity</label><textarea name="purpose" required maxlength="1000">{{ old('purpose', $req->purpose) }}</textarea></div>
-    <div class="table-wrap"><table>
+    <div class="table-wrap"><table id="request-lines">
         <thead><tr><th>Item</th><th class="num">Quantity</th><th>Notes</th></tr></thead>
-        <tbody>@for($n = 0; $n < max(6, count($old)); $n++)
+        <tbody>@for($n = 0; $n < max(3, count($old)); $n++)
             <tr><td><select name="lines[{{ $n }}][item_id]"><option value="">—</option>@foreach($items as $i)<option value="{{ $i->id }}" @selected(($old[$n]['item_id'] ?? null) == $i->id)>{{ $i->name }} ({{ $i->unit->abbreviation }}) · in store: {{ qty($i->onHand()) }}</option>@endforeach</select></td>
                 <td><input type="number" step="0.001" min="0" name="lines[{{ $n }}][requested_qty]" value="{{ $old[$n]['requested_qty'] ?? '' }}"></td>
                 <td><input type="text" name="lines[{{ $n }}][notes]" value="{{ $old[$n]['notes'] ?? '' }}" maxlength="500"></td></tr>
         @endfor</tbody>
     </table></div>
+    <p><button type="button" class="btn secondary small" data-add-line="#request-lines">+ Add line</button></p>
     <p class="hint">Leave unused rows empty. Store balance is shown for information only. Approval does not reserve stock.</p>
     <div class="actions"><button class="btn" name="action" value="submit">Submit for approval</button><button class="btn secondary" name="action" value="draft">Save draft</button></div>
 </form>
+@include('partials.add-line')
 @endsection

@@ -15,7 +15,7 @@ Demo logins (password `Demo12345`): owner@, overall@, pm1@, pm2@, store@, accoun
 
 ## Tests
 ```bash
-php artisan test                                         # 41 feature tests (SQLite in-memory)
+php artisan test                                         # 49 feature tests (SQLite in-memory)
 DB_DATABASE=cms_concurrency_test php artisan cms:concurrency-test   # MySQL parallel-issue proof (staging only)
 ```
 

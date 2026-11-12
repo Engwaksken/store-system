@@ -28,6 +28,10 @@ use Illuminate\Support\Facades\DB;
  */
 class IssueService
 {
+    public function __construct(private WorkflowNotifier $notifier)
+    {
+    }
+
     /** @param array<int|string, mixed> $qtys request_line_id => qty to issue now */
     public function issue(User $storekeeper, MaterialRequest $req, array $qtys, string $recipientName, ?string $notes = null): MaterialIssue
     {
@@ -120,6 +124,7 @@ class IssueService
             $req->forceFill(['status' => $fully ? RequestStatus::FullyIssued : RequestStatus::PartiallyIssued])->save();
 
             ActivityLog::record('issue.created', "Voucher {$issue->issue_no} issued for {$req->request_no} to {$recipientName}", $issue, ['value' => $total]);
+            $this->notifier->issued($issue);
 
             return $issue;
         });

@@ -22,6 +22,10 @@ use Illuminate\Support\Facades\DB;
  */
 class RequestWorkflow
 {
+    public function __construct(private WorkflowNotifier $notifier)
+    {
+    }
+
     // ---------------------------------------------------------------- authorization predicates (also used by policies)
 
     public function canRequestFor(User $user, Project $project): bool
@@ -135,6 +139,7 @@ class RequestWorkflow
                 'submitted_at' => now(),
             ])->save();
             ActivityLog::record('request.submitted', "Request {$req->request_no} v{$req->version} submitted", $req);
+            $this->notifier->submitted($req);
 
             return $req;
         });
@@ -247,6 +252,11 @@ class RequestWorkflow
         ]);
         $req->forceFill(['status' => $decision === 'approved' ? $approved : $rejected])->save();
         ActivityLog::record("request.{$step}_{$decision}", "Request {$req->request_no} v{$req->version} {$decision} at {$step} step", $req, ['reason' => $reason]);
+        match (true) {
+            $decision === 'rejected' => $this->notifier->rejected($req, $step, $reason),
+            $step === MaterialApproval::STEP_PM => $this->notifier->pmApproved($req),
+            default => $this->notifier->overallApproved($req),
+        };
 
         return $req;
     }

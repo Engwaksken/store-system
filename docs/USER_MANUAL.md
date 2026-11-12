@@ -4,6 +4,10 @@ Sign in with your e-mail and password. On first sign-in you must set your own pa
 
 The left menu shows only what your role can use. Every action is recorded in the activity log.
 
+You get an e-mail when something needs your decision or your request changes: submitted (to the PM), PM-approved (to the Overall Manager), fully approved (to the storekeeper and requester), rejected, and issued. Each e-mail has a button that opens the request.
+
+On request and receipt forms, use **+ Add line** if you need more rows.
+
 ## Everyone: how materials leave the store
 **Staff → Project Manager → Overall Manager → Storekeeper → you confirm receipt.**
 Stock is only deducted when the storekeeper issues. Approval reserves nothing.
@@ -31,7 +35,7 @@ Stock is only deducted when the storekeeper issues. Approval reserves nothing.
 - Click **Issue**. Each line is capped at the smaller of *outstanding approved quantity* and *on-hand stock*, and you can issue less (a partial issue). Enter the name of the person collecting, then confirm.
 - **Print voucher** and get it signed. Any remainder stays outstanding until you issue it later.
 - **Receipts → Purchase receipt** records deliveries from suppliers (quantity and unit cost).
-- **Opening balances** is used once per item at go-live. **Adjustment** is for counted differences or damage, and needs a reason. Stock can never go below zero.
+- **Opening balances** is used once per item at go-live. For many items, click *Download the template*, fill in qty and unit_cost in Excel, save as CSV and upload it. If any row is wrong, nothing is imported and the errors are listed. **Adjustment** is for counted differences or damage, and needs a reason. Stock can never go below zero.
 - Rows highlighted on *Stock & items* are at or below the minimum level, so reorder those.
 
 ## Accountant

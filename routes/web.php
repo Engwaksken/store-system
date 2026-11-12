@@ -55,6 +55,8 @@ Route::middleware(['auth', 'usable'])->group(function () {
     Route::get('receipts', [StockController::class, 'index'])->name('receipts.index');
     Route::get('receipts/create', [StockController::class, 'create'])->name('receipts.create');
     Route::post('receipts', [StockController::class, 'store'])->name('receipts.store');
+    Route::get('receipts/opening-template', [StockController::class, 'openingTemplate'])->name('receipts.opening-template');
+    Route::post('receipts/opening-import', [StockController::class, 'importOpening'])->name('receipts.opening-import');
     Route::get('receipts/{receipt}', [StockController::class, 'show'])->name('receipts.show');
     Route::get('adjustments/create', [StockController::class, 'createAdjustment'])->name('adjustments.create');
     Route::post('adjustments', [StockController::class, 'storeAdjustment'])->name('adjustments.store');
