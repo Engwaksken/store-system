@@ -15,7 +15,7 @@ Legend: ✅ done and covered by automated tests · 🟡 done, needs owner or sta
 | B-08 | Adjustments with reason; never negative | ✅ | `test_adjustment_cannot_make_stock_negative_and_needs_reason` |
 | B-09 | Requests: draft, submit, PM decision, Overall decision, revise, cancel; immutable decisions | ✅ | `ApprovalWorkflowTest` (18 tests) |
 | B-10 | Separation of duties (PM ≠ requester, Overall ≠ requester and ≠ PM approver, storekeeper only issues) | ✅ | same |
-| B-11 | Race-safe partial issuance (transaction, row locks, re-validation), voucher, acknowledgment | ✅ / 🟡 | Sequential tests ✅. **Parallel MySQL proof pending:** run `cms:concurrency-test` on staging |
+| B-11 | Race-safe partial issuance (transaction, row locks, re-validation), voucher, acknowledgment | ✅ | Sequential tests plus parallel MariaDB run (`docs/UAT_EVIDENCE.md`). Full suite also passes on MariaDB |
 | B-12 | Expenses with proof upload (private disk), scoped access | ✅ | `test_expense_access_is_permission_controlled_and_scoped` |
 | B-13 | Cost separation: materials issued vs cash expenses, no double count | ✅ | `test_store_purchases_are_not_counted_as_project_cost` |
 
@@ -26,8 +26,8 @@ Legend: ✅ done and covered by automated tests · 🟡 done, needs owner or sta
 | B-15 | Six reports with print view and CSV (formula-injection safe) | ✅ | smoke test, CSV assertion |
 | B-16 | Activity log | ✅ | |
 | B-17 | Demo seed for UAT and training | ✅ | `DemoSeeder`, `PageSmokeTest` |
-| B-18 | Daily backup command plus schedule | ✅ / 🟡 | Zip and retention tested (SQLite). mysqldump path to be verified on the host |
-| B-19 | Restore drill | ⬜ | On staging, per `DEPLOYMENT.md` §6 |
+| B-18 | Daily backup command plus schedule | ✅ | mysqldump backup verified on MariaDB (`docs/UAT_EVIDENCE.md`). Confirm the host allows mysqldump |
+| B-19 | Restore drill | 🟡 | Passed locally (`docs/UAT_EVIDENCE.md`); repeat on the production host |
 | B-20 | Production deploy to client domain | ⬜ | Needs hosting account and domain from owner |
 | B-21 | Training session plus quick manual | 🟡 | `docs/USER_MANUAL.md` written; session not held |
 | B-22 | Owner UAT sign-off | ⬜ | `docs/UAT_TEST_CASES.md` |

@@ -27,6 +27,7 @@ DB_DATABASE=cms_concurrency_test php artisan cms:concurrency-test   # MySQL para
 | `docs/APPROVAL_STATE_MACHINE.md` | Request states, guards, locking |
 | `docs/SCHEMA.md` | Tables, invariants, cost formula |
 | `docs/UAT_TEST_CASES.md` | Acceptance criteria → tests → manual scripts |
+| `docs/UAT_EVIDENCE.md` | MariaDB race test, full suite on MariaDB, backup/restore drill |
 | `docs/BACKLOG.md` | Prioritised backlog, done vs pending vs deferred |
 | `docs/DEPLOYMENT.md` | Shared-hosting deploy, cron, backup & restore |
 | `docs/USER_MANUAL.md` | Quick manual per role |
