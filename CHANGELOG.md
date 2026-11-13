@@ -1,5 +1,12 @@
 # Changelog
 
+## Phase 6 – UAT, go-live & handover (13 Nov 2026)
+- `cms:reconcile` (scheduled daily): stock ledger = balances per store × item, voucher totals/movements, returns ≤ issued, transfers, PO received/invoiced counters, invoice payments, paid claims.
+- `cms:go-live-check`: production configuration, readiness data (admins, overall manager, storekeepers per store, no demo accounts), reconciliation and audit chain.
+- Parallel race proof re-run on MariaDB with the multi-store code (6/6), followed by a clean reconciliation and audit-chain check.
+- Documents: architecture & ERD (`docs/ARCHITECTURE.md`), UAT traceability for the 14 required scenarios with manual scripts and sign-off sheet, training plan, go-live runbook with data migration, secure handover and warranty (`docs/HANDOVER.md`).
+- Tests: `GoLiveTest` (4).
+
 ## Phase 5 – Reporting, alerts & security (13 Nov 2026)
 - Exports: every report to Excel (.xlsx, built-in writer) and PDF (dompdf), plus print and CSV; PDF issue voucher, purchase order and GRN with company branding and signature blocks. Exports keep row-level scoping.
 - Notifications: in-app bell for every hand-off (requests, transfers, counts, requisitions, POs, invoice exceptions, claims) with optional e-mail; daily reminders and escalation; budget variance alerts per project and cost code, once per level.

@@ -60,7 +60,9 @@ The scheduler then runs:
 | `cms:reminders` | weekdays 07:00 | reminders for pending approvals/receipts; escalation to the Owner/Admin |
 | `cms:budget-alerts` | 07:00 and 13:00 | warn (≥ 90 %) / over-budget alerts per project and cost code, once per level |
 
-Run any of them by hand to check, e.g. `php artisan cms:verify-audit`.
+| `cms:reconcile` | daily 02:45 | ledger = balances and every document counter agrees (read-only) |
+
+Run any of them by hand to check, e.g. `php artisan cms:verify-audit`. Before go-live and after every upgrade run `php artisan cms:go-live-check`; it must show no FAIL lines. The full go-live sequence is in `docs/HANDOVER.md`.
 
 ## 3. Go-live data
 1. The admin signs in, changes the temporary password, and fills in **Settings** (company name, address, logo, voucher footer).

@@ -1,4 +1,4 @@
-# Construction Store & Project CMS (Phase 1 MVP)
+# Construction Store, Procurement & Project CMS
 
 Laravel 12 web app for a construction company: projects, a central store plus project site stores (transfers, returns, stock counts), two-level material approvals, controlled race-safe issuing, project expenses and reports. Scope: see `docs/MVP_SCOPE.md`.
 
@@ -17,22 +17,28 @@ Demo logins (password `Demo12345`): owner@, overall@, pm1@, pm2@, store@ (main s
 ```bash
 php artisan test                                         # feature tests (SQLite in-memory)
 DB_DATABASE=cms_concurrency_test php artisan cms:concurrency-test   # MySQL parallel-issue proof (staging only)
+php artisan cms:reconcile                                # books reconcile (read-only)
+php artisan cms:verify-audit                             # audit chain intact (read-only)
+php artisan cms:go-live-check                            # production readiness
 ```
 
 ## Documents
 | File | Purpose |
 |---|---|
-| `docs/MVP_SCOPE.md` | Frozen scope, repo audit, design defaults (D1–D11) |
+| `docs/ARCHITECTURE.md` | Architecture diagram, ERD, request state diagram, scheduled jobs |
+| `docs/MVP_SCOPE.md` | Phase 1 scope, repo audit, design defaults (D1–D11) |
 | `docs/ROLE_PERMISSION_MATRIX.md` | Who can do what (enforced server-side) |
 | `docs/APPROVAL_STATE_MACHINE.md` | Request states, guards, locking |
 | `docs/SCHEMA.md` | Tables, invariants, cost formula |
-| `docs/UAT_TEST_CASES.md` | Acceptance criteria → tests → manual scripts |
+| `docs/UAT_TEST_CASES.md` | Required scenarios → tests, manual scripts, sign-off |
 | `docs/UAT_EVIDENCE.md` | MariaDB race test, full suite on MariaDB, backup/restore drill |
 | `docs/BACKLOG.md` | Prioritised backlog, done vs pending vs deferred |
 | `docs/DEPLOYMENT.md` | Shared-hosting deploy, cron, backup & restore |
 | `docs/PROCUREMENT.md` | Purchasing flow, approval policy, three-way match |
 | `docs/SECURITY.md` | Every security/integrity control and its test |
 | `docs/USER_MANUAL.md` | Quick manual per role |
+| `docs/TRAINING.md` | Training sessions per role |
+| `docs/HANDOVER.md` | Go-live runbook, data migration, secure handover, warranty |
 | `CHANGELOG.md` | Changes per phase |
 
 ## Where the rules live

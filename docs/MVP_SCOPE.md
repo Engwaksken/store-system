@@ -1,5 +1,7 @@
 # MVP Scope — Construction Store & Project CMS (Phase 1)
 
+> **Status (13 Nov 2026):** Phase 1 is delivered. Several items listed below as deferred were later delivered under the full brief (`OpenCode_PM_Construction_CMS.md`): multiple stores and transfers (Phase 2), purchasing/RFQ/PO and supplier invoices (Phase 3), BOQ (Phase 4), alerts/exports/auditor (Phase 5). See `CHANGELOG.md` and `docs/BACKLOG.md`. The design defaults below still apply.
+
 Baseline: the revised PM implementation brief and owner proposal (7 Nov 2026).
 This document is the **frozen Phase 1 scope**. Any change requires a written change note approved by the owner.
 

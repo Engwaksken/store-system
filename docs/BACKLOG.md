@@ -94,6 +94,17 @@ Legend: ✅ done and covered by automated tests · 🟡 done, needs owner or sta
 | B-63 | MFA | ⛔ | Optional in the brief; not built (change order) |
 | B-64 | Load test on the production host | ⬜ | Run during UAT on the real server |
 
+## Phase 6: UAT, go-live & handover
+| ID | Item | Status | Evidence |
+|---|---|---|---|
+| B-65 | `cms:reconcile`: ledger = balances, vouchers, returns, transfers, PO/GRN/invoice counters, payments, claims | ✅ | `GoLiveTest` (demo data reconciles; tampering is caught) |
+| B-66 | `cms:go-live-check`: production config, readiness data, reconcile, audit chain | ✅ | `test_go_live_check_flags_demo_data_and_reports_reconciliation` |
+| B-67 | Parallel race proof re-run with multi-store code; reconcile + audit chain on the raced DB | ✅ | `docs/UAT_EVIDENCE.md` |
+| B-68 | Architecture diagram, ERD, state diagram | ✅ | `docs/ARCHITECTURE.md` |
+| B-69 | UAT traceability for the 14 required scenarios + scripts + sign-off sheet | ✅ | `docs/UAT_TEST_CASES.md` |
+| B-70 | Training plan, go-live runbook, data migration, secure handover, warranty | ✅ | `docs/TRAINING.md`, `docs/HANDOVER.md` |
+| B-71 | Production deployment, training sessions, owner UAT sign-off, production restore drill | ⬜ | Needs the owner, hosting and users (`docs/HANDOVER.md`) |
+
 ## Owner decisions still open (defaults in effect, see MVP_SCOPE §5)
 1. Name the Overall Manager and the primary Storekeeper (D1).
 2. Confirm the substitute PM-step reviewer when a PM requests on their own project (default: Owner/Admin, D2).

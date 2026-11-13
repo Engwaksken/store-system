@@ -1,59 +1,86 @@
-# UAT Test Cases
+# UAT Test Cases & Traceability
 
-Automated coverage: `php artisan test` (49 tests, 432 assertions; last run 12 Nov 2026, all passing on SQLite in-memory).
-Manual UAT uses the demo data (`php artisan migrate --seed` in a non-production environment). All demo accounts use password `Demo12345`.
+Automated coverage: `php artisan test` — **110 feature tests (1,420 assertions)**, all passing on SQLite (in-memory) and on MariaDB 10.4 (13 Nov 2026). Evidence of MySQL-only runs (parallel race, reconciliation, backup/restore) is in `docs/UAT_EVIDENCE.md`.
 
-| Demo account | Role |
-|---|---|
-| owner@demo.test | Owner / Admin |
-| overall@demo.test | Overall Manager |
-| pm1@demo.test / pm2@demo.test | Project Manager (PRJ-001 / PRJ-002) |
-| store@demo.test | Storekeeper |
-| accounts@demo.test | Accountant |
-| staff1@demo.test / staff2@demo.test | Staff (PRJ-001 / PRJ-002) |
+Manual UAT uses the demo data (`php artisan migrate --seed` on a **non-production** copy). Every demo account uses the password `Demo12345`.
 
-## Acceptance criteria from the brief → evidence
+| Demo account | Role | Notes |
+|---|---|---|
+| owner@demo.test | Owner / Admin | |
+| overall@demo.test | Overall Manager | final approvals, PR/PO/count/claim approvals |
+| pm1@demo.test / pm2@demo.test | Project Manager | PRJ-001 (has budgets, BOQ, milestones) / PRJ-002 |
+| store@demo.test | Storekeeper | MAIN store and Kira site store |
+| sitestore@demo.test | Storekeeper | Kira site store only (receives transfers) |
+| buyer@demo.test | Procurement Officer | |
+| accounts@demo.test | Accountant | |
+| auditor@demo.test | Auditor | read-only |
+| staff1@demo.test / staff2@demo.test | Staff | PRJ-001 / PRJ-002 |
 
-| # | Brief acceptance criterion | Automated test | Manual UAT step | Result |
-|---|---|---|---|---|
-| A1 | Staff not assigned to a project cannot request for it | `ApprovalWorkflowTest::test_staff_not_assigned_to_project_cannot_request_for_it`, `..._direct_http_post_is_forbidden` | Log in as staff2 → New request → PRJ-001 is not in the list | ✅ auto |
-| A2 | Wrong PM cannot approve | `test_wrong_pm_cannot_approve` | pm2 opens a PRJ-001 request → no decision panel; a POST returns 403 | ✅ auto |
-| A3 | PM reject blocks overall approval | `test_pm_reject_blocks_overall_approval_and_issue` | pm1 rejects → overall sees no decision panel | ✅ auto |
-| A4 | Overall reject blocks issue | `test_overall_reject_blocks_issue` | overall rejects → request not in storekeeper queue | ✅ auto |
-| A5 | Storekeeper cannot issue until both stages are complete | `test_storekeeper_cannot_issue_until_both_stages_complete` | store@ sees only OVERALL_APPROVED / PARTIALLY_ISSUED requests | ✅ auto |
-| A6 | No self-approval of both stages | `test_pm_as_requester_cannot_self_approve_admin_substitutes_and_overall_stays_independent`, `test_approvers_cannot_issue_and_storekeeper_cannot_approve` | pm1 raises a request on PRJ-001 → pm1 cannot approve it; owner approves as substitute | ✅ auto |
-| A7 | Approved 10 with 6 available: issue ≤ 6, remainder pending, later only the remaining 4, never above 10 | `IssuanceAndStockTest::test_approved_10_with_6_available_scenario` | See script S2 below | ✅ auto |
-| A8 | Simultaneous issue of final units cannot overspend the balance or the approved allocation | Sequential: `test_final_units_cannot_be_issued_twice_to_competing_requests`. **True parallel test:** `php artisan cms:concurrency-test` (MySQL only) | Run the command on the staging MySQL and keep its output as evidence | ✅ Parallel run passed on MariaDB 10.4 (8 workers, 6/6 checks), see `UAT_EVIDENCE.md`. Repeat on staging host. |
-| A9 | Receipt increments balance; issue decrements only on commit; ledger and voucher reconcile | `test_receipt_increments_balance_and_writes_ledger`, `test_approval_alone_does_not_decrement_stock`, `test_failed_multi_line_issue_rolls_back_everything`, `test_ledger_and_vouchers_reconcile_with_balances` | Reports → Stock movement ledger; balances match item pages | ✅ auto |
-| A10 | Unauthorized direct HTTP requests are rejected regardless of hidden menus | `AccessControlTest::test_unauthorized_direct_requests_are_rejected_regardless_of_menus` (17 role/route pairs), `test_client_cannot_set_status_through_hidden_fields` | — | ✅ auto |
-| A11 | Expense and project access is permission-controlled; issue valuation is not counted twice | `test_expense_access_is_permission_controlled_and_scoped`, `test_project_visibility_is_role_scoped`, `test_store_purchases_are_not_counted_as_project_cost` | Reports → Project budget vs cost | ✅ auto |
-| A12 | Backup can be restored | — | Follow `docs/DEPLOYMENT.md` §Backup & restore on staging; record the date and the restored row counts | ✅ Local drill passed (row counts and balances match), see `UAT_EVIDENCE.md`. ☐ Repeat on production host. |
-| A13 | Source, migration, demo seed, deployment steps, manual delivered | `PageSmokeTest` (seeds demo data, renders 32 screens × 6 roles) | — | ✅ |
+## 1. Required test scenarios (brief) → evidence
+| # | Scenario from the brief | Automated test(s) | Result |
+|---|---|---|---|
+| R1 | Unassigned PM denied | `ApprovalWorkflowTest::test_wrong_pm_cannot_approve`, `AccessControlTest::test_unauthorized_direct_requests_are_rejected_regardless_of_menus`, `ProcurementTest::test_pm_raises_pr_only_for_own_project`, `ProjectControlsTest::test_controls_page_and_edit_rights` | ✅ |
+| R2 | Self-approval denied | `test_pm_as_requester_cannot_self_approve_admin_substitutes_and_overall_stays_independent`, `test_requester_cannot_approve_own_pr_and_rejection_needs_reason`, `test_po_approval_policy_creator_threshold_and_stale_version`, `test_pm_claim_goes_to_overall_and_rejection_needs_reason`, `test_count_variance_posts_only_after_independent_approval_with_reason` | ✅ |
+| R3 | Final manager cannot approve before PM | `test_overall_cannot_decide_before_pm` | ✅ |
+| R4 | Storekeeper cannot issue before final approval | `test_storekeeper_cannot_issue_until_both_stages_complete`, `test_approval_alone_does_not_decrement_stock` | ✅ |
+| R5 | Rejection blocks issue | `test_pm_reject_blocks_overall_approval_and_issue`, `test_overall_reject_blocks_issue` | ✅ |
+| R6 | Simultaneous requests cannot make stock negative | `test_final_units_cannot_be_issued_twice_to_competing_requests` + **parallel** `cms:concurrency-test` (8 processes, MariaDB, multi-store code: 6/6 checks) | ✅ |
+| R7 | Partial issue cannot exceed approved quantity | `test_approved_10_with_6_available_scenario`, `test_failed_multi_line_issue_rolls_back_everything` | ✅ |
+| R8 | Rejected request revisions preserve audit history | `test_revise_after_rejection_creates_new_version_and_requires_fresh_approvals`, `test_approval_records_are_immutable`, audit chain tests | ✅ |
+| R9 | Project staff cannot see other projects | `test_project_visibility_is_role_scoped`, `test_requests_are_visible_only_to_permitted_users`, `test_staff_not_assigned_to_project_cannot_request_for_it` | ✅ |
+| R10 | Return and transfer reconcile | `test_transfer_and_return_reconcile_across_stores`, `test_short_receipt_needs_reason_and_ledger_reconciles`, `test_cancel_returns_stock_to_source`, `GoLiveTest` (`cms:reconcile` on the full demo set) | ✅ |
+| R11 | Duplicate issue request cannot double-post | `test_duplicate_issue_post_with_same_key_does_not_double_post`, `test_duplicate_receipt_post_with_same_key_does_not_double_post`, `test_duplicate_grn_post_does_not_double_receive`, `test_second_decision_on_same_step_is_refused` | ✅ |
+| R12 | Stock count adjustment requires authorized reason | `test_count_variance_posts_only_after_independent_approval_with_reason`, `test_rejected_count_posts_nothing_and_requires_reason`, `test_adjustment_cannot_make_stock_negative_and_needs_reason` | ✅ |
+| R13 | Project expense appears exactly once | `test_claim_is_approved_independently_and_paid_into_expenses_exactly_once` (DB unique key too), `test_store_purchases_are_not_counted_as_project_cost`, `test_return_credits_project_once_and_cannot_exceed_what_is_out` | ✅ |
+| R14 | Exports obey row-level permissions | `test_exports_obey_row_level_permissions` (CSV, Excel, PDF), `test_finance_reports_render_and_are_scoped` | ✅ |
 
-## Additional automated checks
-- Approved quantities can only be reduced (PM ≤ requested; Overall ≤ PM).
-- Revising a rejected request creates version n+1, and old decisions stay in history.
-- Only draft lines are editable; approval, ledger and voucher records are immutable.
-- A second decision on the same step is refused.
-- An adjustment cannot make stock negative and needs a reason. Opening balance is allowed once per item.
-- Weighted average cost is correct. Document numbers are sequential and unique.
-- Login, inactive-user lockout, forced password change, and the e-mailed password reset link.
+## 2. Definition of done → evidence
+| Item | Evidence | Status |
+|---|---|---|
+| All acceptance tests pass | 110 tests, SQLite + MariaDB | ✅ |
+| No critical/high security defects | `docs/SECURITY.md`; `AuditorAccessTest` (all mutating routes refuse a read-only user), `AccessControlTest`, headers test | ✅ internal review · ☐ owner's independent review if required |
+| Stock ledger reconciles with balances | `cms:reconcile` (daily schedule), `GoLiveTest`, run on the raced MariaDB DB | ✅ |
+| Approval audit is complete | immutable approval rows + hash-chained activity log, `cms:verify-audit` | ✅ |
+| Owner signs UAT | §5 below | ☐ owner |
+| Production backup/restore tested | local drill passed (`UAT_EVIDENCE.md`) | ☐ repeat on the production host |
+| Repository and credentials handed over securely | `docs/HANDOVER.md` | ☐ at handover |
 
-## Manual UAT scripts (owner-observed)
+## 3. Earlier acceptance criteria (Phase 1) — still passing
+A1–A13 from the MVP remain covered by `ApprovalWorkflowTest`, `IssuanceAndStockTest`, `AccessControlTest`, `PolishFeaturesTest`, `BackupCommandTest`, `PageSmokeTest` (every screen × 9 roles with demo data).
 
-**S1 — Happy path with two approvals**
-1. staff1: New request → PRJ-001 → Cement 20 bags, Nails 5 kg → Submit. Status is *Awaiting PM*.
-2. pm1: Approvals → open the request → reduce nails to 3 → Approve. Status is *Awaiting Overall Manager*.
-3. overall: Approvals → Approve. Status is *Approved – ready to issue*. Item on-hand is **unchanged**.
-4. store: Issues → Issue → Confirm. Voucher IV-… is created; on-hand drops by 20 and 3.
-5. Print the voucher and check the signature lines. staff1 opens the voucher and clicks *Confirm materials received*.
+## 4. Manual UAT scripts (owner-observed)
+**S1 — Two approvals and issue.** staff1: New request → PRJ-001 → Cement 20 bags (BOQ line 3.1), Nails 5 kg → Submit. pm1 (🔔 shows the alert): reduce nails to 3 → Approve. overall: Approve. On-hand is unchanged. store: Issues → Issue (store MAIN) → Confirm → voucher IV-…; download the PDF. staff1 confirms receipt.
 
-**S2 — Partial issue (A7)**: create a request for 10 of an item whose stock you have adjusted to 6. After approval the issue screen caps the quantity at 6; issue 6, and the status becomes *Partially issued*. Record a receipt of 20; the issue screen now caps at 4. Issue 4, and the status becomes *Fully issued*.
+**S2 — Partial issue.** Request 10 of an item with 6 on hand in the chosen store. Issue is capped at 6 → *Partially issued*. Receive 20 → issue the remaining 4 → *Fully issued*; nothing above 10 is possible.
 
-**S3 — Rejection & revision**: pm2 rejects request 4 (demo) with a reason → staff2 clicks *Revise & resubmit* → it becomes v2 in Draft, and the old decision is still visible in history.
+**S3 — Rejection & revision.** pm2 rejects demo request 4 with a reason → staff2 *Revise & resubmit* → v2 Draft; the v1 decision stays in history.
 
-**S4 — Authorization spot-check**: as staff1, paste `/users`, `/receipts/create`, `/expenses`, and `/projects/2` into the address bar. Each one returns *403 Forbidden*.
+**S4 — Transfer with two-person confirmation.** store: Transfers → New → MAIN → Kira site store → 10 bags → Dispatch. Log in as store again and open it: no *Confirm receipt* form. sitestore: confirm 9 received, reason "1 bag torn". MAIN fell by 10, Kira rose by 9; the line shows a shortfall of 1 with the reason.
 
-**S5 — Reports**: Reports → each report → Export CSV opens in Excel. In *Project budget vs cost*, total = materials issued + cash expenses.
+**S5 — Return.** store: open the demo voucher → *Return to store* → return 2 bags → PRJ-001 cost drops by the voucher value (project page).
 
-Sign-off: ____________________ (Owner)  Date: __________
+**S6 — Stock count.** sitestore: the demo count awaits approval. Log in as overall → Stock counts → approve → an adjustment ADJ-… is posted with the reason.
+
+**S7 — Procure to pay.** buyer: open demo PR → quotes already recorded → raise the PO from the second PR or open the pending demo PO. overall approves (buyer cannot). store: Receive goods (GRN) part of it. accounts: record the supplier invoice at a *different* price → *Match exception* → overall approves the exception → accounts records payment. PO PDF downloads with signature blocks.
+
+**S8 — Budget control.** pm1: PRJ-001 → *Budget, BOQ & milestones*: budget, actual, committed and variance per cost code; set the concrete budget below actual+committed → red. Run `php artisan cms:budget-alerts` → management and pm1 receive an alert once.
+
+**S9 — Expense claim.** staff1: Expense claims → New → 50,000 transport with a photo. pm1 approves; accounts pays → the claim appears once in PRJ-001 expenses.
+
+**S10 — Authorization spot-check.** As staff1 paste `/users`, `/receipts/create`, `/purchase-orders`, `/projects/2/controls` → 403. As auditor@ everything opens read-only and no action buttons work.
+
+**S11 — Reports & exports.** Reports → each report → Excel, PDF and CSV. As pm2, exports contain PRJ-002 only.
+
+**S12 — Integrity commands.** `php artisan cms:reconcile` → *All books reconcile*; `php artisan cms:verify-audit` → *Audit chain intact*; `php artisan cms:go-live-check` on the production server → no FAIL lines.
+
+## 5. Sign-off
+| Area | Accepted (✓/✗) | Comments |
+|---|---|---|
+| Material requests, approvals, issue | | |
+| Stores, transfers, returns, counts | | |
+| Procurement (PR, PO, GRN, invoices, payments) | | |
+| Project controls (budgets, BOQ, claims, commitments) | | |
+| Reports, exports, notifications | | |
+| Security & audit | | |
+
+Owner: ____________________  Signature: ____________  Date: __________
