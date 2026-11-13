@@ -6,6 +6,14 @@
         @can('manage-catalog')<a class="btn" href="{{ route('items.create') }}">+ New item</a>@endcan
         @can('manage-stock')<a class="btn secondary" href="{{ route('receipts.create', ['type' => 'opening']) }}">Opening balances</a><a class="btn secondary" href="{{ route('adjustments.create') }}">Adjustment</a>@endcan
     </div></div>
+@can('manage-catalog')
+<details class="card"><summary><strong>Import items from a spreadsheet (CSV)</strong></summary>
+    <form method="POST" action="{{ route('items.import') }}" enctype="multipart/form-data" style="margin-top:.75rem">@csrf
+        <p class="muted">1. <a href="{{ route('items.import-template') }}">Download the template</a>. 2. One row per new item: sku, name, category (exact name), unit (abbreviation), min_level. 3. Save as CSV and upload. If any row is wrong nothing is imported and the errors are listed.</p>
+        <div class="grid grid-4"><div style="grid-column:span 2"><label for="items_file">CSV file</label><input id="items_file" type="file" name="file" accept=".csv,text/csv" required></div>
+            <div><label>&nbsp;</label><button class="btn secondary">Import items</button></div></div>
+    </form></details>
+@endcan
 <form method="GET" class="card filters"><div class="grid grid-4">
     <div><label>Search</label><input type="text" name="q" value="{{ request('q') }}" placeholder="SKU or name"></div>
     <div><label>Category</label><select name="category_id"><option value="">All</option>@foreach($categories as $c)<option value="{{ $c->id }}" @selected(request('category_id') == $c->id)>{{ $c->name }}</option>@endforeach</select></div>

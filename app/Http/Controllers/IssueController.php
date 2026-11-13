@@ -18,7 +18,7 @@ class IssueController extends Controller
     {
         $user = $request->user();
         $issues = MaterialIssue::with('project', 'request', 'issuer', 'acknowledgment')
-            ->when(! $user->hasRole(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant),
+            ->when(! $user->hasRole(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant, Role::Auditor),
                 fn ($q) => $q->whereHas('request', fn ($r) => $r->visibleTo($user)))
             ->latest('issued_at')->paginate(25);
 
@@ -71,6 +71,16 @@ class IssueController extends Controller
             'issue' => $issue->load('project', 'store', 'request.requester', 'request.approvals.approver', 'issuer', 'lines.item.unit', 'lines.returnLines', 'acknowledgment.user', 'returns'),
             'company' => AppSetting::get('company_name', config('app.name')),
         ]);
+    }
+
+    public function pdf(MaterialIssue $issue)
+    {
+        Gate::authorize('view-issue', $issue);
+
+        return \App\Support\Pdf::download('pdf.issue', [
+            'issue' => $issue->load('project', 'store', 'request.requester', 'request.approvals.approver', 'issuer', 'lines.item.unit', 'acknowledgment'),
+            'showValue' => Gate::allows('view-stock-value'),
+        ], $issue->issue_no.'.pdf');
     }
 
     public function acknowledge(Request $request, MaterialIssue $issue, IssueService $service)

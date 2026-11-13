@@ -64,6 +64,12 @@
     </div>
     <button class="btn secondary" style="margin-top:.75rem">Add line</button>
 </form>
+<form method="POST" action="{{ route('projects.boq.import', $project) }}" enctype="multipart/form-data" style="margin-top:1rem">@csrf
+    <h3>Or import BOQ lines (CSV)</h3>
+    <p class="muted"><a href="{{ route('projects.boq.template', $project) }}">Download the template</a>: ref, description, cost_code, unit, qty, rate, optional sku. All rows are checked first; if any is wrong nothing is imported.</p>
+    <div class="grid grid-4"><div style="grid-column:span 2"><label for="boq_file">CSV file</label><input id="boq_file" type="file" name="file" accept=".csv,text/csv" required></div>
+        <div><label>&nbsp;</label><button class="btn secondary">Import BOQ</button></div></div>
+</form>
 @elseif($canEdit)
 <p class="hint">Add cost codes first (Finance → Cost codes).</p>
 @endif

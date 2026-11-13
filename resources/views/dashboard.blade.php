@@ -16,6 +16,31 @@
     <div class="stat bad"><div class="label">Low-stock items</div><div class="value">{{ $lowStock->count() }}</div></div>
 </div>
 
+@if($queues->isNotEmpty())
+<div class="card"><h2>Also waiting for you</h2>
+    <div class="grid grid-4">@foreach($queues as [$label, $url, $n])
+        <a href="{{ $url }}" class="stat gold" style="text-decoration:none"><div class="label">{{ $label }}</div><div class="value">{{ $n }}</div></a>
+    @endforeach</div>
+</div>
+@endif
+
+@if($finance || $storeValues->isNotEmpty())
+<div class="grid grid-2">
+    @if($finance)
+    <div class="card"><h2>Purchasing &amp; payables</h2><dl class="meta">
+        <dt>Open purchase orders (not yet received)</dt><dd><strong>{{ ugx($finance->openPo) }}</strong> UGX</dd>
+        <dt>Unpaid supplier invoices</dt><dd><a href="{{ route('invoices.index', ['payment_status' => 'unpaid']) }}">{{ $finance->unpaidCount }}</a> · {{ ugx($finance->unpaid) }} UGX</dd>
+        <dt>Overdue</dt><dd>@if($finance->overdueCount)<span class="badge rejected">{{ $finance->overdueCount }}</span> {{ ugx($finance->overdue) }} UGX @else none @endif</dd>
+    </dl></div>
+    @endif
+    @if($storeValues->isNotEmpty())
+    <div class="card"><h2>Stock value by store <small class="muted">(average cost)</small></h2><table>
+        <tbody>@foreach($storeValues as $s)<tr><td><a href="{{ route('stores.show', $s->id) }}">{{ $s->code }}</a> {{ $s->name }}</td><td class="num">{{ ugx($s->value) }}</td></tr>@endforeach</tbody>
+        <tfoot><tr><td>Total</td><td class="num">{{ ugx($storeValues->sum('value')) }}</td></tr></tfoot></table></div>
+    @endif
+</div>
+@endif
+
 @if($awaitingMe->isNotEmpty())
 <div class="card">
     <h2>Waiting for your decision</h2>

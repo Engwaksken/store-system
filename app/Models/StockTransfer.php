@@ -58,7 +58,7 @@ class StockTransfer extends Model
 
     public function scopeVisibleTo($q, User $user)
     {
-        if ($user->hasRole(\App\Enums\Role::Admin, \App\Enums\Role::OverallManager, \App\Enums\Role::Accountant)) {
+        if ($user->hasRole(\App\Enums\Role::Admin, \App\Enums\Role::OverallManager, \App\Enums\Role::Accountant, \App\Enums\Role::Auditor)) {
             return $q;
         }
         $ids = Store::operableBy($user)->pluck('id');

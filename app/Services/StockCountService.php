@@ -105,6 +105,7 @@ class StockCountService
             }
             $count->update(['status' => 'submitted', 'submitted_at' => now()]);
             ActivityLog::record('count.submitted', "Stock count {$count->count_no} submitted for approval", $count);
+            app(WorkflowNotifier::class)->countSubmitted($count);
 
             return $count;
         });

@@ -78,6 +78,13 @@ class PurchaseOrderController extends Controller
         return view('pos.show', ['po' => $po, 'threshold' => $service->ownerThreshold()]);
     }
 
+    public function pdf(PurchaseOrder $po)
+    {
+        Gate::authorize('view-po', $po);
+
+        return \App\Support\Pdf::download('pdf.po', ['po' => $po->load('supplier', 'store', 'project', 'creator', 'decider', 'lines.item.unit')], $po->po_no.'.pdf');
+    }
+
     public function decide(Request $request, PurchaseOrder $po, PurchasingService $service)
     {
         Gate::authorize('decide-po', $po);

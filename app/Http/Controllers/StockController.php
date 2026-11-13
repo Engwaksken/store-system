@@ -129,6 +129,13 @@ class StockController extends Controller
         return view('receipts.show', ['receipt' => $receipt->load('lines.item.unit', 'receiver', 'store')]);
     }
 
+    public function pdf(StockReceipt $receipt)
+    {
+        Gate::authorize('view-stock-ledger');
+
+        return \App\Support\Pdf::download('pdf.grn', ['receipt' => $receipt->load('lines.item.unit', 'receiver', 'store', 'purchaseOrder')], $receipt->receipt_no.'.pdf');
+    }
+
     public function createAdjustment(Request $request)
     {
         Gate::authorize('manage-stock');

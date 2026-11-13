@@ -64,8 +64,10 @@ class RequestWorkflow
         if ($user->role !== Role::OverallManager || ! $user->is_active || $user->id === $req->requester_id) {
             return false;
         }
-        $pm = MaterialApproval::where('material_request_id', $req->id)->where('version', $req->version)
-            ->where('step', MaterialApproval::STEP_PM)->first();
+        // Uses eager-loaded approvals when present, so list pages do not run one query per request.
+        $pm = $req->relationLoaded('approvals')
+            ? $req->approvals->first(fn ($a) => $a->version === $req->version && $a->step === MaterialApproval::STEP_PM)
+            : MaterialApproval::where('material_request_id', $req->id)->where('version', $req->version)->where('step', MaterialApproval::STEP_PM)->first();
 
         return ! $pm || $pm->approver_id !== $user->id;
     }

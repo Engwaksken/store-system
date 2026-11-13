@@ -24,7 +24,7 @@ h3 { font-size: 1rem; margin: 0 0 .5rem; }
 .sidebar a { display: flex; justify-content: space-between; align-items: center; padding: .5rem 1.25rem; color: #DCE3EC; border-left: 3px solid transparent; }
 .sidebar a:hover { background: var(--navy-2); text-decoration: none; }
 .sidebar a.active { background: var(--navy-2); border-left-color: var(--gold); color: #fff; }
-.sidebar .count { background: var(--gold); color: var(--navy); border-radius: 10px; font-size: .7rem; padding: 0 .45rem; font-weight: 700; }
+.sidebar .count, .topbar .count { background: var(--gold); color: var(--navy); border-radius: 10px; font-size: .7rem; padding: 0 .45rem; font-weight: 700; }
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .topbar { display: flex; justify-content: space-between; align-items: center; padding: .7rem 1.5rem; background: #fff; border-bottom: 1px solid var(--line); gap: 1rem; }
 .topbar .who { color: var(--muted); font-size: .9rem; }

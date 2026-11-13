@@ -3,7 +3,7 @@
 @section('content')
 <div class="page-head no-print"><div><h1>Purchase order {{ $po->po_no }} <span class="badge {{ $po->tone() }}">{{ $po->statusLabel() }}</span></h1></div>
     <div class="actions">
-        <button class="btn secondary" onclick="window.print()">Print PO</button>
+        <button class="btn secondary" onclick="window.print()">Print PO</button><a class="btn secondary" href="{{ route('pos.pdf', $po) }}">PDF</a>
         @can('receive-po', $po)<a class="btn" href="{{ route('pos.receive', $po) }}">Receive goods (GRN)</a>@endcan
         @if(in_array($po->status, ['approved', 'partially_received', 'received', 'closed']))
             @can('record-invoice')<a class="btn secondary" href="{{ route('invoices.create', $po) }}">Record supplier invoice</a>@endcan

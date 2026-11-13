@@ -11,6 +11,7 @@ enum Role: string
     case Staff = 'staff';
     case Accountant = 'accountant';
     case Procurement = 'procurement';
+    case Auditor = 'auditor';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum Role: string
             self::Staff => 'Staff',
             self::Accountant => 'Accountant',
             self::Procurement => 'Procurement Officer',
+            self::Auditor => 'Auditor (read-only)',
         };
     }
 }

@@ -62,7 +62,7 @@ class MaterialRequest extends Model
     public function scopeVisibleTo(Builder $q, User $user): Builder
     {
         return match ($user->role) {
-            Role::Admin, Role::OverallManager, Role::Accountant => $q,
+            Role::Admin, Role::OverallManager, Role::Accountant, Role::Auditor => $q,
             Role::Storekeeper => $q->whereIn('status', [
                 RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value, RequestStatus::FullyIssued->value,
             ]),

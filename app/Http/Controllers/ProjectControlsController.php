@@ -94,6 +94,60 @@ class ProjectControlsController extends Controller
         return back()->with('status', 'BOQ line removed.');
     }
 
+    public function boqTemplate(Project $project)
+    {
+        Gate::authorize('manage-project-controls', $project);
+
+        return \App\Support\CsvImport::template("boq-{$project->code}.csv", ['ref', 'description', 'cost_code', 'unit', 'qty', 'rate', 'sku'],
+            [['3.1', 'Ground floor slab 150mm C25', CostCode::where('is_active', true)->orderBy('code')->value('code') ?? '03-CON', 'm3', '45', '650000', '']]);
+    }
+
+    /** All-or-nothing BOQ import: cost code by code, optional catalogue SKU; refs must be new for the project. */
+    public function importBoq(Request $request, Project $project)
+    {
+        Gate::authorize('manage-project-controls', $project);
+        $request->validate(['file' => 'required|file|mimes:csv,txt|max:2048']);
+        [$rows, $error] = \App\Support\CsvImport::read($request->file('file'), ['ref', 'description', 'cost_code', 'unit', 'qty', 'rate']);
+        if ($error) {
+            return back()->withErrors(['file' => $error]);
+        }
+        $codes = CostCode::where('is_active', true)->pluck('id', 'code')->mapWithKeys(fn ($id, $c) => [mb_strtolower($c) => $id]);
+        $skus = InventoryItem::pluck('id', 'sku')->mapWithKeys(fn ($id, $s) => [mb_strtolower($s) => $id]);
+        $existing = $project->boqItems()->pluck('ref')->map(fn ($r) => mb_strtolower($r))->flip();
+        $seen = $errors = $new = [];
+        foreach ($rows as $line => $r) {
+            $ref = $r['ref'];
+            $qty = \App\Support\CsvImport::number($r['qty']);
+            $rate = \App\Support\CsvImport::number($r['rate']);
+            $sku = mb_strtolower($r['sku'] ?? '');
+            if ($ref === '' || $r['description'] === '' || $r['unit'] === '') {
+                $errors[] = "Row {$line}: ref, description and unit are required.";
+            } elseif (isset($existing[mb_strtolower($ref)]) || isset($seen[mb_strtolower($ref)])) {
+                $errors[] = "Row {$line}: BOQ ref {$ref} already exists on this project.";
+            } elseif (! isset($codes[mb_strtolower($r['cost_code'])])) {
+                $errors[] = "Row {$line}: unknown or inactive cost code '{$r['cost_code']}'.";
+            } elseif ($qty === null || $rate === null) {
+                $errors[] = "Row {$line}: qty and rate must be numbers of 0 or more.";
+            } elseif ($sku !== '' && ! isset($skus[$sku])) {
+                $errors[] = "Row {$line}: unknown SKU '{$r['sku']}'.";
+            } else {
+                $seen[mb_strtolower($ref)] = true;
+                $q = Decimal::of($qty, 3);
+                $rt = Decimal::of($rate, 2);
+                $new[] = ['project_id' => $project->id, 'ref' => mb_substr($ref, 0, 30), 'description' => mb_substr($r['description'], 0, 500),
+                    'cost_code_id' => $codes[mb_strtolower($r['cost_code'])], 'unit' => mb_substr($r['unit'], 0, 20), 'qty' => $q, 'rate' => $rt,
+                    'amount' => bcmul($q, $rt, 2), 'item_id' => $sku !== '' ? $skus[$sku] : null];
+            }
+        }
+        if ($errors) {
+            return back()->withErrors(array_slice($errors, 0, 20));
+        }
+        DB::transaction(fn () => collect($new)->each(fn ($d) => BoqItem::create($d)));
+        ActivityLog::record('boq.imported', count($new)." BOQ lines imported into {$project->code}", $project);
+
+        return redirect()->route('projects.controls', $project)->with('status', count($new).' BOQ lines imported.');
+    }
+
     public function storeMilestone(Request $request, Project $project)
     {
         Gate::authorize('manage-project-controls', $project);

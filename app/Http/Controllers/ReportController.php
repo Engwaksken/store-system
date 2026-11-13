@@ -16,6 +16,8 @@ use App\Services\ProjectCostService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use App\Support\Pdf;
+use App\Support\XlsxWriter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -229,8 +231,28 @@ class ReportController extends Controller
             $sum[$i] = $rows->reduce(fn ($c, $r) => bcadd($c, (string) ($r[$i] ?: '0'), 2), '0');
         }
 
-        if ($request->query('format') === 'csv') {
-            return $this->csv(str($title)->slug().'-'.now()->format('Ymd-His').'.csv', $headers, $rows, $sum);
+        $file = str($title)->slug().'-'.now()->format('Ymd-His');
+        switch ($request->query('format')) {
+            case 'csv':
+                return $this->csv($file.'.csv', $headers, $rows, $sum);
+            case 'xlsx':
+                $totals = null;
+                if ($sum) {
+                    $totals = array_fill(0, count($headers), '');
+                    $totals[0] = 'TOTAL';
+                    foreach ($sum as $i => $v) {
+                        $totals[$i] = $v;
+                    }
+                }
+                $path = XlsxWriter::write($title, $headers, $rows, $numeric, $totals);
+
+                return response()->download($path, $file.'.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])->deleteFileAfterSend();
+            case 'pdf':
+                $filterText = collect($request->only(['store_id', 'project_id', 'item_id', 'type', 'from', 'to']))->filter()
+                    ->map(fn ($v, $k) => str_replace('_id', '', $k).': '.$v)->implode(' · ');
+
+                return Pdf::download('pdf.report', compact('title', 'headers', 'rows', 'numeric', 'money', 'sum', 'note', 'filterText'), $file.'.pdf',
+                    count($headers) > 7 ? 'landscape' : 'portrait');
         }
 
         $user = $request->user();

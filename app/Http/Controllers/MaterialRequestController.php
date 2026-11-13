@@ -34,7 +34,7 @@ class MaterialRequestController extends Controller
     public function approvals(Request $request)
     {
         Gate::authorize('approve-any');
-        $pending = MaterialRequest::with('project', 'requester', 'lines')
+        $pending = MaterialRequest::with('project', 'requester', 'lines', 'approvals')
             ->whereIn('status', [RequestStatus::Submitted->value, RequestStatus::PmApproved->value])
             ->oldest('submitted_at')->get()
             ->filter(fn ($r) => Gate::allows('pm-decide', $r) || Gate::allows('overall-decide', $r))->values();
@@ -119,6 +119,8 @@ class MaterialRequestController extends Controller
 
     public function pmDecision(Request $request, MaterialRequest $materialRequest)
     {
+        // Refuse before validating; the workflow re-checks state and separation of duties under a lock.
+        Gate::authorize('approve-any');
         $d = $this->decisionInput($request);
         $this->wf->pmDecide($request->user(), $materialRequest, $d['decision'], $d['reason'] ?? null, $d['qty'] ?? []);
 
@@ -127,6 +129,8 @@ class MaterialRequestController extends Controller
 
     public function overallDecision(Request $request, MaterialRequest $materialRequest)
     {
+        // Refuse before validating; the workflow re-checks state and separation of duties under a lock.
+        Gate::authorize('approve-any');
         $d = $this->decisionInput($request);
         $this->wf->overallDecide($request->user(), $materialRequest, $d['decision'], $d['reason'] ?? null, $d['qty'] ?? []);
 

@@ -41,6 +41,7 @@ class ExpenseClaimService
             'amount' => $amount, 'description' => $data['description'], 'receipt_path' => $data['receipt_path'] ?? null,
         ]);
         ActivityLog::record('claim.submitted', "Expense claim {$claim->claim_no} for {$project->code}: {$amount}", $claim);
+        app(WorkflowNotifier::class)->claimSubmitted($claim);
 
         return $claim;
     }
@@ -79,6 +80,7 @@ class ExpenseClaimService
             }
             $claim->forceFill(['status' => $decision, 'approver_id' => $user->id, 'decided_at' => now(), 'decision_reason' => $reason])->save();
             ActivityLog::record('claim.'.$decision, "Expense claim {$claim->claim_no} {$decision}", $claim, ['reason' => $reason]);
+            app(WorkflowNotifier::class)->claimDecided($claim);
 
             return $claim;
         });

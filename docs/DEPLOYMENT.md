@@ -36,6 +36,9 @@ ADMIN_EMAIL=owner@company.co.ug
 ADMIN_PASSWORD=             # leave empty to have a random temporary password printed once
 COMPANY_NAME="..."
 SESSION_SECURE_COOKIE=true
+CMS_MAIL_ALERTS=true        # false = in-app notifications only
+CMS_REMINDER_DAYS=2         # remind whoever must act after this many days
+CMS_ESCALATION_DAYS=5       # also alert the Owner/Admin after this many days
 ```
 Then:
 ```bash
@@ -49,7 +52,15 @@ Cron (cPanel → Cron Jobs):
 ```
 * * * * * cd ~/cms && php artisan schedule:run >> /dev/null 2>&1
 ```
-This runs `cms:backup` every day at 01:30.
+The scheduler then runs:
+| Command | When | Purpose |
+|---|---|---|
+| `cms:backup --keep=14` | daily 01:30 | database dump (§5) |
+| `cms:verify-audit` | daily 02:30 | tamper check of the activity log; a failure is logged with the row id |
+| `cms:reminders` | weekdays 07:00 | reminders for pending approvals/receipts; escalation to the Owner/Admin |
+| `cms:budget-alerts` | 07:00 and 13:00 | warn (≥ 90 %) / over-budget alerts per project and cost code, once per level |
+
+Run any of them by hand to check, e.g. `php artisan cms:verify-audit`.
 
 ## 3. Go-live data
 1. The admin signs in, changes the temporary password, and fills in **Settings** (company name, address, logo, voucher footer).
@@ -96,5 +107,7 @@ It launches 8 parallel processes that try to (1) take the last 5 units for 8 com
 - `APP_DEBUG=false`, HTTPS only, `SESSION_SECURE_COOKIE=true`.
 - Document root is `public/` only. `.env`, `storage/` and `vendor/` are not web-accessible.
 - Expense proofs live on the private disk and are served only after an authorization check.
-- Login is rate-limited (5 attempts per minute per e-mail and IP). There is no public registration.
+- Login is rate-limited and there is no public registration. Signed-in users are limited to 300 requests per minute.
+- Security headers (CSP, frame, nosniff, HSTS on HTTPS) are set by the application. See `docs/SECURITY.md` for the full control list.
+- Keep a copy of `APP_KEY` with the backups (sealed): it is needed to verify the audit chain after a restore.
 - Deactivate (don't delete) staff who leave.

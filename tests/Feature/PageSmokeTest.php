@@ -23,7 +23,7 @@ class PageSmokeTest extends TestCase
             'adjustments.create', 'requests.create', 'password.change',
             'stores.index', 'stores.create', 'transfers.index', 'transfers.create', 'returns.index', 'counts.index', 'counts.create',
             'prs.index', 'prs.create', 'pos.index', 'pos.create', 'suppliers.index', 'suppliers.create', 'invoices.index',
-            'claims.index', 'claims.create', 'cost-codes.index', 'reports.cost-codes', 'reports.boq', 'reports.commitments'];
+            'claims.index', 'claims.create', 'cost-codes.index', 'reports.cost-codes', 'reports.boq', 'reports.commitments', 'notifications.index'];
         $detail = [
             fn () => route('projects.show', Project::first()),
             fn () => route('requests.show', \App\Models\MaterialRequest::first()),
@@ -43,7 +43,7 @@ class PageSmokeTest extends TestCase
             fn () => route('claims.show', \App\Models\ExpenseClaim::first()),
             fn () => route('claims.show', \App\Models\ExpenseClaim::latest('id')->first()),
         ];
-        foreach (['owner', 'overall', 'pm1', 'store', 'sitestore', 'accounts', 'buyer', 'staff1'] as $who) {
+        foreach (['owner', 'overall', 'pm1', 'store', 'sitestore', 'accounts', 'buyer', 'auditor', 'staff1'] as $who) {
             $user = User::where('email', "{$who}@demo.test")->sole();
             foreach ($pages as $page) {
                 $status = $this->actingAs($user)->get(route($page))->status();

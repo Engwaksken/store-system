@@ -82,6 +82,8 @@
             <button class="btn secondary small menu-toggle" type="button" onclick="document.body.classList.toggle('nav-open')">☰ Menu</button>
             <span class="who">{{ $u->name }} · {{ $u->role->label() }}</span>
             <span class="actions">
+                @php($unread = $u->unreadNotifications()->count())
+                <a href="{{ route('notifications.index') }}" class="btn secondary small" aria-label="Notifications, {{ $unread }} unread">🔔@if($unread) <span class="count">{{ $unread }}</span>@endif</a>
                 <a href="{{ route('password.change') }}" class="btn secondary small">Password</a>
                 <form method="POST" action="{{ route('logout') }}" class="inline-form">@csrf<button class="btn secondary small">Sign out</button></form>
             </span>

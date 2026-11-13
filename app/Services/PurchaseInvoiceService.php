@@ -90,6 +90,9 @@ class PurchaseInvoiceService
                 $line->forceFill(['invoiced_qty' => $newInvoiced])->save();
             }
             ActivityLog::record('invoice.recorded', "Supplier invoice {$invoice->supplier_invoice_no} recorded as {$invoice->pi_no} ({$invoice->match_status})", $invoice);
+            if ($invoice->match_status === 'exception') {
+                app(WorkflowNotifier::class)->invoiceException($invoice);
+            }
 
             return $invoice;
         });

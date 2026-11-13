@@ -74,7 +74,25 @@ Legend: ✅ done and covered by automated tests · 🟡 done, needs owner or sta
 | B-47 | Request lines linked to BOQ lines (same project only); consumption per BOQ line | ✅ | `test_boq_line_must_belong_to_the_request_project`, `test_budget_vs_committed_vs_actual_by_cost_code` |
 | B-48 | Expense claims: independent approval, paid once into expenses | ✅ | `test_claim_is_approved_independently_and_paid_into_expenses_exactly_once` |
 | B-49 | Commitments (open POs + approved claims) vs actuals, variance and warn/over flags on dashboard, project page and reports | ✅ | same, `test_finance_reports_render_and_are_scoped` |
-| B-50 | Variance e-mail / in-app alerts | ⬜ | Phase 5 (notifications) |
+| B-50 | Variance e-mail / in-app alerts | ✅ | Phase 5, `test_budget_alerts_fire_once_per_level_and_rearm` |
+
+## Phase 5: reporting, alerts, security
+| ID | Item | Status | Evidence |
+|---|---|---|---|
+| B-51 | Excel (.xlsx) and PDF export of every report, alongside print and CSV | ✅ | `test_xlsx_and_pdf_report_exports` |
+| B-52 | PDF issue voucher, purchase order and GRN with branding and signature blocks | ✅ | `test_document_pdfs_respect_permissions` |
+| B-53 | Exports obey row-level permissions | ✅ | `test_exports_obey_row_level_permissions` |
+| B-54 | In-app notifications (bell) for every hand-off; e-mail optional | ✅ | `test_in_app_notifications_bell_and_open` |
+| B-55 | Daily reminders and escalation to the Owner/Admin | ✅ | `test_reminders_and_escalation_for_stale_approvals` |
+| B-56 | Budget variance alerts per project / cost code, once per level, re-armed | ✅ | `test_budget_alerts_fire_once_per_level_and_rearm` |
+| B-57 | Auditor (read-only) role | ✅ | `AuditorAccessTest` |
+| B-58 | Tamper-evident audit log (HMAC chain) + daily verification + audit export | ✅ | `test_audit_chain_detects_edits_and_deletions`, `test_deleting_the_newest_audit_rows_is_detected` |
+| B-59 | CSV import templates: catalogue items, BOQ (opening balances already) | ✅ | `test_items_import_is_all_or_nothing`, `test_boq_import` |
+| B-60 | Security headers, no-store caching, per-user throttle | ✅ | `test_security_headers_and_no_store_on_authenticated_pages` |
+| B-61 | Owner dashboard: cross-module queues, payables, open POs, stock value by store, budget flags | ✅ | `PageSmokeTest` |
+| B-62 | Query budget: list/dashboard queries do not grow per pending item | ✅ | `test_dashboard_and_approvals_queries_do_not_grow_per_pending_request` |
+| B-63 | MFA | ⛔ | Optional in the brief; not built (change order) |
+| B-64 | Load test on the production host | ⬜ | Run during UAT on the real server |
 
 ## Owner decisions still open (defaults in effect, see MVP_SCOPE §5)
 1. Name the Overall Manager and the primary Storekeeper (D1).

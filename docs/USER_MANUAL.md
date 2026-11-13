@@ -74,12 +74,21 @@ Stock is only deducted when the storekeeper issues. Approval reserves nothing.
 
 ## Owner / Admin
 - **Users**: add people, set role, deactivate leavers, or reset a password (the user must then change it).
-- **Settings**: company details and logo shown on vouchers, and expense categories.
+- **Settings**: company details and logo shown on vouchers and PDFs, the purchase-order owner threshold, and expense categories.
+- **Imports**: *Stock & items → Import items* (CSV of new catalogue items) and *project → Budget, BOQ & milestones → Import BOQ*. Download the template first; if any row is wrong nothing is imported.
 - **Stores**: add site stores (linked to their project) and tick which storekeepers may operate each store.
 - **Activity log**: who did what and when.
 - The dashboard shows work waiting, low stock, and each project's budget against cost.
 
-## Reports (print or CSV)
+## Notifications
+- The bell (🔔) at the top shows alerts for you: approvals waiting, goods to receive, claims to pay, rejections, reminders and budget alerts. Click one to open the document; it is then marked read. The same alerts are e-mailed if the company enabled e-mail.
+- Anything waiting more than 2 days is reminded every weekday morning; after 5 days the Owner/Admin is told as well.
+
+## Auditor
+- You can open every register, report and the activity log, and export them (Excel, PDF, CSV). You cannot change anything.
+- **Activity log → Excel** exports the full trail with each row's hash. The system checks the trail every night; ask the Owner/Admin for the latest `cms:verify-audit` result.
+
+## Reports (print, Excel, PDF or CSV)
 | Report | Shows |
 |---|---|
 | Stock summary | On hand, minimum level, average cost and value per item |

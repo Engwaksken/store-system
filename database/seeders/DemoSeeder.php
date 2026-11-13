@@ -47,6 +47,7 @@ class DemoSeeder extends Seeder
         $sk2 = $mk('Agnes Site Store', 'sitestore@demo.test', Role::Storekeeper);
         $acc = $mk('Joan Accounts', 'accounts@demo.test', Role::Accountant);
         $buyer = $mk('Daniel Procurement', 'buyer@demo.test', Role::Procurement);
+        $mk('Irene Auditor', 'auditor@demo.test', Role::Auditor);
         $s1 = $mk('Brian Site', 'staff1@demo.test', Role::Staff);
         $s2 = $mk('Esther Site', 'staff2@demo.test', Role::Staff);
 
@@ -188,6 +189,6 @@ class DemoSeeder extends Seeder
         $claims->decide($pm1, $c2, 'approved', null);
         $claims->submit($s2, ['project_id' => $p2->id, 'category_id' => $catId, 'incurred_on' => now()->toDateString(), 'amount' => 60000, 'description' => 'Fuel for water pump']);
 
-        $this->command?->info('Demo data loaded. All demo accounts use password Demo12345: owner@, overall@, pm1@, pm2@, store@, sitestore@, accounts@, buyer@, staff1@, staff2@demo.test');
+        $this->command?->info('Demo data loaded. All demo accounts use password Demo12345: owner@, overall@, pm1@, pm2@, store@, sitestore@, accounts@, buyer@, auditor@, staff1@, staff2@demo.test');
     }
 }

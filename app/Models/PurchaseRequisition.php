@@ -46,7 +46,7 @@ class PurchaseRequisition extends Model
     /** Procurement, finance, management see all; others see their own (PMs also their projects'). */
     public function scopeVisibleTo(Builder $q, User $user): Builder
     {
-        if ($user->hasRole(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant)) {
+        if ($user->hasRole(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant, Role::Auditor)) {
             return $q;
         }
         if ($user->role === Role::ProjectManager) {

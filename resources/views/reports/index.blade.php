@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Reports')
 @section('content')
-<div class="page-head"><div><h1>Reports</h1><p>Every report can be printed or exported to CSV (opens in Excel).</p></div></div>
+<div class="page-head"><div><h1>Reports</h1><p>Every report can be printed or exported to Excel (.xlsx), PDF or CSV. Rows are limited to what you are allowed to see.</p></div></div>
 <div class="grid grid-3">
     <a class="card" href="{{ route('reports.stock') }}"><h3>Stock summary</h3><p class="muted">Balances, minimum levels, stock value.</p></a>
     @can('view-stock-ledger')<a class="card" href="{{ route('reports.movements') }}"><h3>Stock movement ledger</h3><p class="muted">Every receipt, issue and adjustment.</p></a>@endcan

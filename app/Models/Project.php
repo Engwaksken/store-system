@@ -51,7 +51,7 @@ class Project extends Model
     /** Projects a user may see (row-level scoping). */
     public function scopeVisibleTo(Builder $q, User $user): Builder
     {
-        if ($user->hasRole(Role::Admin, Role::OverallManager, Role::Accountant, Role::Storekeeper)) {
+        if ($user->hasRole(Role::Admin, Role::OverallManager, Role::Accountant, Role::Storekeeper, Role::Auditor)) {
             return $q;
         }
 

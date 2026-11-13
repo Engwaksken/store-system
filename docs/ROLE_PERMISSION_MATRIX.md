@@ -2,7 +2,7 @@
 
 Every permission is enforced on the server (policies/gates in `app/Policies`, `app/Providers/AppServiceProvider.php`). Hiding a menu item is cosmetic only, and a direct HTTP request without the permission returns **403**.
 
-Roles (`users.role`): `admin` (Owner/Admin), `overall_manager`, `project_manager`, `storekeeper`, `staff`, `accountant`, `procurement` (Procurement Officer, Phase 3).
+Roles (`users.role`): `admin` (Owner/Admin), `overall_manager`, `project_manager`, `storekeeper`, `staff`, `accountant`, `procurement` (Procurement Officer, Phase 3), `auditor` (read-only, Phase 5).
 
 "Assigned" means the user is the project's `manager_id` or appears in `project_user`.
 
@@ -66,6 +66,9 @@ Full policy: `docs/PROCUREMENT.md`.
 | Approve / reject claim | ✅ (not own) | ✅ (not own) | own projects, not own claim | — | — | — | — |
 | Pay claim (creates the expense) | ✅ | — | — | — | — | ✅ | — |
 | Cost-code, BOQ and commitment reports | all | all | managed projects | — | — | all | — |
+
+## Auditor (Phase 5)
+Read-only: dashboard, projects (all), budget/BOQ pages (no edit), requests, issues/vouchers, stock, stores, transfers, returns, counts, receipts, requisitions, POs, suppliers, supplier invoices, claims, expenses, cost codes, every report and export (CSV / Excel / PDF), and the activity log with export. **No** create, edit, approve, post or pay action anywhere — `AuditorAccessTest` calls every mutating route and expects 403.
 
 ## Separation-of-duty rules (server-checked)
 1. PM-step approver ≠ requester.

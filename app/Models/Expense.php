@@ -37,7 +37,7 @@ class Expense extends Model
     public function scopeVisibleTo(Builder $q, User $user): Builder
     {
         return match ($user->role) {
-            Role::Admin, Role::OverallManager, Role::Accountant => $q,
+            Role::Admin, Role::OverallManager, Role::Accountant, Role::Auditor => $q,
             Role::ProjectManager => $q->whereHas('project', fn ($p) => $p->where('manager_id', $user->id)),
             default => $q->whereRaw('1 = 0'),
         };

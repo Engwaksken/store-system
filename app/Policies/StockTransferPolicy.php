@@ -11,7 +11,7 @@ class StockTransferPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->is_active && $user->hasRole(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant);
+        return $user->is_active && $user->hasRole(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant, Role::Auditor);
     }
 
     public function view(User $user, StockTransfer $transfer): bool

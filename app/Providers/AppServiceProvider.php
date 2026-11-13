@@ -52,7 +52,7 @@ class AppServiceProvider extends ServiceProvider
             $user = auth()->user();
             $approvalCount = 0;
             if ($user && Gate::allows('approve-any')) {
-                $approvalCount = MaterialRequest::whereIn('status', [RequestStatus::Submitted->value, RequestStatus::PmApproved->value])
+                $approvalCount = MaterialRequest::with('approvals')->whereIn('status', [RequestStatus::Submitted->value, RequestStatus::PmApproved->value])
                     ->get()->filter(fn ($r) => Gate::allows('pm-decide', $r) || Gate::allows('overall-decide', $r))->count();
             }
             $issueQueueCount = $user && Gate::allows('issue-stock')
@@ -79,26 +79,26 @@ class AppServiceProvider extends ServiceProvider
         // Administration
         Gate::define('manage-users', $is(Role::Admin));
         Gate::define('manage-settings', $is(Role::Admin));
-        Gate::define('view-activity', $is(Role::Admin, Role::OverallManager));
+        Gate::define('view-activity', $is(Role::Admin, Role::OverallManager, Role::Auditor));
 
         // Projects
         Gate::define('manage-projects', $is(Role::Admin, Role::OverallManager));
         Gate::define('view-project', fn (User $u, Project $p) => Project::visibleTo($u)->whereKey($p->id)->exists());
-        Gate::define('view-project-finance', fn (User $u, Project $p) => $u->hasRole(Role::Admin, Role::OverallManager, Role::Accountant)
+        Gate::define('view-project-finance', fn (User $u, Project $p) => $u->hasRole(Role::Admin, Role::OverallManager, Role::Accountant, Role::Auditor)
             || ($u->role === Role::ProjectManager && $p->manager_id === $u->id));
 
         // Inventory
         Gate::define('manage-catalog', $is(Role::Admin, Role::Storekeeper));
         Gate::define('manage-stock', $is(Role::Admin, Role::Storekeeper));
         Gate::define('view-stock', fn (User $u) => true);
-        Gate::define('view-stock-ledger', $is(Role::Admin, Role::OverallManager, Role::ProjectManager, Role::Storekeeper, Role::Accountant));
-        Gate::define('view-stock-value', $is(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant));
+        Gate::define('view-stock-ledger', $is(Role::Admin, Role::OverallManager, Role::ProjectManager, Role::Storekeeper, Role::Accountant, Role::Auditor));
+        Gate::define('view-stock-value', $is(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant, Role::Auditor));
         // Store-level scoping (which store) is enforced again inside every stock service via Store::assertOperable.
         Gate::define('operate-stores', fn (User $u) => $u->hasRole(Role::Admin, Role::Storekeeper) && Store::operableBy($u)->exists());
         Gate::define('record-return', fn (User $u, MaterialIssue $i) => $u->hasRole(Role::Admin, Role::Storekeeper) && Store::operableBy($u)->exists()
             && $i->lines()->get()->contains(fn ($l) => bccomp((string) $l->qty, $l->returnedQty(), 3) > 0));
-        Gate::define('view-returns', $is(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant));
-        Gate::define('view-counts', $is(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant));
+        Gate::define('view-returns', $is(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant, Role::Auditor));
+        Gate::define('view-counts', $is(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant, Role::Auditor));
         Gate::define('start-count', fn (User $u) => $u->hasRole(Role::Admin, Role::Storekeeper) && Store::operableBy($u)->exists());
         Gate::define('edit-count', fn (User $u, StockCount $c) => $c->status === 'draft' && ($u->id === $c->counted_by || $u->isAdmin()));
         Gate::define('decide-count', fn (User $u, StockCount $c) => $c->status === 'submitted' && $u->id !== $c->counted_by
@@ -116,20 +116,20 @@ class AppServiceProvider extends ServiceProvider
         // Issuance
         Gate::define('issue-stock', $is(Role::Storekeeper));
         Gate::define('issue-request', fn (User $u, MaterialRequest $r) => $u->role === Role::Storekeeper && $r->status->isIssuable());
-        Gate::define('view-issue', fn (User $u, MaterialIssue $i) => $u->hasRole(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant)
+        Gate::define('view-issue', fn (User $u, MaterialIssue $i) => $u->hasRole(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant, Role::Auditor)
             || Gate::forUser($u)->allows('view-request', $i->request));
         Gate::define('acknowledge-issue', fn (User $u, MaterialIssue $i) => ($u->id === $i->request->requester_id || $u->role === Role::Storekeeper)
             && ! $i->acknowledgment()->exists());
 
         // Expenses
         Gate::define('record-expense', $is(Role::Admin, Role::Accountant));
-        Gate::define('view-expenses', $is(Role::Admin, Role::OverallManager, Role::Accountant, Role::ProjectManager));
+        Gate::define('view-expenses', $is(Role::Admin, Role::OverallManager, Role::Accountant, Role::ProjectManager, Role::Auditor));
         Gate::define('view-expense', fn (User $u, Expense $e) => Expense::visibleTo($u)->whereKey($e->id)->exists());
 
         // Procurement (purchasing approval policy is separate from material issue approval; see PurchasingService)
-        Gate::define('view-suppliers', $is(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant, Role::Storekeeper));
+        Gate::define('view-suppliers', $is(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant, Role::Storekeeper, Role::Auditor));
         Gate::define('manage-suppliers', $is(Role::Admin, Role::Procurement));
-        Gate::define('view-purchasing', $is(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant, Role::Storekeeper, Role::ProjectManager));
+        Gate::define('view-purchasing', $is(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant, Role::Storekeeper, Role::ProjectManager, Role::Auditor));
         Gate::define('create-pr', $is(Role::Admin, Role::Procurement, Role::Storekeeper, Role::ProjectManager));
         Gate::define('view-pr', fn (User $u, PurchaseRequisition $pr) => PurchaseRequisition::visibleTo($u)->whereKey($pr->id)->exists());
         Gate::define('decide-pr', fn (User $u, PurchaseRequisition $pr) => $pr->status === 'submitted' && $u->id !== $pr->requested_by
@@ -139,14 +139,14 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('decide-po', fn (User $u, PurchaseOrder $po) => app(PurchasingService::class)->canDecideOrder($u, $po));
         Gate::define('receive-po', fn (User $u, PurchaseOrder $po) => $po->isReceivable() && $u->hasRole(Role::Admin, Role::Storekeeper)
             && Store::operableBy($u)->whereKey($po->store_id)->exists());
-        Gate::define('view-invoices', $is(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant));
+        Gate::define('view-invoices', $is(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant, Role::Auditor));
         Gate::define('record-invoice', $is(Role::Admin, Role::Accountant));
         Gate::define('approve-invoice-exception', fn (User $u, PurchaseInvoice $i) => $i->match_status === 'exception'
             && $u->id !== $i->recorded_by && $u->hasRole(Role::Admin, Role::OverallManager));
         Gate::define('pay-invoice', fn (User $u, PurchaseInvoice $i) => $i->isPayable() && $u->hasRole(Role::Admin, Role::Accountant));
 
         // Project controls (Phase 4)
-        Gate::define('view-cost-codes', $is(Role::Admin, Role::OverallManager, Role::Accountant, Role::ProjectManager, Role::Procurement));
+        Gate::define('view-cost-codes', $is(Role::Admin, Role::OverallManager, Role::Accountant, Role::ProjectManager, Role::Procurement, Role::Auditor));
         Gate::define('manage-cost-codes', $is(Role::Admin, Role::Accountant));
         Gate::define('manage-project-controls', fn (User $u, Project $p) => $u->hasRole(Role::Admin, Role::OverallManager)
             || ($u->role === Role::ProjectManager && $p->manager_id === $u->id));
@@ -157,7 +157,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('pay-claim', fn (User $u, ExpenseClaim $c) => $c->status === 'approved' && $u->hasRole(Role::Admin, Role::Accountant));
 
         // Reports
-        Gate::define('view-reports', $is(Role::Admin, Role::OverallManager, Role::Accountant, Role::ProjectManager, Role::Storekeeper));
-        Gate::define('view-finance-reports', $is(Role::Admin, Role::OverallManager, Role::Accountant, Role::ProjectManager));
+        Gate::define('view-reports', $is(Role::Admin, Role::OverallManager, Role::Accountant, Role::ProjectManager, Role::Storekeeper, Role::Auditor));
+        Gate::define('view-finance-reports', $is(Role::Admin, Role::OverallManager, Role::Accountant, Role::ProjectManager, Role::Auditor));
     }
 }

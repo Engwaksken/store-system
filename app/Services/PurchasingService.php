@@ -93,7 +93,10 @@ class PurchasingService
             throw new AuthorizationException('Only the requester can submit this requisition.');
         }
 
-        return $this->transitionPr($pr, ['draft'], 'submitted', fn ($p) => $p->forceFill(['submitted_at' => now()]), 'pr.submitted');
+        $pr = $this->transitionPr($pr, ['draft'], 'submitted', fn ($p) => $p->forceFill(['submitted_at' => now()]), 'pr.submitted');
+        app(WorkflowNotifier::class)->requisitionSubmitted($pr);
+
+        return $pr;
     }
 
     public function decideRequisition(User $user, PurchaseRequisition $pr, string $decision, ?string $reason): PurchaseRequisition
@@ -106,8 +109,11 @@ class PurchasingService
         }
         $this->assertDecision($decision, $reason);
 
-        return $this->transitionPr($pr, ['submitted'], $decision,
+        $pr = $this->transitionPr($pr, ['submitted'], $decision,
             fn ($p) => $p->forceFill(['decided_by' => $user->id, 'decided_at' => now(), 'decision_reason' => $reason]), 'pr.'.$decision);
+        app(WorkflowNotifier::class)->requisitionDecided($pr);
+
+        return $pr;
     }
 
     public function cancelRequisition(User $user, PurchaseRequisition $pr): PurchaseRequisition
@@ -265,6 +271,7 @@ class PurchasingService
             }
             $pr?->forceFill(['status' => 'ordered'])->save();
             ActivityLog::record('po.created', "Purchase order {$po->po_no} raised ({$total})", $po);
+            app(WorkflowNotifier::class)->orderPending($po);
 
             return $po;
         });
@@ -312,6 +319,7 @@ class PurchasingService
                 PurchaseRequisition::whereKey($po->purchase_requisition_id)->where('status', 'ordered')->update(['status' => 'approved']);
             }
             ActivityLog::record('po.'.$decision, "Purchase order {$po->po_no} {$decision}", $po, ['reason' => $reason]);
+            app(WorkflowNotifier::class)->orderApproved($po);
 
             return $po;
         });

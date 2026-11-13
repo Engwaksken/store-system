@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\IssueController;
 use App\Http\Controllers\MaterialRequestController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectControlsController;
 use App\Http\Controllers\PurchaseInvoiceController;
@@ -34,12 +35,16 @@ Route::middleware('guest')->group(function () {
     Route::post('reset-password', [AuthController::class, 'reset'])->name('password.update');
 });
 
-Route::middleware(['auth', 'usable'])->group(function () {
+// Per-user ceiling on requests; individual posting routes have tighter limits.
+Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('password/change', [AuthController::class, 'showChange'])->name('password.change');
     Route::put('password/change', [AuthController::class, 'change'])->name('password.change.update');
 
     Route::get('/', DashboardController::class)->name('dashboard');
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/{id}', [NotificationController::class, 'open'])->whereUuid('id')->name('notifications.open');
+    Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
 
     // Administration
     Route::resource('users', UserController::class)->except(['show', 'destroy']);
@@ -55,6 +60,8 @@ Route::middleware(['auth', 'usable'])->group(function () {
     Route::post('projects/{project}/boq', [ProjectControlsController::class, 'storeBoq'])->name('projects.boq.store');
     Route::put('projects/{project}/boq/{boq}', [ProjectControlsController::class, 'updateBoq'])->name('projects.boq.update');
     Route::delete('projects/{project}/boq/{boq}', [ProjectControlsController::class, 'destroyBoq'])->name('projects.boq.destroy');
+    Route::get('projects/{project}/boq-template', [ProjectControlsController::class, 'boqTemplate'])->name('projects.boq.template');
+    Route::post('projects/{project}/boq-import', [ProjectControlsController::class, 'importBoq'])->name('projects.boq.import');
     Route::post('projects/{project}/milestones', [ProjectControlsController::class, 'storeMilestone'])->name('projects.milestones.store');
     Route::put('projects/{project}/milestones/{milestone}', [ProjectControlsController::class, 'completeMilestone'])->name('projects.milestones.complete');
     Route::get('cost-codes', [CostCodeController::class, 'index'])->name('cost-codes.index');
@@ -66,6 +73,8 @@ Route::middleware(['auth', 'usable'])->group(function () {
     Route::post('catalog/categories', [CatalogController::class, 'storeCategory'])->name('catalog.categories.store');
     Route::post('catalog/units', [CatalogController::class, 'storeUnit'])->name('catalog.units.store');
     Route::get('items', [CatalogController::class, 'index'])->name('items.index');
+    Route::get('items/import-template', [CatalogController::class, 'importTemplate'])->name('items.import-template');
+    Route::post('items/import', [CatalogController::class, 'import'])->name('items.import');
     Route::get('items/create', [CatalogController::class, 'create'])->name('items.create');
     Route::post('items', [CatalogController::class, 'store'])->name('items.store');
     Route::get('items/{item}', [CatalogController::class, 'show'])->name('items.show');
@@ -103,6 +112,7 @@ Route::middleware(['auth', 'usable'])->group(function () {
     Route::get('receipts/opening-template', [StockController::class, 'openingTemplate'])->name('receipts.opening-template');
     Route::post('receipts/opening-import', [StockController::class, 'importOpening'])->name('receipts.opening-import');
     Route::get('receipts/{receipt}', [StockController::class, 'show'])->name('receipts.show');
+    Route::get('receipts/{receipt}/pdf', [StockController::class, 'pdf'])->name('receipts.pdf');
     Route::get('adjustments/create', [StockController::class, 'createAdjustment'])->name('adjustments.create');
     Route::post('adjustments', [StockController::class, 'storeAdjustment'])->name('adjustments.store');
 
@@ -125,6 +135,7 @@ Route::middleware(['auth', 'usable'])->group(function () {
     Route::get('requests/{materialRequest}/issue', [IssueController::class, 'create'])->name('issues.create');
     Route::post('requests/{materialRequest}/issue', [IssueController::class, 'store'])->name('issues.store');
     Route::get('issues/{issue}', [IssueController::class, 'show'])->name('issues.show');
+    Route::get('issues/{issue}/pdf', [IssueController::class, 'pdf'])->name('issues.pdf');
     Route::post('issues/{issue}/acknowledge', [IssueController::class, 'acknowledge'])->name('issues.acknowledge');
 
     // Procurement
@@ -142,6 +153,7 @@ Route::middleware(['auth', 'usable'])->group(function () {
     Route::get('purchase-orders/create', [PurchaseOrderController::class, 'create'])->name('pos.create');
     Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->name('pos.store');
     Route::get('purchase-orders/{po}', [PurchaseOrderController::class, 'show'])->name('pos.show');
+    Route::get('purchase-orders/{po}/pdf', [PurchaseOrderController::class, 'pdf'])->name('pos.pdf');
     Route::post('purchase-orders/{po}/decide', [PurchaseOrderController::class, 'decide'])->name('pos.decide');
     Route::post('purchase-orders/{po}/cancel', [PurchaseOrderController::class, 'cancel'])->name('pos.cancel');
     Route::post('purchase-orders/{po}/close', [PurchaseOrderController::class, 'close'])->name('pos.close');

@@ -1,5 +1,16 @@
 # Changelog
 
+## Phase 5 – Reporting, alerts & security (13 Nov 2026)
+- Exports: every report to Excel (.xlsx, built-in writer) and PDF (dompdf), plus print and CSV; PDF issue voucher, purchase order and GRN with company branding and signature blocks. Exports keep row-level scoping.
+- Notifications: in-app bell for every hand-off (requests, transfers, counts, requisitions, POs, invoice exceptions, claims) with optional e-mail; daily reminders and escalation; budget variance alerts per project and cost code, once per level.
+- New **Auditor** role: read-only access to every register, report and the audit log; all ~70 mutating routes refuse it (tested).
+- Tamper-evident activity log (HMAC hash chain), `cms:verify-audit` scheduled daily, audit export to Excel/CSV.
+- CSV imports with templates for catalogue items and BOQ lines (all-or-nothing validation).
+- Security headers (CSP, frame/nosniff/referrer/permissions, HSTS), `no-store` on authenticated pages, per-user request throttle; decision endpoints authorize before validating.
+- Owner dashboard: cross-module work queues, open POs, unpaid/overdue supplier invoices, stock value per store.
+- Performance: approval lists use eager-loaded approvals; a test guards that dashboard/approval queries do not grow with pending items.
+- Tests: `ReportingAndSecurityTest` (12), `AuditorAccessTest`. Full suite 106 tests on SQLite and MariaDB 10.4.
+
 ## Phase 4 – Project controls (13 Nov 2026)
 - Cost codes (default set seeded), budgets per cost code, BOQ lines, milestones on a new *Budget, BOQ & milestones* page per project.
 - Material request lines can be linked to a BOQ line of the same project; issues and returns roll up to BOQ lines and cost codes.

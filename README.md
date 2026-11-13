@@ -11,7 +11,7 @@ php artisan migrate --seed              # base data + DEMO data (non-production 
 php artisan storage:link
 php artisan serve                       # http://127.0.0.1:8000
 ```
-Demo logins (password `Demo12345`): owner@, overall@, pm1@, pm2@, store@ (main store), sitestore@ (Kira site store), accounts@, buyer@ (procurement), staff1@, staff2@ `demo.test`.
+Demo logins (password `Demo12345`): owner@, overall@, pm1@, pm2@, store@ (main store), sitestore@ (Kira site store), accounts@, buyer@ (procurement), auditor@ (read-only), staff1@, staff2@ `demo.test`.
 
 ## Tests
 ```bash
@@ -31,6 +31,7 @@ DB_DATABASE=cms_concurrency_test php artisan cms:concurrency-test   # MySQL para
 | `docs/BACKLOG.md` | Prioritised backlog, done vs pending vs deferred |
 | `docs/DEPLOYMENT.md` | Shared-hosting deploy, cron, backup & restore |
 | `docs/PROCUREMENT.md` | Purchasing flow, approval policy, three-way match |
+| `docs/SECURITY.md` | Every security/integrity control and its test |
 | `docs/USER_MANUAL.md` | Quick manual per role |
 | `CHANGELOG.md` | Changes per phase |
 

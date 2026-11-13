@@ -83,6 +83,7 @@ class StockTransferService
                 $this->move($actor, $transfer, $itemId, $fromStoreId, 'transfer_out', '-'.$qty, (string) $item->avg_cost, $after);
             }
             ActivityLog::record('transfer.dispatched', "Transfer {$transfer->transfer_no} dispatched", $transfer);
+            app(WorkflowNotifier::class)->transferDispatched($transfer);
 
             return $transfer;
         }));

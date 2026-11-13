@@ -66,7 +66,7 @@ class PurchaseOrder extends Model
 
     public function scopeVisibleTo(Builder $q, User $user): Builder
     {
-        if ($user->hasRole(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant)) {
+        if ($user->hasRole(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant, Role::Auditor)) {
             return $q;
         }
         if ($user->role === Role::Storekeeper) {

@@ -39,7 +39,7 @@ class ExpenseClaim extends Model
     public function scopeVisibleTo(Builder $q, User $user): Builder
     {
         return match ($user->role) {
-            Role::Admin, Role::OverallManager, Role::Accountant => $q,
+            Role::Admin, Role::OverallManager, Role::Accountant, Role::Auditor => $q,
             Role::ProjectManager => $q->where(fn ($w) => $w->where('claimant_id', $user->id)
                 ->orWhereIn('project_id', Project::where('manager_id', $user->id)->select('id'))),
             default => $q->where('claimant_id', $user->id),
