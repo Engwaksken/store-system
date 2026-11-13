@@ -52,10 +52,24 @@ Legend: ✅ done and covered by automated tests · 🟡 done, needs owner or sta
 | B-33 | Ledger reconciles per store × item after transfers, issues, returns, adjustments | ✅ | `test_transfer_and_return_reconcile_across_stores` |
 | B-34 | Upgrade drill: run the Phase 2 migration on a copy of the live Phase 1 database | ⬜ | Fresh migration verified on MariaDB 10.4 (full suite); repeat on a production copy before go-live |
 
+## Phase 3: procurement
+| ID | Item | Status | Evidence |
+|---|---|---|---|
+| B-35 | Suppliers, Procurement Officer role | ✅ | `ProcurementTest::test_procurement_pages_and_role_visibility` |
+| B-36 | Purchase requisitions with independent approval and mandatory rejection reason | ✅ | `test_requester_cannot_approve_own_pr_and_rejection_needs_reason`, `test_pm_raises_pr_only_for_own_project` |
+| B-37 | Supplier quotes; justification when not the lowest; PO must match selected quote | ✅ | `test_choosing_a_dearer_quote_needs_a_reason_and_po_must_match_quote` |
+| B-38 | PO approval policy: not the creator, owner threshold, optimistic lock | ✅ | `test_po_approval_policy_creator_threshold_and_stale_version` |
+| B-39 | GRN against PO into the delivery store; no over-receipt; idempotent | ✅ | `test_grn_cannot_exceed_outstanding...`, `test_duplicate_grn_post_does_not_double_receive` |
+| B-40 | Supplier invoices with three-way match; exceptions need independent approval; duplicate invoice numbers refused | ✅ | `test_invoice_mismatch_blocks_payment_until_independent_approval`, `test_same_supplier_invoice_cannot_be_entered_twice` |
+| B-41 | Payments (records only), status unpaid / partial / paid, no overpayment | ✅ | `test_full_procure_to_pay_cycle` |
+| B-42 | PO cancel (before receipt) and close (short delivery) | ✅ | `test_cancel_reopens_requisition_but_not_after_receipt` |
+| B-43 | Printable PO with company branding and signatory blocks | ✅ | `pos/show` print view (PDF export: Phase 5) |
+| B-44 | Owner to confirm the PO owner-approval threshold (default 20,000,000 UGX) | 🟡 | Settings screen |
+
 ## Owner decisions still open (defaults in effect, see MVP_SCOPE §5)
 1. Name the Overall Manager and the primary Storekeeper (D1).
 2. Confirm the substitute PM-step reviewer when a PM requests on their own project (default: Owner/Admin, D2).
 3. Provide the hosting account and domain, project list, and opening stock count.
 
 ## Deferred: Phase 2, explicitly excluded
-purchasing/RFQ/PO (Phase 3) · supplier balances and portal · BOQ · payroll · equipment · native mobile app · offline sync · barcode/RFID · SMS/WhatsApp · accounting integration · multi-company · advanced analytics · bulk legacy migration.
+supplier portal · BOQ (Phase 4) · payroll · equipment · native mobile app · offline sync · barcode/RFID · SMS/WhatsApp · accounting integration · multi-company · advanced analytics · bulk legacy migration.

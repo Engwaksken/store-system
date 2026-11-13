@@ -28,10 +28,14 @@ Stock is only deducted when the storekeeper issues. Approval reserves nothing.
 - **Approvals** lists requests that the PM has approved.
 - Give the final decision. You may reduce quantities further (never above the PM's figure).
 - You cannot decide on a request you approved at PM level.
+- **Purchase requisitions / purchase orders** awaiting your decision are counted next to *Purchase requisitions* in the menu. You cannot approve your own requisition or a PO you raised.
+- **Supplier invoices** with a *Match exception* need your review: approve with a reason only when the difference is agreed.
 - **Stock counts** submitted by storekeepers wait for your approval. Check the reasons for each difference, then approve (posts the differences to stock) or reject with a comment.
 - You can create and edit projects and assign staff, and view all reports and the activity log.
 
 ## Storekeeper
+- **Purchase orders**: when goods arrive for an approved PO delivered to your store, open the PO and click **Receive goods (GRN)**. Enter what actually arrived; you cannot receive more than is still on order. The GRN updates stock at the PO price.
+- You can raise **Purchase requisitions** when stock runs low.
 - **Issues & vouchers → Ready to issue** lists fully approved requests.
 - Click **Issue**. Each line is capped at the smaller of *outstanding approved quantity* and *on-hand stock*, and you can issue less (a partial issue). Enter the name of the person collecting, then confirm.
 - **Print voucher** and get it signed. Any remainder stays outstanding until you issue it later.
@@ -46,7 +50,15 @@ Stock is only deducted when the storekeeper issues. Approval reserves nothing.
 - **Return to store**: open the issue voucher and click *Return to store* when unused material comes back. You cannot return more than is still out on the voucher. The project is credited at the voucher cost.
 - **Stock counts → New count** creates a count sheet with the book quantities frozen. Enter what you physically count (0 if none), give a reason for every difference, save, and **Submit for approval**. Nothing changes in stock until the Owner/Admin or Overall Manager approves; then each difference is posted as an adjustment.
 
+## Procurement Officer
+- **Purchase requisitions** shows requests to buy. Once a requisition is *approved*, record each supplier's quotation on it (one per supplier) and **Select** the winner. If it is not the lowest, type why.
+- Click **Raise purchase order**: supplier, prices and quantities come from the selected quote. Saving sends the PO for approval. You cannot approve your own PO; above the owner threshold only the Owner/Admin can.
+- **Print PO** gives a branded order with signature blocks for the supplier.
+- **Cancel** a PO only before anything is delivered. If a supplier will never deliver the balance, **Close** the PO instead.
+- **Suppliers**: keep contacts, TIN and payment terms up to date.
+
 ## Accountant
+- **Supplier invoices**: open the PO and click *Record supplier invoice*. Enter the invoice exactly as printed and attach the scan. If the price differs from the PO, or it bills more than has been received, it is flagged as a *Match exception*; ask the Overall Manager or Owner to review it. You can record payments only on matched or approved invoices, and never more than the balance.
 - **Expenses → Record expense** is for cash paid directly for a project: labour, transport, hire, direct site purchases. Attach the receipt photo or PDF.
 - **Do not** record materials bought into the store as an expense. They are a stock receipt, and become project cost when issued.
 - Reports: *Cash expenses by project*, *Materials issued by project*, *Project budget vs cost*. Each can be printed or exported to CSV.

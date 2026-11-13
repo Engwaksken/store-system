@@ -8,6 +8,9 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\IssueController;
 use App\Http\Controllers\MaterialRequestController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\PurchaseInvoiceController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\PurchaseRequisitionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StockController;
@@ -15,6 +18,7 @@ use App\Http\Controllers\StockCountController;
 use App\Http\Controllers\StockReturnController;
 use App\Http\Controllers\StockTransferController;
 use App\Http\Controllers\StoreController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -109,6 +113,34 @@ Route::middleware(['auth', 'usable'])->group(function () {
     Route::post('requests/{materialRequest}/issue', [IssueController::class, 'store'])->name('issues.store');
     Route::get('issues/{issue}', [IssueController::class, 'show'])->name('issues.show');
     Route::post('issues/{issue}/acknowledge', [IssueController::class, 'acknowledge'])->name('issues.acknowledge');
+
+    // Procurement
+    Route::resource('suppliers', SupplierController::class)->except(['destroy']);
+    Route::get('purchase-requisitions', [PurchaseRequisitionController::class, 'index'])->name('prs.index');
+    Route::get('purchase-requisitions/create', [PurchaseRequisitionController::class, 'create'])->name('prs.create');
+    Route::post('purchase-requisitions', [PurchaseRequisitionController::class, 'store'])->name('prs.store');
+    Route::get('purchase-requisitions/{pr}', [PurchaseRequisitionController::class, 'show'])->name('prs.show');
+    Route::post('purchase-requisitions/{pr}/submit', [PurchaseRequisitionController::class, 'submit'])->name('prs.submit');
+    Route::post('purchase-requisitions/{pr}/decide', [PurchaseRequisitionController::class, 'decide'])->name('prs.decide');
+    Route::post('purchase-requisitions/{pr}/cancel', [PurchaseRequisitionController::class, 'cancel'])->name('prs.cancel');
+    Route::post('purchase-requisitions/{pr}/quotes', [PurchaseRequisitionController::class, 'storeQuote'])->name('prs.quotes.store');
+    Route::post('quotes/{quote}/select', [PurchaseRequisitionController::class, 'selectQuote'])->name('quotes.select');
+    Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->name('pos.index');
+    Route::get('purchase-orders/create', [PurchaseOrderController::class, 'create'])->name('pos.create');
+    Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->name('pos.store');
+    Route::get('purchase-orders/{po}', [PurchaseOrderController::class, 'show'])->name('pos.show');
+    Route::post('purchase-orders/{po}/decide', [PurchaseOrderController::class, 'decide'])->name('pos.decide');
+    Route::post('purchase-orders/{po}/cancel', [PurchaseOrderController::class, 'cancel'])->name('pos.cancel');
+    Route::post('purchase-orders/{po}/close', [PurchaseOrderController::class, 'close'])->name('pos.close');
+    Route::get('purchase-orders/{po}/receive', [PurchaseOrderController::class, 'receiveForm'])->name('pos.receive');
+    Route::post('purchase-orders/{po}/receive', [PurchaseOrderController::class, 'receive'])->middleware('throttle:30,1')->name('pos.receive.store');
+    Route::get('purchase-orders/{po}/invoice', [PurchaseInvoiceController::class, 'create'])->name('invoices.create');
+    Route::post('purchase-orders/{po}/invoice', [PurchaseInvoiceController::class, 'store'])->name('invoices.store');
+    Route::get('supplier-invoices', [PurchaseInvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('supplier-invoices/{invoice}', [PurchaseInvoiceController::class, 'show'])->name('invoices.show');
+    Route::get('supplier-invoices/{invoice}/attachment', [PurchaseInvoiceController::class, 'attachment'])->name('invoices.attachment');
+    Route::post('supplier-invoices/{invoice}/approve-exception', [PurchaseInvoiceController::class, 'approveException'])->name('invoices.approve-exception');
+    Route::post('supplier-invoices/{invoice}/payments', [PurchaseInvoiceController::class, 'pay'])->middleware('throttle:30,1')->name('invoices.pay');
 
     // Expenses
     Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');

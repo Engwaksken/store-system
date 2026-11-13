@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Gate;
 
 class SettingsController extends Controller
 {
-    public const KEYS = ['company_name', 'company_address', 'company_phone', 'company_email', 'voucher_footer'];
+    public const KEYS = ['company_name', 'company_address', 'company_phone', 'company_email', 'voucher_footer', 'po_owner_threshold'];
 
     public function edit()
     {
@@ -31,6 +31,7 @@ class SettingsController extends Controller
             'company_phone' => 'nullable|string|max:50',
             'company_email' => 'nullable|email|max:150',
             'voucher_footer' => 'nullable|string|max:300',
+            'po_owner_threshold' => 'nullable|numeric|min:0',
             'logo' => 'nullable|image|mimes:png,jpg,jpeg|max:1024',
         ]);
         foreach (self::KEYS as $k) {

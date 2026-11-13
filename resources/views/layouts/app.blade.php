@@ -48,6 +48,14 @@
             <a href="{{ route('catalog.setup') }}" @class(['active' => request()->routeIs('catalog.*')])>Categories &amp; units</a>
         @endcan
 
+        @can('view-purchasing')
+            <div class="nav-group">Procurement</div>
+            <a href="{{ route('prs.index') }}" @class(['active' => request()->routeIs('prs.*')])>Purchase requisitions @if($purchaseApprovalCount)<span class="count">{{ $purchaseApprovalCount }}</span>@endif</a>
+            <a href="{{ route('pos.index') }}" @class(['active' => request()->routeIs('pos.*')])>Purchase orders</a>
+            @can('view-suppliers')<a href="{{ route('suppliers.index') }}" @class(['active' => request()->routeIs('suppliers.*')])>Suppliers</a>@endcan
+            @can('view-invoices')<a href="{{ route('invoices.index') }}" @class(['active' => request()->routeIs('invoices.*')])>Supplier invoices</a>@endcan
+        @endcan
+
         @can('view-expenses')
             <div class="nav-group">Finance</div>
             <a href="{{ route('expenses.index') }}" @class(['active' => request()->routeIs('expenses.*')])>Expenses</a>

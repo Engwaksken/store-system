@@ -11,6 +11,8 @@
     <div class="field"><label>Phone</label><input type="text" name="company_phone" value="{{ old('company_phone', $values['company_phone']) }}"></div>
     <div class="field"><label>E-mail</label><input type="email" name="company_email" value="{{ old('company_email', $values['company_email']) }}"></div>
     <div class="field"><label>Voucher footer text</label><input type="text" name="voucher_footer" value="{{ old('voucher_footer', $values['voucher_footer']) }}"></div>
+    <div class="field"><label for="po_owner_threshold">Purchase orders above this value (UGX) need the Owner/Admin</label><input id="po_owner_threshold" type="number" min="0" step="1" name="po_owner_threshold" value="{{ old('po_owner_threshold', $values['po_owner_threshold'] ?? \App\Services\PurchasingService::DEFAULT_OWNER_THRESHOLD) }}">
+        <p class="hint">Below it, the Overall Manager may approve. Nobody approves a PO they raised.</p></div>
     <div class="field"><label>Logo (PNG/JPG, max 1 MB)</label><input type="file" name="logo" accept="image/png,image/jpeg"></div>
     <button class="btn">Save settings</button>
 </form>

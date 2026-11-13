@@ -9,11 +9,16 @@ use App\Models\Expense;
 use App\Models\MaterialIssue;
 use App\Models\MaterialRequest;
 use App\Models\Project;
+use App\Models\PurchaseInvoice;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseRequisition;
 use App\Models\StockCount;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\PurchasingService;
 use App\Services\RequestWorkflow;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -31,8 +36,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->defineGates();
+        Route::model('pr', PurchaseRequisition::class);
+        Route::model('po', PurchaseOrder::class);
+        Route::model('quote', \App\Models\SupplierQuote::class);
+        Route::model('invoice', PurchaseInvoice::class);
 
-        View::composer(['layouts.app', 'layouts.guest', 'issues.show', 'reports.table'], function ($view) {
+        View::composer(['layouts.app', 'layouts.guest', 'issues.show', 'reports.table', 'pos.show'], function ($view) {
             $view->with('companyName', rescue(fn () => AppSetting::get('company_name'), null, false) ?: config('app.name'));
         });
         View::composer('layouts.app', function ($view) {
@@ -47,7 +56,12 @@ class AppServiceProvider extends ServiceProvider
             $transferInboxCount = $user && $user->hasRole(Role::Admin, Role::Storekeeper)
                 ? \App\Models\StockTransfer::where('status', 'in_transit')->where('dispatched_by', '!=', $user->id)
                     ->whereIn('to_store_id', Store::operableBy($user)->select('id'))->count() : 0;
-            $view->with(compact('approvalCount', 'issueQueueCount', 'transferInboxCount'));
+            $purchaseApprovalCount = 0;
+            if ($user && $user->hasRole(Role::Admin, Role::OverallManager)) {
+                $purchaseApprovalCount = PurchaseRequisition::where('status', 'submitted')->where('requested_by', '!=', $user->id)->count()
+                    + PurchaseOrder::where('status', 'pending_approval')->get()->filter(fn ($po) => Gate::allows('decide-po', $po))->count();
+            }
+            $view->with(compact('approvalCount', 'issueQueueCount', 'transferInboxCount', 'purchaseApprovalCount'));
         });
     }
 
@@ -104,6 +118,25 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('record-expense', $is(Role::Admin, Role::Accountant));
         Gate::define('view-expenses', $is(Role::Admin, Role::OverallManager, Role::Accountant, Role::ProjectManager));
         Gate::define('view-expense', fn (User $u, Expense $e) => Expense::visibleTo($u)->whereKey($e->id)->exists());
+
+        // Procurement (purchasing approval policy is separate from material issue approval; see PurchasingService)
+        Gate::define('view-suppliers', $is(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant, Role::Storekeeper));
+        Gate::define('manage-suppliers', $is(Role::Admin, Role::Procurement));
+        Gate::define('view-purchasing', $is(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant, Role::Storekeeper, Role::ProjectManager));
+        Gate::define('create-pr', $is(Role::Admin, Role::Procurement, Role::Storekeeper, Role::ProjectManager));
+        Gate::define('view-pr', fn (User $u, PurchaseRequisition $pr) => PurchaseRequisition::visibleTo($u)->whereKey($pr->id)->exists());
+        Gate::define('decide-pr', fn (User $u, PurchaseRequisition $pr) => $pr->status === 'submitted' && $u->id !== $pr->requested_by
+            && $u->hasRole(Role::Admin, Role::OverallManager));
+        Gate::define('buy', $is(Role::Admin, Role::Procurement));
+        Gate::define('view-po', fn (User $u, PurchaseOrder $po) => PurchaseOrder::visibleTo($u)->whereKey($po->id)->exists());
+        Gate::define('decide-po', fn (User $u, PurchaseOrder $po) => app(PurchasingService::class)->canDecideOrder($u, $po));
+        Gate::define('receive-po', fn (User $u, PurchaseOrder $po) => $po->isReceivable() && $u->hasRole(Role::Admin, Role::Storekeeper)
+            && Store::operableBy($u)->whereKey($po->store_id)->exists());
+        Gate::define('view-invoices', $is(Role::Admin, Role::OverallManager, Role::Procurement, Role::Accountant));
+        Gate::define('record-invoice', $is(Role::Admin, Role::Accountant));
+        Gate::define('approve-invoice-exception', fn (User $u, PurchaseInvoice $i) => $i->match_status === 'exception'
+            && $u->id !== $i->recorded_by && $u->hasRole(Role::Admin, Role::OverallManager));
+        Gate::define('pay-invoice', fn (User $u, PurchaseInvoice $i) => $i->isPayable() && $u->hasRole(Role::Admin, Role::Accountant));
 
         // Reports
         Gate::define('view-reports', $is(Role::Admin, Role::OverallManager, Role::Accountant, Role::ProjectManager, Role::Storekeeper));

@@ -11,7 +11,7 @@ php artisan migrate --seed              # base data + DEMO data (non-production 
 php artisan storage:link
 php artisan serve                       # http://127.0.0.1:8000
 ```
-Demo logins (password `Demo12345`): owner@, overall@, pm1@, pm2@, store@ (main store), sitestore@ (Kira site store), accounts@, staff1@, staff2@ `demo.test`.
+Demo logins (password `Demo12345`): owner@, overall@, pm1@, pm2@, store@ (main store), sitestore@ (Kira site store), accounts@, buyer@ (procurement), staff1@, staff2@ `demo.test`.
 
 ## Tests
 ```bash
@@ -30,6 +30,7 @@ DB_DATABASE=cms_concurrency_test php artisan cms:concurrency-test   # MySQL para
 | `docs/UAT_EVIDENCE.md` | MariaDB race test, full suite on MariaDB, backup/restore drill |
 | `docs/BACKLOG.md` | Prioritised backlog, done vs pending vs deferred |
 | `docs/DEPLOYMENT.md` | Shared-hosting deploy, cron, backup & restore |
+| `docs/PROCUREMENT.md` | Purchasing flow, approval policy, three-way match |
 | `docs/USER_MANUAL.md` | Quick manual per role |
 | `CHANGELOG.md` | Changes per phase |
 
@@ -40,5 +41,6 @@ DB_DATABASE=cms_concurrency_test php artisan cms:concurrency-test   # MySQL para
 - `app/Services/StockTransferService.php`, `StockReturnService.php`, `StockCountService.php`: transfers, returns, counts
 - `app/Models/Store.php` (`operableBy`, `assertOperable`): which stores a user may move stock in
 - `app/Support/Idempotency.php`: duplicate-post protection
+- `app/Services/PurchasingService.php`, `GoodsReceiptService.php`, `PurchaseInvoiceService.php`: PR → PO → GRN → invoice → payment
 - `app/Services/ProjectCostService.php`: materials issued + cash expenses (no double count)
 - `app/Providers/AppServiceProvider.php`: all authorization gates

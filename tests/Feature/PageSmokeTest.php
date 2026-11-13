@@ -21,7 +21,8 @@ class PageSmokeTest extends TestCase
             'expenses.index', 'expenses.create', 'reports.index', 'reports.stock', 'reports.movements', 'reports.pending', 'reports.issued', 'reports.expenses',
             'reports.project-cost', 'users.index', 'users.create', 'activity.index', 'settings.edit', 'projects.create', 'items.create', 'receipts.create',
             'adjustments.create', 'requests.create', 'password.change',
-            'stores.index', 'stores.create', 'transfers.index', 'transfers.create', 'returns.index', 'counts.index', 'counts.create'];
+            'stores.index', 'stores.create', 'transfers.index', 'transfers.create', 'returns.index', 'counts.index', 'counts.create',
+            'prs.index', 'prs.create', 'pos.index', 'pos.create', 'suppliers.index', 'suppliers.create', 'invoices.index'];
         $detail = [
             fn () => route('projects.show', Project::first()),
             fn () => route('requests.show', \App\Models\MaterialRequest::first()),
@@ -32,8 +33,13 @@ class PageSmokeTest extends TestCase
             fn () => route('transfers.show', \App\Models\StockTransfer::first()),
             fn () => route('returns.show', \App\Models\StockReturn::first()),
             fn () => route('counts.show', \App\Models\StockCount::first()),
+            fn () => route('prs.show', \App\Models\PurchaseRequisition::first()),
+            fn () => route('pos.show', \App\Models\PurchaseOrder::first()),
+            fn () => route('pos.show', \App\Models\PurchaseOrder::latest('id')->first()),
+            fn () => route('suppliers.show', \App\Models\Supplier::first()),
+            fn () => route('invoices.show', \App\Models\PurchaseInvoice::first()),
         ];
-        foreach (['owner', 'overall', 'pm1', 'store', 'sitestore', 'accounts', 'staff1'] as $who) {
+        foreach (['owner', 'overall', 'pm1', 'store', 'sitestore', 'accounts', 'buyer', 'staff1'] as $who) {
             $user = User::where('email', "{$who}@demo.test")->sole();
             foreach ($pages as $page) {
                 $status = $this->actingAs($user)->get(route($page))->status();

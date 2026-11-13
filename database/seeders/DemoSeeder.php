@@ -17,6 +17,10 @@ use App\Services\StockReturnService;
 use App\Services\StockService;
 use App\Services\StockTransferService;
 use App\Models\Store;
+use App\Models\Supplier;
+use App\Services\GoodsReceiptService;
+use App\Services\PurchaseInvoiceService;
+use App\Services\PurchasingService;
 use Illuminate\Database\Seeder;
 
 /**
@@ -38,6 +42,7 @@ class DemoSeeder extends Seeder
         $sk = $mk('Moses Store', 'store@demo.test', Role::Storekeeper);
         $sk2 = $mk('Agnes Site Store', 'sitestore@demo.test', Role::Storekeeper);
         $acc = $mk('Joan Accounts', 'accounts@demo.test', Role::Accountant);
+        $buyer = $mk('Daniel Procurement', 'buyer@demo.test', Role::Procurement);
         $s1 = $mk('Brian Site', 'staff1@demo.test', Role::Staff);
         $s2 = $mk('Esther Site', 'staff2@demo.test', Role::Staff);
 
@@ -123,6 +128,28 @@ class DemoSeeder extends Seeder
         ]])->all());
         $counts->submit($sk2, $count);
 
+        // Procurement: suppliers, an approved PR with two quotes, a PO partly delivered and invoiced, and a PO awaiting approval.
+        $sup1 = Supplier::create(['code' => 'KHL', 'name' => 'Kampala Hardware Ltd', 'contact_person' => 'Sarah', 'phone' => '0772 000111', 'payment_terms' => '30 days']);
+        $sup2 = Supplier::create(['code' => 'RSM', 'name' => 'Roofing & Steel Mart', 'contact_person' => 'Ivan', 'phone' => '0701 222333', 'payment_terms' => 'Cash on delivery']);
+        $buy = app(PurchasingService::class);
+        $pr = $buy->createRequisition($sk, ['store_id' => Store::DEFAULT_ID, 'purpose' => 'Iron sheets for Kira roofing', 'project_id' => null],
+            [['item_id' => $items[7]->id, 'qty' => 120, 'est_unit_cost' => 38000]]);
+        $buy->submitRequisition($sk, $pr);
+        $pr = $buy->decideRequisition($om, $pr, 'approved', null);
+        $prLine = $pr->lines()->first();
+        $buy->addQuote($buyer, $pr, $sup1->id, [$prLine->id => 39000], ['quote_ref' => 'Q-551']);
+        $q2 = $buy->addQuote($buyer, $pr, $sup2->id, [$prLine->id => 37500], ['quote_ref' => 'RSM/88']);
+        $buy->selectQuote($buyer, $q2, null);
+        $po = $buy->createOrder($buyer, ['purchase_requisition_id' => $pr->id, 'supplier_id' => $sup2->id, 'store_id' => Store::DEFAULT_ID,
+            'expected_on' => now()->addDays(3)->toDateString(), 'terms' => 'Delivery to main store'], [['item_id' => $items[7]->id, 'qty' => 120, 'unit_price' => 37500]]);
+        $po = $buy->decideOrder($om, $po, 'approved', null);
+        $poLine = $po->lines()->first();
+        app(GoodsReceiptService::class)->receive($sk, $po, [$poLine->id => 80], ['reference' => 'DN-3021']);
+        app(PurchaseInvoiceService::class)->record($acc, $po->fresh(), ['supplier_invoice_no' => 'RSM-INV-771', 'invoice_date' => now()->toDateString(),
+            'due_date' => now()->addDays(30)->toDateString()], [$poLine->id => ['qty' => 80, 'unit_price' => 37500]]);
+        $buy->createOrder($buyer, ['supplier_id' => $sup1->id, 'store_id' => $site->id, 'project_id' => $p1->id],
+            [['item_id' => $items[2]->id, 'qty' => 60, 'unit_price' => 42000], ['item_id' => $items[1]->id, 'qty' => 2, 'unit_price' => 350000]]);
+
         $ec = fn (string $n) => ExpenseCategory::where('name', $n)->value('id');
         $rows = [
             [$p1, 'Casual labour', 1850000, 'cash', 'Weekly casuals week 1', 12],
@@ -134,6 +161,6 @@ class DemoSeeder extends Seeder
             Expense::create(['project_id' => $p->id, 'category_id' => $ec($c), 'incurred_on' => now()->subDays($daysAgo), 'amount' => $amt, 'payment_mode' => $mode, 'description' => $desc, 'recorded_by' => $acc->id]);
         }
 
-        $this->command?->info('Demo data loaded. All demo accounts use password Demo12345: owner@, overall@, pm1@, pm2@, store@, sitestore@, accounts@, staff1@, staff2@demo.test');
+        $this->command?->info('Demo data loaded. All demo accounts use password Demo12345: owner@, overall@, pm1@, pm2@, store@, sitestore@, accounts@, buyer@, staff1@, staff2@demo.test');
     }
 }

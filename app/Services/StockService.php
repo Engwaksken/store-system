@@ -35,61 +35,72 @@ class StockService
         $this->assertStoreUser($actor);
         $storeId = (int) ($header['store_id'] ?? Store::DEFAULT_ID);
         Store::assertOperable($actor, $storeId);
-        $type = $header['type'] === 'opening' ? 'opening' : 'purchase';
         $lines = $this->normaliseLines($lines);
 
-        return Idempotency::run(StockReceipt::class, $header['idempotency_key'] ?? null, fn () => DB::transaction(function () use ($actor, $header, $lines, $type, $storeId, $extra) {
-            $itemIds = array_keys($lines);
-            $items = InventoryItem::whereIn('id', $itemIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
-            $balances = InventoryBalance::lockRows($storeId, $itemIds);
+        return Idempotency::run(StockReceipt::class, $header['idempotency_key'] ?? null,
+            fn () => DB::transaction(fn () => $this->postReceipt($actor, $header, $lines, $extra)));
+    }
 
-            if ($type === 'opening') {
-                $already = StockMovement::where('store_id', $storeId)->whereIn('item_id', $itemIds)->pluck('item_id')->unique();
-                if ($already->isNotEmpty()) {
-                    $skus = $items->only($already->all())->pluck('sku')->implode(', ');
-                    throw new WorkflowException("Opening balance not allowed: item(s) {$skus} already have stock history in this store. Use a receipt or adjustment.");
-                }
+    /**
+     * Writes the receipt, lines, balances, average cost and ledger. Must run inside a transaction; the caller has
+     * already authorized the actor for the store (receive() or GoodsReceiptService).
+     *
+     * @param  array<int, array{qty:string, unit_cost:string, po_line_id?:int}>  $lines  normalised by normaliseLines()
+     */
+    public function postReceipt(User $actor, array $header, array $lines, array $extra = []): StockReceipt
+    {
+        $storeId = (int) ($header['store_id'] ?? Store::DEFAULT_ID);
+        $type = $header['type'] === 'opening' ? 'opening' : 'purchase';
+        $itemIds = array_keys($lines);
+        $items = InventoryItem::whereIn('id', $itemIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+        $balances = InventoryBalance::lockRows($storeId, $itemIds);
+
+        if ($type === 'opening') {
+            $already = StockMovement::where('store_id', $storeId)->whereIn('item_id', $itemIds)->pluck('item_id')->unique();
+            if ($already->isNotEmpty()) {
+                $skus = $items->only($already->all())->pluck('sku')->implode(', ');
+                throw new WorkflowException("Opening balance not allowed: item(s) {$skus} already have stock history in this store. Use a receipt or adjustment.");
             }
+        }
 
-            $receipt = StockReceipt::create([
-                'receipt_no' => DocumentSequence::next($type === 'opening' ? 'OB' : 'GRN'),
-                'type' => $type,
-                'store_id' => $storeId,
-                'supplier_name' => $header['supplier_name'] ?? null,
-                'reference' => $header['reference'] ?? null,
-                'received_on' => $header['received_on'],
-                'notes' => $header['notes'] ?? null,
-                'total_value' => $this->total($lines),
-                'received_by' => $actor->id,
-                'idempotency_key' => $header['idempotency_key'] ?? null,
-                ...$extra,
+        $receipt = StockReceipt::create([
+            'receipt_no' => DocumentSequence::next($type === 'opening' ? 'OB' : 'GRN'),
+            'type' => $type,
+            'store_id' => $storeId,
+            'supplier_name' => $header['supplier_name'] ?? null,
+            'reference' => $header['reference'] ?? null,
+            'received_on' => $header['received_on'],
+            'notes' => $header['notes'] ?? null,
+            'total_value' => $this->total($lines),
+            'received_by' => $actor->id,
+            'idempotency_key' => $header['idempotency_key'] ?? null,
+            ...$extra,
+        ]);
+
+        foreach ($lines as $itemId => $l) {
+            $item = $items->get($itemId) ?? throw new WorkflowException('Unknown item.');
+            $balance = $balances->get($itemId);
+            $newOnHand = bcadd((string) $balance->on_hand, $l['qty'], 3);
+            $this->revalueOnReceipt($item, $l['qty'], $l['unit_cost']);
+
+            StockReceiptLine::create([
+                'stock_receipt_id' => $receipt->id, 'item_id' => $itemId,
+                'qty' => $l['qty'], 'unit_cost' => $l['unit_cost'],
+                'line_total' => bcmul($l['qty'], $l['unit_cost'], 2),
+                ...(isset($l['po_line_id']) ? ['purchase_order_line_id' => $l['po_line_id']] : []),
             ]);
+            $balance->update(['on_hand' => $newOnHand]);
 
-            foreach ($lines as $itemId => $l) {
-                $item = $items->get($itemId) ?? throw new WorkflowException('Unknown item.');
-                $balance = $balances->get($itemId);
-                $newOnHand = bcadd((string) $balance->on_hand, $l['qty'], 3);
-                $this->revalueOnReceipt($item, $l['qty'], $l['unit_cost']);
+            StockMovement::create([
+                'item_id' => $itemId, 'store_id' => $storeId, 'movement_type' => $type === 'opening' ? 'opening' : 'receipt',
+                'qty_delta' => $l['qty'], 'unit_cost' => $l['unit_cost'], 'balance_after' => $newOnHand,
+                'project_id' => null, 'source_type' => 'stock_receipt', 'source_id' => $receipt->id, 'actor_id' => $actor->id,
+            ]);
+        }
 
-                StockReceiptLine::create([
-                    'stock_receipt_id' => $receipt->id, 'item_id' => $itemId,
-                    'qty' => $l['qty'], 'unit_cost' => $l['unit_cost'],
-                    'line_total' => bcmul($l['qty'], $l['unit_cost'], 2),
-                    ...(isset($l['po_line_id']) ? ['purchase_order_line_id' => $l['po_line_id']] : []),
-                ]);
-                $balance->update(['on_hand' => $newOnHand]);
+        ActivityLog::record('stock.'.$type, "Stock {$type} {$receipt->receipt_no} recorded", $receipt);
 
-                StockMovement::create([
-                    'item_id' => $itemId, 'store_id' => $storeId, 'movement_type' => $type === 'opening' ? 'opening' : 'receipt',
-                    'qty_delta' => $l['qty'], 'unit_cost' => $l['unit_cost'], 'balance_after' => $newOnHand,
-                    'project_id' => null, 'source_type' => 'stock_receipt', 'source_id' => $receipt->id, 'actor_id' => $actor->id,
-                ]);
-            }
-
-            ActivityLog::record('stock.'.$type, "Stock {$type} {$receipt->receipt_no} recorded", $receipt);
-
-            return $receipt;
-        }));
+        return $receipt;
     }
 
     /**
@@ -160,7 +171,7 @@ class StockService
     }
 
     /** @return array<int, array{qty:string, unit_cost:string, po_line_id?:int}> keyed and sorted by item_id */
-    private function normaliseLines(array $lines): array
+    public function normaliseLines(array $lines): array
     {
         $out = [];
         foreach ($lines as $l) {

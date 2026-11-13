@@ -1,5 +1,15 @@
 # Changelog
 
+## Phase 3 – Procurement (13 Nov 2026)
+- New role **Procurement Officer**; suppliers register.
+- Purchase requisitions (store restock or project), approved by Owner/Admin or Overall Manager, never the requester.
+- Supplier quotations per requisition, with a written reason when the chosen quote is not the lowest.
+- Purchase orders: prices locked to the selected quote; approval never by the creator; above a configurable owner threshold only the Owner/Admin; optimistic locking; cancel before receipt, close on short delivery; printable PO.
+- Goods received against the PO into its delivery store (no over-receipt, idempotent); stock valued at PO price.
+- Supplier invoices with three-way match (PO price, received qty, invoiced qty); exceptions block payment until independently approved; duplicate supplier invoice numbers refused; private scan attachment.
+- Supplier payments recorded (no bank transactions), with unpaid / partially paid / paid status.
+- Tests: `ProcurementTest` (11). Full suite 85 tests on SQLite and MariaDB 10.4.
+
 ## Phase 2 – Multi-store stock control (13 Nov 2026)
 - Stores: central store plus project site stores; storekeepers are assigned per store. All existing stock and history moved into store `MAIN` by the migration, and existing storekeepers are assigned to it.
 - Receipts, opening balances (once per item per store), adjustments and issues now name a store. Site stores issue only to their own project.

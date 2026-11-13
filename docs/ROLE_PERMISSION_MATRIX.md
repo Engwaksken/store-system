@@ -2,7 +2,7 @@
 
 Every permission is enforced on the server (policies/gates in `app/Policies`, `app/Providers/AppServiceProvider.php`). Hiding a menu item is cosmetic only, and a direct HTTP request without the permission returns **403**.
 
-Roles (`users.role`): `admin` (Owner/Admin), `overall_manager`, `project_manager`, `storekeeper`, `staff`, `accountant`.
+Roles (`users.role`): `admin` (Owner/Admin), `overall_manager`, `project_manager`, `storekeeper`, `staff`, `accountant`, `procurement` (Procurement Officer, Phase 3).
 
 "Assigned" means the user is the project's `manager_id` or appears in `project_user`.
 
@@ -37,6 +37,24 @@ Roles (`users.role`): `admin` (Owner/Admin), `overall_manager`, `project_manager
 
 ¹ Admin may request on any project. Because admin is never an approver except as the D2 substitute, an admin request goes PM → Overall in the normal way.
 
+## Procurement (Phase 3)
+Full policy: `docs/PROCUREMENT.md`.
+
+| Capability | Admin | Overall Mgr | Project Mgr | Storekeeper | Staff | Accountant | Procurement |
+|---|---|---|---|---|---|---|---|
+| View suppliers | ✅ | ✅ | — | ✅ | — | ✅ | ✅ |
+| Create / edit suppliers | ✅ | — | — | — | — | — | ✅ |
+| Raise purchase requisition | ✅ | — | own projects | ✅ | — | — | ✅ |
+| View requisitions | all | all | own + managed projects | own | — | all | all |
+| Approve / reject requisition | ✅ (not own) | ✅ (not own) | — | — | — | — | — |
+| Record quotes, select supplier, raise / cancel / close PO | ✅ | — | — | — | — | — | ✅ |
+| Approve / reject PO | ✅ (not own PO; required above threshold) | ✅ up to threshold (not own PO) | — | — | — | — | — |
+| View purchase orders | all | all | managed projects | delivery store assigned | — | all | all |
+| Receive goods against PO (GRN) | ✅ | — | — | assigned delivery store | — | — | — |
+| Record supplier invoice, record payment | ✅ | — | — | — | — | ✅ | — |
+| View supplier invoices | ✅ | ✅ | — | — | — | ✅ | ✅ |
+| Approve invoice match exception | ✅ (not recorder) | ✅ (not recorder) | — | — | — | — | — |
+
 ## Separation-of-duty rules (server-checked)
 1. PM-step approver ≠ requester.
 2. Overall approver ≠ requester **and** ≠ PM-step approver of the same version.
@@ -45,3 +63,5 @@ Roles (`users.role`): `admin` (Owner/Admin), `overall_manager`, `project_manager
 5. A transfer is received by a different person from the one who dispatched it.
 6. A stock count is approved by Admin/Overall Manager, never by the person who counted.
 7. Store scoping is re-checked inside every stock service (`Store::assertOperable`), not only on routes.
+8. A purchase requisition is never approved by its requester; a PO is never approved by its creator; POs above the owner threshold need the Owner/Admin.
+9. A match exception on a supplier invoice is approved by someone other than the person who recorded the invoice, and blocks payment until then.

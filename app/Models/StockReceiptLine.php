@@ -10,7 +10,7 @@ class StockReceiptLine extends Model
 {
     use Immutable;
 
-    protected $fillable = ['stock_receipt_id', 'item_id', 'qty', 'unit_cost', 'line_total'];
+    protected $fillable = ['stock_receipt_id', 'item_id', 'purchase_order_line_id', 'qty', 'unit_cost', 'line_total'];
 
     protected function casts(): array
     {
