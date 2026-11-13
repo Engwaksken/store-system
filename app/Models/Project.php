@@ -73,4 +73,29 @@ class Project extends Model
         return $q->where(fn ($w) => $w->where('manager_id', $user->id)
             ->orWhereHas('members', fn ($m) => $m->whereKey($user->id)));
     }
+
+    public function budgets(): HasMany
+    {
+        return $this->hasMany(ProjectBudget::class);
+    }
+
+    public function boqItems(): HasMany
+    {
+        return $this->hasMany(BoqItem::class)->orderBy('ref');
+    }
+
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(ProjectMilestone::class)->orderBy('sort')->orderBy('planned_on');
+    }
+
+    public function claims(): HasMany
+    {
+        return $this->hasMany(ExpenseClaim::class);
+    }
+
+    public function purchaseOrders(): HasMany
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
 }

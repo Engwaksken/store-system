@@ -56,9 +56,13 @@
             @can('view-invoices')<a href="{{ route('invoices.index') }}" @class(['active' => request()->routeIs('invoices.*')])>Supplier invoices</a>@endcan
         @endcan
 
+        <div class="nav-group">Finance</div>
+        <a href="{{ route('claims.index') }}" @class(['active' => request()->routeIs('claims.*')])>Expense claims @if($claimCount)<span class="count">{{ $claimCount }}</span>@endif</a>
         @can('view-expenses')
-            <div class="nav-group">Finance</div>
             <a href="{{ route('expenses.index') }}" @class(['active' => request()->routeIs('expenses.*')])>Expenses</a>
+        @endcan
+        @can('view-cost-codes')
+            <a href="{{ route('cost-codes.index') }}" @class(['active' => request()->routeIs('cost-codes.*')])>Cost codes</a>
         @endcan
 
         @can('view-reports')

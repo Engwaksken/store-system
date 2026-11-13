@@ -22,7 +22,8 @@ class PageSmokeTest extends TestCase
             'reports.project-cost', 'users.index', 'users.create', 'activity.index', 'settings.edit', 'projects.create', 'items.create', 'receipts.create',
             'adjustments.create', 'requests.create', 'password.change',
             'stores.index', 'stores.create', 'transfers.index', 'transfers.create', 'returns.index', 'counts.index', 'counts.create',
-            'prs.index', 'prs.create', 'pos.index', 'pos.create', 'suppliers.index', 'suppliers.create', 'invoices.index'];
+            'prs.index', 'prs.create', 'pos.index', 'pos.create', 'suppliers.index', 'suppliers.create', 'invoices.index',
+            'claims.index', 'claims.create', 'cost-codes.index', 'reports.cost-codes', 'reports.boq', 'reports.commitments'];
         $detail = [
             fn () => route('projects.show', Project::first()),
             fn () => route('requests.show', \App\Models\MaterialRequest::first()),
@@ -38,6 +39,9 @@ class PageSmokeTest extends TestCase
             fn () => route('pos.show', \App\Models\PurchaseOrder::latest('id')->first()),
             fn () => route('suppliers.show', \App\Models\Supplier::first()),
             fn () => route('invoices.show', \App\Models\PurchaseInvoice::first()),
+            fn () => route('projects.controls', Project::first()),
+            fn () => route('claims.show', \App\Models\ExpenseClaim::first()),
+            fn () => route('claims.show', \App\Models\ExpenseClaim::latest('id')->first()),
         ];
         foreach (['owner', 'overall', 'pm1', 'store', 'sitestore', 'accounts', 'buyer', 'staff1'] as $who) {
             $user = User::where('email', "{$who}@demo.test")->sole();

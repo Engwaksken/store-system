@@ -86,6 +86,7 @@ class ExpenseController extends Controller
         return [
             'projects' => Project::orderBy('code')->get(),
             'categories' => ExpenseCategory::where('is_active', true)->orderBy('name')->get(),
+            'costCodes' => \App\Models\CostCode::where('is_active', true)->orderBy('code')->get(),
         ];
     }
 
@@ -94,6 +95,7 @@ class ExpenseController extends Controller
         return $request->validate([
             'project_id' => 'required|exists:projects,id',
             'category_id' => ['required', Rule::exists('expense_categories', 'id')->where('is_active', true)],
+            'cost_code_id' => ['nullable', Rule::exists('cost_codes', 'id')->where('is_active', true)],
             'incurred_on' => 'required|date|before_or_equal:today',
             'amount' => 'required|numeric|gt:0|max:9999999999999',
             'payment_mode' => ['required', Rule::in(Expense::PAYMENT_MODES)],

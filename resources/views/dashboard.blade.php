@@ -44,14 +44,15 @@
 
 @if($costRows->isNotEmpty())
 <div class="card">
-    <h2>Project budget vs cost <span class="muted" style="font-weight:400;font-size:.85rem">(materials issued + cash expenses)</span></h2>
+    <h2>Project budget vs cost <span class="muted" style="font-weight:400;font-size:.85rem">(actual = materials issued + cash expenses; committed = open POs + approved claims)</span></h2>
     <div class="table-wrap"><table>
-        <thead><tr><th>Project</th><th class="num">Budget</th><th class="num">Materials</th><th class="num">Expenses</th><th class="num">Remaining</th><th>Used</th></tr></thead>
+        <thead><tr><th>Project</th><th class="num">Budget</th><th class="num">Materials</th><th class="num">Expenses</th><th class="num">Committed</th><th class="num">Uncommitted</th><th>Actual + committed</th></tr></thead>
         <tbody>@foreach($costRows as $c)
             <tr><td><a href="{{ route('projects.show', $c->project) }}">{{ $c->project->code }}</a> {{ $c->project->name }}</td>
                 <td class="num">{{ ugx($c->budget) }}</td><td class="num">{{ ugx($c->materials) }}</td><td class="num">{{ ugx($c->expenses) }}</td>
-                <td class="num">{{ ugx($c->remaining) }}</td>
-                <td>@if($c->used_pct !== null)<div @class(['bar', 'over' => $c->used_pct > 100])><span style="width:{{ min(100, $c->used_pct) }}%"></span></div><small>{{ $c->used_pct }}%</small>@endif</td></tr>
+                <td class="num">{{ ugx($c->committed) }}</td><td class="num">{{ ugx($c->uncommitted) }}</td>
+                <td>@if($c->exposure_pct !== null)<div @class(['bar', 'over' => $c->flag === 'over'])><span style="width:{{ min(100, $c->exposure_pct) }}%"></span></div><small>{{ $c->exposure_pct }}%</small>@endif
+                    @if($c->flag === 'over')<span class="badge rejected">Over budget</span>@elseif($c->flag === 'warn')<span class="badge pending">Near budget</span>@endif</td></tr>
         @endforeach</tbody>
     </table></div>
 </div>

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MaterialRequestLine extends Model
 {
     /** Approved / issued quantities are written only by RequestWorkflow and IssueService. */
-    protected $fillable = ['material_request_id', 'item_id', 'requested_qty', 'notes'];
+    protected $fillable = ['material_request_id', 'item_id', 'boq_item_id', 'requested_qty', 'notes'];
 
     protected function casts(): array
     {
@@ -36,5 +36,10 @@ class MaterialRequestLine extends Model
         }
 
         return bcsub((string) $this->final_approved_qty, (string) $this->issued_qty, 3);
+    }
+
+    public function boqItem(): BelongsTo
+    {
+        return $this->belongsTo(BoqItem::class);
     }
 }

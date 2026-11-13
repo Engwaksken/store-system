@@ -66,10 +66,20 @@ Legend: ✅ done and covered by automated tests · 🟡 done, needs owner or sta
 | B-43 | Printable PO with company branding and signatory blocks | ✅ | `pos/show` print view (PDF export: Phase 5) |
 | B-44 | Owner to confirm the PO owner-approval threshold (default 20,000,000 UGX) | 🟡 | Settings screen |
 
+## Phase 4: project controls
+| ID | Item | Status | Evidence |
+|---|---|---|---|
+| B-45 | Cost codes (seeded defaults; admin/accountant manage) | ✅ | `test_cost_codes_are_managed_by_admin_and_accountant_only` |
+| B-46 | Budgets per cost code, BOQ lines, milestones (PM of the project / management) | ✅ | `test_controls_page_and_edit_rights` |
+| B-47 | Request lines linked to BOQ lines (same project only); consumption per BOQ line | ✅ | `test_boq_line_must_belong_to_the_request_project`, `test_budget_vs_committed_vs_actual_by_cost_code` |
+| B-48 | Expense claims: independent approval, paid once into expenses | ✅ | `test_claim_is_approved_independently_and_paid_into_expenses_exactly_once` |
+| B-49 | Commitments (open POs + approved claims) vs actuals, variance and warn/over flags on dashboard, project page and reports | ✅ | same, `test_finance_reports_render_and_are_scoped` |
+| B-50 | Variance e-mail / in-app alerts | ⬜ | Phase 5 (notifications) |
+
 ## Owner decisions still open (defaults in effect, see MVP_SCOPE §5)
 1. Name the Overall Manager and the primary Storekeeper (D1).
 2. Confirm the substitute PM-step reviewer when a PM requests on their own project (default: Owner/Admin, D2).
 3. Provide the hosting account and domain, project list, and opening stock count.
 
 ## Deferred: Phase 2, explicitly excluded
-supplier portal · BOQ (Phase 4) · payroll · equipment · native mobile app · offline sync · barcode/RFID · SMS/WhatsApp · accounting integration · multi-company · advanced analytics · bulk legacy migration.
+supplier portal · payroll · equipment · native mobile app · offline sync · barcode/RFID · SMS/WhatsApp · accounting integration · multi-company · advanced analytics · bulk legacy migration.

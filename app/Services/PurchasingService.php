@@ -255,6 +255,7 @@ class PurchasingService
             $po = PurchaseOrder::create([
                 'po_no' => DocumentSequence::next('PO'), 'supplier_id' => $header['supplier_id'], 'purchase_requisition_id' => $pr?->id,
                 'supplier_quote_id' => $quote?->id, 'project_id' => $header['project_id'] ?? null, 'store_id' => $header['store_id'],
+                'cost_code_id' => ! empty($header['project_id']) ? ($header['cost_code_id'] ?? null) : null,
                 'order_date' => $header['order_date'] ?? now()->toDateString(), 'expected_on' => $header['expected_on'] ?? null,
                 'total' => $total, 'terms' => $header['terms'] ?? null, 'notes' => $header['notes'] ?? null, 'created_by' => $user->id,
             ]);

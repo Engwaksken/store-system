@@ -19,7 +19,7 @@ class PurchaseOrder extends Model
     /** Statuses in which goods can still be received against the PO. */
     public const RECEIVABLE = ['approved', 'partially_received'];
 
-    protected $fillable = ['po_no', 'supplier_id', 'purchase_requisition_id', 'supplier_quote_id', 'project_id', 'store_id',
+    protected $fillable = ['po_no', 'supplier_id', 'purchase_requisition_id', 'supplier_quote_id', 'project_id', 'cost_code_id', 'store_id',
         'order_date', 'expected_on', 'total', 'terms', 'notes', 'created_by'];
 
     protected $attributes = ['status' => 'pending_approval', 'lock_version' => 0];
@@ -77,5 +77,10 @@ class PurchaseOrder extends Model
         }
 
         return $q->whereRaw('1 = 0');
+    }
+
+    public function costCode(): BelongsTo
+    {
+        return $this->belongsTo(CostCode::class);
     }
 }

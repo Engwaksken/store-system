@@ -146,7 +146,7 @@ class MaterialRequestController extends Controller
     private function formOptions(Request $request): array
     {
         return [
-            'projects' => Project::requestableBy($request->user())->orderBy('code')->get(),
+            'projects' => $projects = Project::requestableBy($request->user())->with('boqItems')->orderBy('code')->get(),
             'items' => InventoryItem::with('unit', 'balances')->where('is_active', true)->orderBy('name')->get(),
         ];
     }
@@ -161,6 +161,7 @@ class MaterialRequestController extends Controller
             'lines.*.item_id' => 'nullable|exists:inventory_items,id',
             'lines.*.requested_qty' => 'nullable|required_with:lines.*.item_id|numeric|gt:0',
             'lines.*.notes' => 'nullable|string|max:500',
+            'lines.*.boq_item_id' => 'nullable|integer|exists:boq_items,id',
         ]);
     }
 }

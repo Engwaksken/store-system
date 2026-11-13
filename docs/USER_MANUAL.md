@@ -13,12 +13,16 @@ On request and receipt forms, use **+ Add line** if you need more rows.
 Stock is only deducted when the storekeeper issues. Approval reserves nothing.
 
 ## Staff / site personnel
+- **Expense claims → New claim**: when you pay for something on site, claim it with the receipt photo. Your PM approves it and the accountant pays you.
 1. **New request**: choose your project (only projects you are assigned to appear), describe the purpose, and add items and quantities. Click **Submit for approval**, or **Save draft** to finish later.
 2. Follow progress under **Requests**. The badge shows who it is waiting on.
 3. If a request is **rejected**, read the reason, click **Revise & resubmit**, correct it and submit again. It becomes a new version and must be approved again.
 4. When materials are issued, open the voucher and click **Confirm materials received**. Note any shortage in *Remarks*.
 
 ## Project Manager
+- **Budget, BOQ & milestones** (button on your project): enter the budget per cost code, the BOQ lines and milestones. The table shows, per cost code, the budget, actual cost, committed cost (open purchase orders and approved claims) and the variance. Amber means 90 % or more is used or committed; red means over budget.
+- When staff raise a material request they can link each line to a BOQ line, so consumption is reported per BOQ line.
+- **Expense claims** from your team wait for your approval. You cannot approve your own claim; it goes to the Overall Manager.
 - **Approvals** lists requests on *your* projects that are waiting for you.
 - Open a request. You may **reduce** quantities (never increase them), then **Approve** or **Reject**. Rejecting requires a reason.
 - You cannot approve a request you raised yourself. The Owner/Admin reviews those.
@@ -50,7 +54,12 @@ Stock is only deducted when the storekeeper issues. Approval reserves nothing.
 - **Return to store**: open the issue voucher and click *Return to store* when unused material comes back. You cannot return more than is still out on the voucher. The project is credited at the voucher cost.
 - **Stock counts → New count** creates a count sheet with the book quantities frozen. Enter what you physically count (0 if none), give a reason for every difference, save, and **Submit for approval**. Nothing changes in stock until the Owner/Admin or Overall Manager approves; then each difference is posted as an adjustment.
 
+## Accountant: claims and cost codes
+- Approved **Expense claims** are counted next to the menu item. Record the payment on the claim; this creates the project expense once.
+- **Cost codes** are maintained by you or the Owner/Admin.
+
 ## Procurement Officer
+- For project purchase orders, choose the **cost code** so the order shows as a commitment against that budget line.
 - **Purchase requisitions** shows requests to buy. Once a requisition is *approved*, record each supplier's quotation on it (one per supplier) and **Select** the winner. If it is not the lowest, type why.
 - Click **Raise purchase order**: supplier, prices and quantities come from the selected quote. Saving sends the PO for approval. You cannot approve your own PO; above the owner threshold only the Owner/Admin can.
 - **Print PO** gives a branded order with signature blocks for the supplier.

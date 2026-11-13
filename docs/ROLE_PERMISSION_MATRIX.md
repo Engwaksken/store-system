@@ -55,6 +55,18 @@ Full policy: `docs/PROCUREMENT.md`.
 | View supplier invoices | ✅ | ✅ | — | — | — | ✅ | ✅ |
 | Approve invoice match exception | ✅ (not recorder) | ✅ (not recorder) | — | — | — | — | — |
 
+## Project controls & claims (Phase 4)
+| Capability | Admin | Overall Mgr | Project Mgr | Storekeeper | Staff | Accountant | Procurement |
+|---|---|---|---|---|---|---|---|
+| View cost codes | ✅ | ✅ | ✅ | — | — | ✅ | ✅ |
+| Manage cost codes | ✅ | — | — | — | — | ✅ | — |
+| View budget / BOQ / milestones page | ✅ | ✅ | own projects | — | — | ✅ | — |
+| Edit cost-code budgets, BOQ, milestones | ✅ | ✅ | own projects | — | — | — | — |
+| Submit expense claim | ✅ | ✅ | assigned projects | — | assigned projects | ✅ | — |
+| Approve / reject claim | ✅ (not own) | ✅ (not own) | own projects, not own claim | — | — | — | — |
+| Pay claim (creates the expense) | ✅ | — | — | — | — | ✅ | — |
+| Cost-code, BOQ and commitment reports | all | all | managed projects | — | — | all | — |
+
 ## Separation-of-duty rules (server-checked)
 1. PM-step approver ≠ requester.
 2. Overall approver ≠ requester **and** ≠ PM-step approver of the same version.
@@ -65,3 +77,4 @@ Full policy: `docs/PROCUREMENT.md`.
 7. Store scoping is re-checked inside every stock service (`Store::assertOperable`), not only on routes.
 8. A purchase requisition is never approved by its requester; a PO is never approved by its creator; POs above the owner threshold need the Owner/Admin.
 9. A match exception on a supplier invoice is approved by someone other than the person who recorded the invoice, and blocks payment until then.
+10. An expense claim is never approved by the claimant; a PM's own claim goes to the Overall Manager or Owner/Admin. A claim is paid once (unique `expenses.expense_claim_id`).

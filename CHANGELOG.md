@@ -1,5 +1,13 @@
 # Changelog
 
+## Phase 4 – Project controls (13 Nov 2026)
+- Cost codes (default set seeded), budgets per cost code, BOQ lines, milestones on a new *Budget, BOQ & milestones* page per project.
+- Material request lines can be linked to a BOQ line of the same project; issues and returns roll up to BOQ lines and cost codes.
+- Expense claims: submitted by project members, approved by the PM (or Overall Manager/Admin; never the claimant), paid by the accountant into exactly one expense.
+- Commitments (approved POs not yet received + approved claims not yet paid) shown beside actuals; variance with warn (≥ 90 %) and over-budget flags on the dashboard, project page and reports.
+- New reports: budget by cost code, consumption per BOQ line, open commitments; project budget report now includes committed cost.
+- Tests: `ProjectControlsTest` (8). Full suite 93 tests on SQLite and MariaDB 10.4.
+
 ## Phase 3 – Procurement (13 Nov 2026)
 - New role **Procurement Officer**; suppliers register.
 - Purchase requisitions (store restock or project), approved by Owner/Admin or Overall Manager, never the requester.

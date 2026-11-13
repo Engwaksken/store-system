@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\Role;
 use App\Models\AppSetting;
+use App\Models\CostCode;
 use App\Models\ExpenseCategory;
 use App\Models\InventoryCategory;
 use App\Models\InventoryUnit;
@@ -27,6 +28,14 @@ class BaseSeeder extends Seeder
         }
         foreach (['Casual labour', 'Transport & fuel', 'Equipment hire', 'Direct site purchase', 'Permits & fees', 'Utilities', 'Meals & allowances', 'Miscellaneous'] as $c) {
             ExpenseCategory::firstOrCreate(['name' => $c]);
+        }
+        foreach ([
+            ['01-PRE', 'Preliminaries & site setup', 'overheads'], ['02-SUB', 'Substructure (excavation, foundations)', 'materials'],
+            ['03-CON', 'Concrete & reinforcement', 'materials'], ['04-WAL', 'Walling & blockwork', 'materials'],
+            ['05-ROF', 'Roofing', 'materials'], ['06-FIN', 'Finishes', 'materials'], ['07-MEP', 'Plumbing & electrical', 'subcontract'],
+            ['08-LAB', 'Labour', 'labour'], ['09-EQP', 'Equipment & transport', 'equipment'],
+        ] as [$code, $name, $cat]) {
+            CostCode::firstOrCreate(['code' => $code], ['name' => $name, 'category' => $cat]);
         }
         if (! AppSetting::where('key', 'company_name')->exists()) {
             AppSetting::put('company_name', config('cms.company_name'));

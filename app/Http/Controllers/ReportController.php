@@ -9,6 +9,7 @@ use App\Models\InventoryItem;
 use App\Models\MaterialIssueLine;
 use App\Models\MaterialRequest;
 use App\Models\Project;
+use App\Models\PurchaseOrder;
 use App\Models\StockMovement;
 use App\Models\StockReturnLine;
 use App\Services\ProjectCostService;
@@ -145,13 +146,56 @@ class ReportController extends Controller
         Gate::authorize('view-finance-reports');
         $projects = Project::query()->tap(fn ($q) => $this->scopeProjects($q, $request, 'projects.id'))->orderBy('code')->get();
         $rows = $costs->summary($projects)->map(fn ($c) => [
-            $c->project->code, $c->project->name, $c->project->status, $c->budget, $c->materials, $c->expenses, $c->total, $c->remaining,
-            $c->used_pct === null ? '' : $c->used_pct.'%',
+            $c->project->code, $c->project->name, $c->project->status, $c->budget, $c->materials, $c->expenses, $c->total, $c->committed, $c->uncommitted,
+            $c->exposure_pct === null ? '' : $c->exposure_pct.'%', strtoupper($c->flag === 'ok' ? '' : $c->flag),
         ]);
 
-        return $this->respond($request, 'Project budget vs cost', ['Code', 'Project', 'Status', 'Budget', 'Materials issued', 'Cash expenses', 'Total cost', 'Remaining', 'Used'],
-            $rows, numeric: [3, 4, 5, 6, 7], totals: [3, 4, 5, 6, 7], filters: ['project'], money: [3, 4, 5, 6, 7],
-            note: 'Total cost = materials issued from store (valued at average cost when issued) + cash expenses. Store purchases are not project cost until issued, so they are never counted twice.');
+        return $this->respond($request, 'Project budget vs cost', ['Code', 'Project', 'Status', 'Budget', 'Materials (net)', 'Cash expenses', 'Actual cost', 'Committed', 'Uncommitted budget', 'Actual+committed', 'Flag'],
+            $rows, numeric: [3, 4, 5, 6, 7, 8], totals: [3, 4, 5, 6, 7, 8], filters: ['project'], money: [3, 4, 5, 6, 7, 8],
+            note: 'Actual = materials issued (net of returns, at issue cost) + cash expenses. Committed = approved POs not yet received + approved claims not yet paid. Store purchases are not project cost until issued, so they are never counted twice. WARN from '.ProjectCostService::WARN_PCT.'%, OVER above 100%.');
+    }
+
+    /** Budget vs committed vs actual by cost code, one block of rows per project. */
+    public function costCodes(Request $request, ProjectCostService $costs)
+    {
+        Gate::authorize('view-finance-reports');
+        $projects = Project::query()->tap(fn ($q) => $this->scopeProjects($q, $request, 'projects.id'))->orderBy('code')->get();
+        $rows = $projects->flatMap(fn ($p) => $costs->byCostCode($p)->map(fn ($r) => [
+            $p->code, $r->label, $r->budget, $r->materials, $r->expenses, $r->actual, $r->committed, $r->variance,
+            $r->pct === null ? '' : $r->pct.'%', strtoupper($r->flag === 'ok' ? '' : $r->flag),
+        ]));
+
+        return $this->respond($request, 'Budget vs committed vs actual by cost code', ['Project', 'Cost code', 'Budget', 'Materials', 'Expenses', 'Actual', 'Committed', 'Variance', 'Used', 'Flag'],
+            $rows, numeric: [2, 3, 4, 5, 6, 7], totals: [2, 3, 4, 5, 6, 7], filters: ['project'], money: [2, 3, 4, 5, 6, 7],
+            note: 'Variance = budget − (actual + committed). Materials are allocated through the BOQ line chosen on the material request; issues without a BOQ line appear as Unallocated.');
+    }
+
+    public function boqConsumption(Request $request, ProjectCostService $costs)
+    {
+        Gate::authorize('view-finance-reports');
+        $projects = Project::query()->tap(fn ($q) => $this->scopeProjects($q, $request, 'projects.id'))->orderBy('code')->get();
+        $rows = $projects->flatMap(fn ($p) => $costs->boqConsumption($p)->map(fn ($r) => [
+            $p->code, $r->boq->ref, $r->boq->description, $r->boq->costCode->code, (string) $r->boq->qty, $r->boq->unit,
+            (string) $r->boq->amount, $r->consumed_value, $r->pct === null ? '' : $r->pct.'%',
+        ]));
+
+        return $this->respond($request, 'Material consumption per BOQ line', ['Project', 'Ref', 'Description', 'Cost code', 'BOQ qty', 'Unit', 'BOQ amount', 'Materials used (net)', 'Used'],
+            $rows, numeric: [4, 6, 7], totals: [6, 7], filters: ['project'], money: [6, 7]);
+    }
+
+    /** Open commitments: approved POs not fully received, and approved claims not yet paid. */
+    public function commitments(Request $request)
+    {
+        Gate::authorize('view-finance-reports');
+        $pos = PurchaseOrder::with('project', 'supplier', 'costCode', 'lines')->whereIn('status', PurchaseOrder::RECEIVABLE)->whereNotNull('project_id')
+            ->tap(fn ($q) => $this->scopeProjects($q, $request, 'project_id'))->orderBy('id')->get()
+            ->map(fn ($po) => [$po->project->code, 'Purchase order', $po->po_no, $po->supplier->name, $po->costCode?->code ?? '', $po->order_date->format('Y-m-d'), $po->openValue()]);
+        $claims = \App\Models\ExpenseClaim::with('project', 'claimant', 'costCode')->where('status', 'approved')
+            ->tap(fn ($q) => $this->scopeProjects($q, $request, 'project_id'))->orderBy('id')->get()
+            ->map(fn ($c) => [$c->project->code, 'Approved claim', $c->claim_no, $c->claimant->name, $c->costCode?->code ?? '', $c->incurred_on->format('Y-m-d'), (string) $c->amount]);
+
+        return $this->respond($request, 'Open commitments', ['Project', 'Type', 'Document', 'Supplier / claimant', 'Cost code', 'Date', 'Open value (UGX)'],
+            $pos->concat($claims)->sortBy(0)->values(), numeric: [6], totals: [6], filters: ['project'], money: [6]);
     }
 
     // ---------------------------------------------------------------- helpers

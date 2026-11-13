@@ -1,6 +1,6 @@
 # Database Schema
 
-Source of truth: the files in `database/migrations/` (Phase 1: `..._000100_create_cms_domain_tables.php`; Phase 2 stores: `..._000200_add_multiple_stores_and_transfers.php`; Phase 3 procurement: `..._000300_create_procurement_tables.php`).
+Source of truth: the files in `database/migrations/` (Phase 1: `..._000100_create_cms_domain_tables.php`; Phase 2 stores: `..._000200_add_multiple_stores_and_transfers.php`; Phase 3 procurement: `..._000300_create_procurement_tables.php`; Phase 4 project controls: `..._000400_create_project_controls_tables.php`).
 
 Precision: quantities `DECIMAL(14,3)`, money `DECIMAL(15,2)`, unit costs `DECIMAL(15,4)`. All arithmetic in PHP uses bcmath (`App\Support\Decimal`), never floats.
 Foreign keys use `RESTRICT` on delete for anything with financial or stock history, so nothing auditable can be orphaned.
@@ -11,7 +11,7 @@ Foreign keys use `RESTRICT` on delete for anything with financial or stock histo
 | `users` | `role` (indexed), `is_active`, `must_change_password`, `phone` | Role values in `App\Enums\Role`. Users are deactivated, never deleted. |
 | `password_reset_tokens`, `sessions` | Laravel defaults | |
 | `app_settings` | `key` unique, `value` | Company name, address, phone, e-mail, voucher footer, logo path. |
-| `document_sequences` | `sequence_key` unique (e.g. `IV-2026`), `last_number` | Incremented under `lockForUpdate`, giving unique document numbers `PREFIX-YYYY-00001`. Prefixes: MR (request), IV (issue voucher), GRN (receipt), OB (opening), ADJ (adjustment), TR (transfer), RET (return), SC (stock count), PR (purchase requisition), PO (purchase order), PI (supplier invoice), PAY (supplier payment). |
+| `document_sequences` | `sequence_key` unique (e.g. `IV-2026`), `last_number` | Incremented under `lockForUpdate`, giving unique document numbers `PREFIX-YYYY-00001`. Prefixes: MR (request), IV (issue voucher), GRN (receipt), OB (opening), ADJ (adjustment), TR (transfer), RET (return), SC (stock count), PR (purchase requisition), PO (purchase order), PI (supplier invoice), PAY (supplier payment), EC (expense claim). |
 | `activity_logs` | `user_id`, `action` (indexed), `subject_type/id`, `description`, `properties` JSON, `ip_address`, `created_at` | Insert-only (model blocks update/delete). |
 
 ## Projects
@@ -59,6 +59,18 @@ Foreign keys use `RESTRICT` on delete for anything with financial or stock histo
 | `purchase_invoice_lines` | `purchase_invoice_id`, `purchase_order_line_id`, `qty`, `unit_price`, `line_total` | Immutable. |
 | `supplier_payments` | `payment_no` unique, `purchase_invoice_id`, `amount`, `paid_on`, `method`, `reference`, `recorded_by`, `idempotency_key` unique | Immutable record of a payment made outside the system. |
 
+## Project controls (Phase 4)
+| Table | Key columns | Notes |
+|---|---|---|
+| `cost_codes` | `code` unique, `name`, `category` (materials/labour/equipment/subcontract/overheads), `is_active` | Company-wide. Base codes are seeded. |
+| `project_budgets` | `project_id`, `cost_code_id`, unique pair, `amount` | Budget per cost code. The screen warns when their sum differs from `projects.budget`. |
+| `boq_items` | `project_id`, `ref` (unique per project), `description`, `cost_code_id`, `unit`, `qty`, `rate`, `amount` (= qty × rate), `item_id` nullable | Lines used by requests cannot be deleted. |
+| `project_milestones` | `project_id`, `name`, `planned_on`, `completed_on`, `notes`, `sort` | State: done / late / open. |
+| `material_request_lines` (+) | `boq_item_id` nullable | Must belong to the request's project. Allocates issued materials to a BOQ line and cost code. |
+| `purchase_orders` (+) | `cost_code_id` nullable | Allocates the PO's open value (commitment). |
+| `expenses` (+) | `cost_code_id` nullable, `expense_claim_id` nullable **unique** | A paid claim becomes exactly one expense. |
+| `expense_claims` | `claim_no` unique, `project_id`, `category_id`, `cost_code_id`, `claimant_id`, `incurred_on`, `amount`, `description`, `receipt_path` (private), `status`, `approver_id`, `decided_at`, `decision_reason` | Status: submitted → approved / rejected → paid. |
+
 ## Requisitions & approvals
 | Table | Key columns | Notes |
 |---|---|---|
@@ -80,7 +92,11 @@ Foreign keys use `RESTRICT` on delete for anything with financial or stock histo
 | `expenses` | `project_id`, `category_id`, `incurred_on`, `amount`, `payment_mode`, `reference`, `description`, `receipt_path` (private disk), `recorded_by` | Index (project_id, incurred_on). Cash costs only; store purchases are excluded (MVP_SCOPE D9). |
 
 ## Project cost formula (reports)
-`project cost = Σ material_issues.total_value − Σ stock_returns.total_value + Σ expenses.amount` (per project). Stock receipts and transfers are never added to project cost.
+`actual = Σ material_issues.total_value − Σ stock_returns.total_value + Σ expenses.amount` (per project). Stock receipts and transfers are never added to project cost.
+
+`committed = Σ (po_line.qty − po_line.received_qty) × po_line.unit_price` over approved / partially received project POs `+ Σ approved (unpaid) expense_claims.amount`.
+
+`variance = budget − (actual + committed)`; flag **warn** from 90 % and **over** above 100 % (`ProjectCostService`). By cost code, materials follow `material_request_lines.boq_item_id → boq_items.cost_code_id`; anything without a code is shown as *Unallocated*.
 
 ## Idempotency
 Receipts, issues, transfers and returns accept a one-time `idempotency_key` from the form (`partials/idem`). A repeated post returns the first document; concurrent duplicates are stopped by the unique index (`App\Support\Idempotency`).

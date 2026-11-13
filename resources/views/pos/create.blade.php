@@ -14,6 +14,9 @@
         <div class="field"><label for="project_id">Project (optional)</label><select id="project_id" name="project_id" @disabled($pr)><option value="">— Store stock —</option>
             @foreach($projects as $p)<option value="{{ $p->id }}" @selected(old('project_id', $pr?->project_id) == $p->id)>{{ $p->code }} – {{ $p->name }}</option>@endforeach</select>
             @if($pr)<p class="hint">Taken from the requisition.</p>@endif</div>
+        <div class="field"><label for="cost_code_id">Cost code (project POs)</label><select id="cost_code_id" name="cost_code_id"><option value="">—</option>
+            @foreach($costCodes as $cc)<option value="{{ $cc->id }}" @selected(old('cost_code_id') == $cc->id)>{{ $cc->label() }}</option>@endforeach</select>
+            <p class="hint">Used to report this PO as a commitment against the project's cost-code budget.</p></div>
         <div class="field"><label for="order_date">Order date</label><input id="order_date" type="date" name="order_date" value="{{ old('order_date', now()->format('Y-m-d')) }}" required></div>
         <div class="field"><label for="expected_on">Expected delivery</label><input id="expected_on" type="date" name="expected_on" value="{{ old('expected_on') }}"></div>
         <div class="field"><label for="terms">Terms</label><input id="terms" type="text" name="terms" value="{{ old('terms') }}" placeholder="e.g. Delivery to site, 30 days credit"></div>

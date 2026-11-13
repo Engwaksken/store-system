@@ -6,6 +6,7 @@ use App\Enums\RequestStatus;
 use App\Enums\Role;
 use App\Models\AppSetting;
 use App\Models\Expense;
+use App\Models\ExpenseClaim;
 use App\Models\MaterialIssue;
 use App\Models\MaterialRequest;
 use App\Models\Project;
@@ -15,6 +16,7 @@ use App\Models\PurchaseRequisition;
 use App\Models\StockCount;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\ExpenseClaimService;
 use App\Services\PurchasingService;
 use App\Services\RequestWorkflow;
 use Illuminate\Support\Facades\Gate;
@@ -40,6 +42,8 @@ class AppServiceProvider extends ServiceProvider
         Route::model('po', PurchaseOrder::class);
         Route::model('quote', \App\Models\SupplierQuote::class);
         Route::model('invoice', PurchaseInvoice::class);
+        Route::model('claim', ExpenseClaim::class);
+        Route::model('boq', \App\Models\BoqItem::class);
 
         View::composer(['layouts.app', 'layouts.guest', 'issues.show', 'reports.table', 'pos.show'], function ($view) {
             $view->with('companyName', rescue(fn () => AppSetting::get('company_name'), null, false) ?: config('app.name'));
@@ -61,7 +65,10 @@ class AppServiceProvider extends ServiceProvider
                 $purchaseApprovalCount = PurchaseRequisition::where('status', 'submitted')->where('requested_by', '!=', $user->id)->count()
                     + PurchaseOrder::where('status', 'pending_approval')->get()->filter(fn ($po) => Gate::allows('decide-po', $po))->count();
             }
-            $view->with(compact('approvalCount', 'issueQueueCount', 'transferInboxCount', 'purchaseApprovalCount'));
+            $claimCount = $user && $user->hasRole(Role::Admin, Role::OverallManager, Role::ProjectManager)
+                ? ExpenseClaim::with('project')->where('status', 'submitted')->get()->filter(fn ($c) => Gate::allows('decide-claim', $c))->count()
+                : ($user && $user->hasRole(Role::Accountant) ? ExpenseClaim::where('status', 'approved')->count() : 0);
+            $view->with(compact('approvalCount', 'issueQueueCount', 'transferInboxCount', 'purchaseApprovalCount', 'claimCount'));
         });
     }
 
@@ -137,6 +144,17 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('approve-invoice-exception', fn (User $u, PurchaseInvoice $i) => $i->match_status === 'exception'
             && $u->id !== $i->recorded_by && $u->hasRole(Role::Admin, Role::OverallManager));
         Gate::define('pay-invoice', fn (User $u, PurchaseInvoice $i) => $i->isPayable() && $u->hasRole(Role::Admin, Role::Accountant));
+
+        // Project controls (Phase 4)
+        Gate::define('view-cost-codes', $is(Role::Admin, Role::OverallManager, Role::Accountant, Role::ProjectManager, Role::Procurement));
+        Gate::define('manage-cost-codes', $is(Role::Admin, Role::Accountant));
+        Gate::define('manage-project-controls', fn (User $u, Project $p) => $u->hasRole(Role::Admin, Role::OverallManager)
+            || ($u->role === Role::ProjectManager && $p->manager_id === $u->id));
+        Gate::define('submit-claim', fn (User $u) => $u->hasRole(Role::Admin, Role::Accountant, Role::OverallManager)
+            || ($u->hasRole(Role::Staff, Role::ProjectManager) && Project::requestableBy($u)->exists()));
+        Gate::define('view-claim', fn (User $u, ExpenseClaim $c) => ExpenseClaim::visibleTo($u)->whereKey($c->id)->exists());
+        Gate::define('decide-claim', fn (User $u, ExpenseClaim $c) => app(ExpenseClaimService::class)->canDecide($u, $c));
+        Gate::define('pay-claim', fn (User $u, ExpenseClaim $c) => $c->status === 'approved' && $u->hasRole(Role::Admin, Role::Accountant));
 
         // Reports
         Gate::define('view-reports', $is(Role::Admin, Role::OverallManager, Role::Accountant, Role::ProjectManager, Role::Storekeeper));

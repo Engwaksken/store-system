@@ -12,7 +12,7 @@ class Expense extends Model
 {
     public const PAYMENT_MODES = ['cash', 'bank_transfer', 'mobile_money', 'cheque'];
 
-    protected $fillable = ['project_id', 'category_id', 'incurred_on', 'amount', 'payment_mode', 'reference', 'description', 'receipt_path', 'recorded_by'];
+    protected $fillable = ['project_id', 'category_id', 'incurred_on', 'amount', 'payment_mode', 'reference', 'description', 'receipt_path', 'recorded_by', 'cost_code_id', 'expense_claim_id'];
 
     protected function casts(): array
     {
@@ -41,5 +41,15 @@ class Expense extends Model
             Role::ProjectManager => $q->whereHas('project', fn ($p) => $p->where('manager_id', $user->id)),
             default => $q->whereRaw('1 = 0'),
         };
+    }
+
+    public function costCode(): BelongsTo
+    {
+        return $this->belongsTo(CostCode::class);
+    }
+
+    public function claim(): BelongsTo
+    {
+        return $this->belongsTo(ExpenseClaim::class, 'expense_claim_id');
     }
 }

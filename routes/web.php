@@ -3,11 +3,14 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CostCodeController;
+use App\Http\Controllers\ExpenseClaimController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\IssueController;
 use App\Http\Controllers\MaterialRequestController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectControlsController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseRequisitionController;
@@ -47,6 +50,16 @@ Route::middleware(['auth', 'usable'])->group(function () {
 
     // Projects
     Route::resource('projects', ProjectController::class)->except(['destroy']);
+    Route::get('projects/{project}/controls', [ProjectControlsController::class, 'show'])->name('projects.controls');
+    Route::put('projects/{project}/budgets', [ProjectControlsController::class, 'saveBudgets'])->name('projects.budgets.save');
+    Route::post('projects/{project}/boq', [ProjectControlsController::class, 'storeBoq'])->name('projects.boq.store');
+    Route::put('projects/{project}/boq/{boq}', [ProjectControlsController::class, 'updateBoq'])->name('projects.boq.update');
+    Route::delete('projects/{project}/boq/{boq}', [ProjectControlsController::class, 'destroyBoq'])->name('projects.boq.destroy');
+    Route::post('projects/{project}/milestones', [ProjectControlsController::class, 'storeMilestone'])->name('projects.milestones.store');
+    Route::put('projects/{project}/milestones/{milestone}', [ProjectControlsController::class, 'completeMilestone'])->name('projects.milestones.complete');
+    Route::get('cost-codes', [CostCodeController::class, 'index'])->name('cost-codes.index');
+    Route::post('cost-codes', [CostCodeController::class, 'store'])->name('cost-codes.store');
+    Route::put('cost-codes/{costCode}', [CostCodeController::class, 'update'])->name('cost-codes.update');
 
     // Catalog
     Route::get('catalog/setup', [CatalogController::class, 'setup'])->name('catalog.setup');
@@ -142,6 +155,15 @@ Route::middleware(['auth', 'usable'])->group(function () {
     Route::post('supplier-invoices/{invoice}/approve-exception', [PurchaseInvoiceController::class, 'approveException'])->name('invoices.approve-exception');
     Route::post('supplier-invoices/{invoice}/payments', [PurchaseInvoiceController::class, 'pay'])->middleware('throttle:30,1')->name('invoices.pay');
 
+    // Expense claims
+    Route::get('claims', [ExpenseClaimController::class, 'index'])->name('claims.index');
+    Route::get('claims/create', [ExpenseClaimController::class, 'create'])->name('claims.create');
+    Route::post('claims', [ExpenseClaimController::class, 'store'])->name('claims.store');
+    Route::get('claims/{claim}', [ExpenseClaimController::class, 'show'])->name('claims.show');
+    Route::get('claims/{claim}/receipt', [ExpenseClaimController::class, 'receipt'])->name('claims.receipt');
+    Route::post('claims/{claim}/decide', [ExpenseClaimController::class, 'decide'])->name('claims.decide');
+    Route::post('claims/{claim}/pay', [ExpenseClaimController::class, 'pay'])->name('claims.pay');
+
     // Expenses
     Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
     Route::get('expenses/create', [ExpenseController::class, 'create'])->name('expenses.create');
@@ -158,4 +180,7 @@ Route::middleware(['auth', 'usable'])->group(function () {
     Route::get('reports/issued-by-project', [ReportController::class, 'issued'])->name('reports.issued');
     Route::get('reports/expenses-by-project', [ReportController::class, 'expenses'])->name('reports.expenses');
     Route::get('reports/project-cost', [ReportController::class, 'projectCost'])->name('reports.project-cost');
+    Route::get('reports/cost-codes', [ReportController::class, 'costCodes'])->name('reports.cost-codes');
+    Route::get('reports/boq-consumption', [ReportController::class, 'boqConsumption'])->name('reports.boq');
+    Route::get('reports/commitments', [ReportController::class, 'commitments'])->name('reports.commitments');
 });

@@ -17,6 +17,10 @@ use App\Services\StockReturnService;
 use App\Services\StockService;
 use App\Services\StockTransferService;
 use App\Models\Store;
+use App\Models\BoqItem;
+use App\Models\CostCode;
+use App\Models\ProjectBudget;
+use App\Services\ExpenseClaimService;
 use App\Models\Supplier;
 use App\Services\GoodsReceiptService;
 use App\Services\PurchaseInvoiceService;
@@ -50,6 +54,19 @@ class DemoSeeder extends Seeder
         $p2 = Project::create(['code' => 'PRJ-002', 'name' => 'Ntinda Apartments Phase 1', 'client' => 'Private client', 'location' => 'Ntinda', 'status' => 'active', 'budget' => 420000000, 'manager_id' => $pm2->id, 'start_date' => now()->subMonth(), 'created_by' => $owner->id]);
         $p1->members()->sync([$s1->id]);
         $p2->members()->sync([$s2->id]);
+
+        // Project controls for PRJ-001: cost-code budgets, BOQ lines and milestones.
+        $cc = fn (string $code) => CostCode::where('code', $code)->value('id');
+        foreach (['01-PRE' => 12000000, '02-SUB' => 30000000, '03-CON' => 55000000, '04-WAL' => 28000000, '05-ROF' => 22000000,
+            '06-FIN' => 15000000, '08-LAB' => 13000000, '09-EQP' => 5000000] as $code => $amount) {
+            ProjectBudget::create(['project_id' => $p1->id, 'cost_code_id' => $cc($code), 'amount' => $amount]);
+        }
+        $boqSlab = BoqItem::create(['project_id' => $p1->id, 'cost_code_id' => $cc('03-CON'), 'ref' => '3.1', 'description' => 'Ground floor slab, 150mm C25 concrete incl. formwork', 'unit' => 'm3', 'qty' => 45, 'rate' => 650000, 'amount' => 29250000]);
+        BoqItem::create(['project_id' => $p1->id, 'cost_code_id' => $cc('03-CON'), 'ref' => '3.2', 'description' => 'Reinforcement Y12 to slab and beams', 'unit' => 't', 'qty' => 6, 'rate' => 4200000, 'amount' => 25200000]);
+        BoqItem::create(['project_id' => $p1->id, 'cost_code_id' => $cc('05-ROF'), 'ref' => '5.1', 'description' => 'G28 iron sheets on timber trusses', 'unit' => 'm2', 'qty' => 420, 'rate' => 52000, 'amount' => 21840000]);
+        foreach ([['Site handover & setting out', -55, -50], ['Foundations complete', -30, -28], ['Ground floor slab cast', -2, null], ['Roof complete', 40, null], ['Practical completion', 120, null]] as $i => [$name, $plan, $done]) {
+            $p1->milestones()->create(['name' => $name, 'planned_on' => now()->addDays($plan), 'completed_on' => $done === null ? null : now()->addDays($done), 'sort' => $i]);
+        }
 
         $sk->stores()->attach(Store::DEFAULT_ID);
         $site = Store::create(['code' => 'KIRA-SITE', 'name' => 'Kira Site Store', 'type' => 'site', 'project_id' => $p1->id, 'location' => 'Kira']);
@@ -90,7 +107,7 @@ class DemoSeeder extends Seeder
 
         // 1) Fully approved (overall reduced Y12 to 50) and partially issued.
         $r1 = $wf->createDraft($s1, $p1, 'Ground floor slab casting', now()->addDays(2)->toDateString(), [
-            ['item_id' => $items[0]->id, 'requested_qty' => 120], ['item_id' => $items[2]->id, 'requested_qty' => 60],
+            ['item_id' => $items[0]->id, 'requested_qty' => 120, 'boq_item_id' => $boqSlab->id], ['item_id' => $items[2]->id, 'requested_qty' => 60, 'boq_item_id' => $boqSlab->id],
         ]);
         $wf->submit($s1, $r1);
         $wf->pmDecide($pm1, $r1, 'approved', 'OK for slab');
@@ -147,7 +164,7 @@ class DemoSeeder extends Seeder
         app(GoodsReceiptService::class)->receive($sk, $po, [$poLine->id => 80], ['reference' => 'DN-3021']);
         app(PurchaseInvoiceService::class)->record($acc, $po->fresh(), ['supplier_invoice_no' => 'RSM-INV-771', 'invoice_date' => now()->toDateString(),
             'due_date' => now()->addDays(30)->toDateString()], [$poLine->id => ['qty' => 80, 'unit_price' => 37500]]);
-        $buy->createOrder($buyer, ['supplier_id' => $sup1->id, 'store_id' => $site->id, 'project_id' => $p1->id],
+        $buy->createOrder($buyer, ['supplier_id' => $sup1->id, 'store_id' => $site->id, 'project_id' => $p1->id, 'cost_code_id' => $cc('03-CON')],
             [['item_id' => $items[2]->id, 'qty' => 60, 'unit_price' => 42000], ['item_id' => $items[1]->id, 'qty' => 2, 'unit_price' => 350000]]);
 
         $ec = fn (string $n) => ExpenseCategory::where('name', $n)->value('id');
@@ -160,6 +177,16 @@ class DemoSeeder extends Seeder
         foreach ($rows as [$p, $c, $amt, $mode, $desc, $daysAgo]) {
             Expense::create(['project_id' => $p->id, 'category_id' => $ec($c), 'incurred_on' => now()->subDays($daysAgo), 'amount' => $amt, 'payment_mode' => $mode, 'description' => $desc, 'recorded_by' => $acc->id]);
         }
+
+        // Expense claims: one paid, one approved awaiting payment, one awaiting the PM.
+        $claims = app(ExpenseClaimService::class);
+        $catId = ExpenseCategory::where('name', 'Transport & fuel')->value('id');
+        $c1 = $claims->submit($s1, ['project_id' => $p1->id, 'category_id' => $catId, 'cost_code_id' => $cc('09-EQP'), 'incurred_on' => now()->subDays(4)->toDateString(), 'amount' => 85000, 'description' => 'Boda trips for site samples']);
+        $claims->decide($pm1, $c1, 'approved', null);
+        $claims->pay($acc, $c1, 'mobile_money', 'MM-77812');
+        $c2 = $claims->submit($s1, ['project_id' => $p1->id, 'category_id' => ExpenseCategory::where('name', 'Casual labour')->value('id'), 'cost_code_id' => $cc('08-LAB'), 'incurred_on' => now()->subDay()->toDateString(), 'amount' => 240000, 'description' => 'Two casuals for 3 days, slab prep']);
+        $claims->decide($pm1, $c2, 'approved', null);
+        $claims->submit($s2, ['project_id' => $p2->id, 'category_id' => $catId, 'incurred_on' => now()->toDateString(), 'amount' => 60000, 'description' => 'Fuel for water pump']);
 
         $this->command?->info('Demo data loaded. All demo accounts use password Demo12345: owner@, overall@, pm1@, pm2@, store@, sitestore@, accounts@, buyer@, staff1@, staff2@demo.test');
     }

@@ -4,6 +4,7 @@
 <div class="page-head"><div><h1>{{ $project->code }} · {{ $project->name }}</h1><p>{{ $project->client }} @if($project->location) · {{ $project->location }} @endif</p></div>
     <div class="actions">
         @can('create-request')<a class="btn" href="{{ route('requests.create', ['project_id' => $project->id]) }}">+ Request materials</a>@endcan
+        @can('view-project-finance', $project)<a class="btn secondary" href="{{ route('projects.controls', $project) }}">Budget, BOQ &amp; milestones</a>@endcan
         @can('manage-projects')<a class="btn secondary" href="{{ route('projects.edit', $project) }}">Edit</a>@endcan
     </div></div>
 
@@ -14,6 +15,11 @@
     <div class="stat gold"><div class="label">Cash expenses</div><div class="value">{{ ugx($cost->expenses) }}</div></div>
     <div @class(['stat', 'bad' => bccomp($cost->remaining, '0', 2) < 0])><div class="label">Remaining</div><div class="value">{{ ugx($cost->remaining) }}</div></div>
 </div>
+@if(bccomp($cost->committed, '0', 2) > 0 || $cost->flag !== 'ok')
+<div @class(['alert', 'warn' => $cost->flag !== 'over', 'bad' => $cost->flag === 'over'])>Committed (open POs + approved claims): <strong>{{ ugx($cost->committed) }}</strong> UGX ·
+    actual + committed = {{ ugx($cost->exposure) }} UGX{{ $cost->exposure_pct !== null ? ' ('.$cost->exposure_pct.'% of budget)' : '' }}.
+    @if($cost->flag === 'over') <strong>Over budget.</strong> @elseif($cost->flag === 'warn') Approaching the budget. @endif</div>
+@endif
 <p class="hint" style="margin-top:-.75rem">Materials are valued at average cost when issued; returns to store are credited at the same cost. Store purchases count only when issued to this project, so nothing is counted twice.</p>
 @endif
 

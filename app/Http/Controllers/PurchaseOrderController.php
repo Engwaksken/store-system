@@ -42,6 +42,7 @@ class PurchaseOrderController extends Controller
             'stores' => Store::where('is_active', true)->orderBy('id')->get(),
             'projects' => Project::whereIn('status', ['planned', 'active', 'on_hold'])->orderBy('code')->get(),
             'items' => InventoryItem::with('unit')->where('is_active', true)->orderBy('name')->get(),
+            'costCodes' => \App\Models\CostCode::where('is_active', true)->orderBy('code')->get(),
         ]);
     }
 
@@ -53,6 +54,7 @@ class PurchaseOrderController extends Controller
             'supplier_id' => 'required|integer|exists:suppliers,id',
             'store_id' => 'required|integer|exists:stores,id',
             'project_id' => 'nullable|integer|exists:projects,id',
+            'cost_code_id' => 'nullable|integer|exists:cost_codes,id',
             'order_date' => 'required|date',
             'expected_on' => 'nullable|date|after_or_equal:order_date',
             'terms' => 'nullable|string|max:1000',

@@ -9,7 +9,10 @@
     @can('view-finance-reports')
         <a class="card" href="{{ route('reports.issued') }}"><h3>Materials issued by project</h3><p class="muted">Quantities and value consumed.</p></a>
         <a class="card" href="{{ route('reports.expenses') }}"><h3>Cash expenses by project</h3><p class="muted">Totals per expense category.</p></a>
-        <a class="card" href="{{ route('reports.project-cost') }}"><h3>Project budget vs cost</h3><p class="muted">Budget, materials, expenses, remaining.</p></a>
+        <a class="card" href="{{ route('reports.project-cost') }}"><h3>Project budget vs cost</h3><p class="muted">Budget, actual, committed and over-budget flags.</p></a>
+        <a class="card" href="{{ route('reports.cost-codes') }}"><h3>Budget by cost code</h3><p class="muted">Budget vs committed vs actual, variance per cost code.</p></a>
+        <a class="card" href="{{ route('reports.boq') }}"><h3>Consumption per BOQ line</h3><p class="muted">Materials used against each BOQ line.</p></a>
+        <a class="card" href="{{ route('reports.commitments') }}"><h3>Open commitments</h3><p class="muted">Approved POs not yet received, claims not yet paid.</p></a>
     @endcan
 </div>
 @endsection

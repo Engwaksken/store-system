@@ -78,7 +78,7 @@ class RequestWorkflow
         if (! $this->canRequestFor($user, $project)) {
             throw new AuthorizationException('You are not assigned to this project.');
         }
-        $lines = $this->normaliseLines($lines);
+        $lines = $this->normaliseLines($lines, $project->id);
 
         return DB::transaction(function () use ($user, $project, $purpose, $neededOn, $lines) {
             $req = MaterialRequest::create([
@@ -96,7 +96,7 @@ class RequestWorkflow
 
     public function updateDraft(User $user, MaterialRequest $req, string $purpose, ?string $neededOn, array $lines): MaterialRequest
     {
-        $lines = $this->normaliseLines($lines);
+        $lines = $this->normaliseLines($lines, $req->project_id);
 
         return DB::transaction(function () use ($user, $req, $purpose, $neededOn, $lines) {
             $req = $this->lock($req);
@@ -282,7 +282,7 @@ class RequestWorkflow
         }
     }
 
-    private function normaliseLines(array $lines): array
+    private function normaliseLines(array $lines, ?int $projectId = null): array
     {
         $out = [];
         foreach ($lines as $l) {
@@ -297,7 +297,11 @@ class RequestWorkflow
             if (Decimal::cmp($qty, '0') <= 0) {
                 throw new WorkflowException('Requested quantities must be greater than zero.');
             }
-            $out[$id] = ['item_id' => $id, 'requested_qty' => $qty, 'notes' => $l['notes'] ?? null];
+            $boq = empty($l['boq_item_id']) ? null : (int) $l['boq_item_id'];
+            if ($boq !== null && ! \App\Models\BoqItem::whereKey($boq)->where('project_id', $projectId)->exists()) {
+                throw new WorkflowException('The BOQ line must belong to the request\'s project.');
+            }
+            $out[$id] = ['item_id' => $id, 'boq_item_id' => $boq, 'requested_qty' => $qty, 'notes' => $l['notes'] ?? null];
         }
         if (! $out) {
             throw new WorkflowException('Add at least one item.');
