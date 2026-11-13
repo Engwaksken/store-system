@@ -11,6 +11,10 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StockController;
+use App\Http\Controllers\StockCountController;
+use App\Http\Controllers\StockReturnController;
+use App\Http\Controllers\StockTransferController;
+use App\Http\Controllers\StoreController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -51,7 +55,31 @@ Route::middleware(['auth', 'usable'])->group(function () {
     Route::get('items/{item}/edit', [CatalogController::class, 'edit'])->name('items.edit');
     Route::put('items/{item}', [CatalogController::class, 'update'])->name('items.update');
 
-    // Stock
+    // Stores, transfers, returns, counts (authorization inside controllers + policies; store scoping inside services)
+    Route::get('stores', [StoreController::class, 'index'])->name('stores.index');
+    Route::get('stores/create', [StoreController::class, 'create'])->name('stores.create');
+    Route::post('stores', [StoreController::class, 'store'])->name('stores.store');
+    Route::get('stores/{store}', [StoreController::class, 'show'])->name('stores.show');
+    Route::get('stores/{store}/edit', [StoreController::class, 'edit'])->name('stores.edit');
+    Route::put('stores/{store}', [StoreController::class, 'update'])->name('stores.update');
+    Route::get('transfers', [StockTransferController::class, 'index'])->name('transfers.index');
+    Route::get('transfers/create', [StockTransferController::class, 'create'])->name('transfers.create');
+    Route::post('transfers', [StockTransferController::class, 'store'])->middleware('throttle:30,1')->name('transfers.store');
+    Route::get('transfers/{transfer}', [StockTransferController::class, 'show'])->name('transfers.show');
+    Route::post('transfers/{transfer}/receive', [StockTransferController::class, 'receive'])->name('transfers.receive');
+    Route::post('transfers/{transfer}/cancel', [StockTransferController::class, 'cancel'])->name('transfers.cancel');
+    Route::get('returns', [StockReturnController::class, 'index'])->name('returns.index');
+    Route::get('issues/{issue}/return', [StockReturnController::class, 'create'])->name('returns.create');
+    Route::post('issues/{issue}/return', [StockReturnController::class, 'store'])->name('returns.store');
+    Route::get('returns/{return}', [StockReturnController::class, 'show'])->name('returns.show');
+    Route::get('counts', [StockCountController::class, 'index'])->name('counts.index');
+    Route::get('counts/create', [StockCountController::class, 'create'])->name('counts.create');
+    Route::post('counts', [StockCountController::class, 'store'])->name('counts.store');
+    Route::get('counts/{count}', [StockCountController::class, 'show'])->name('counts.show');
+    Route::put('counts/{count}', [StockCountController::class, 'update'])->name('counts.update');
+    Route::post('counts/{count}/decide', [StockCountController::class, 'decide'])->name('counts.decide');
+
+    // Stock receipts & adjustments
     Route::get('receipts', [StockController::class, 'index'])->name('receipts.index');
     Route::get('receipts/create', [StockController::class, 'create'])->name('receipts.create');
     Route::post('receipts', [StockController::class, 'store'])->name('receipts.store');

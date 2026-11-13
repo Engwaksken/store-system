@@ -2,7 +2,7 @@
 @section('title', $issue->issue_no)
 @section('content')
 <div class="page-head no-print"><div><h1>Issue voucher {{ $issue->issue_no }}</h1></div>
-    <div class="actions"><button class="btn secondary" onclick="window.print()">Print voucher</button><a class="btn secondary" href="{{ route('requests.show', $issue->request) }}">Open request</a></div></div>
+    <div class="actions"><button class="btn secondary" onclick="window.print()">Print voucher</button>@can('record-return', $issue)<a class="btn secondary" href="{{ route('returns.create', $issue) }}">Return to store</a>@endcan<a class="btn secondary" href="{{ route('requests.show', $issue->request) }}">Open request</a></div></div>
 
 <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">
@@ -14,6 +14,7 @@
         <dt>Project</dt><dd>{{ $issue->project->code }} · {{ $issue->project->name }}</dd>
         <dt>Request</dt><dd>{{ $issue->request->request_no }} (v{{ $issue->request->version }}) by {{ $issue->request->requester->name }}</dd>
         <dt>Approved by</dt><dd>@foreach($issue->request->approvals->where('version', $issue->request->version)->where('decision', 'approved') as $a){{ $a->step === 'pm' ? 'PM' : 'Overall' }}: {{ $a->approver->name }} ({{ $a->decided_at->format('d M Y') }})@if(! $loop->last); @endif @endforeach</dd>
+        <dt>Store</dt><dd>{{ $issue->store->label() }}</dd>
         <dt>Issued by</dt><dd>{{ $issue->issuer->name }} (Storekeeper)</dd>
         <dt>Recipient</dt><dd>{{ $issue->recipient_name }}</dd>
         @if($issue->notes)<dt>Notes</dt><dd>{{ $issue->notes }}</dd>@endif
@@ -25,6 +26,9 @@
         @can('view-stock-value')<tfoot><tr><td colspan="6">Total</td><td class="num">{{ ugx($issue->total_value) }}</td></tr></tfoot>@endcan
     </table></div>
 
+    @if($issue->returns->isNotEmpty())
+        <div class="alert warn" style="margin-top:1rem">Returned to store: @foreach($issue->returns as $r)<a href="{{ route('returns.show', $r) }}">{{ $r->return_no }}</a> ({{ $r->returned_at->format('d M Y') }}, {{ ugx($r->total_value) }} UGX)@if(! $loop->last); @endif @endforeach</div>
+    @endif
     @if($issue->acknowledgment)
         <div class="alert ok" style="margin-top:1rem">Received and acknowledged by <strong>{{ $issue->acknowledgment->recipient_name }}</strong> on {{ $issue->acknowledgment->acknowledged_at->format('d M Y H:i') }} (recorded by {{ $issue->acknowledgment->user->name }}).@if($issue->acknowledgment->remarks) “{{ $issue->acknowledgment->remarks }}”@endif</div>
     @endif

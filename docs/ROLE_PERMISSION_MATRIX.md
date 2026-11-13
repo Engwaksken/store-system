@@ -13,12 +13,22 @@ Roles (`users.role`): `admin` (Owner/Admin), `overall_manager`, `project_manager
 | Create / edit projects, assign staff | ✅ | ✅ | — | — | — | — |
 | View projects | all | all | managed/assigned | all (name/code only, for issuing) | assigned | all |
 | Item catalog, categories, units | ✅ | view | view | ✅ | view | view |
-| Opening balances, stock receipts, adjustments | ✅ | — | — | ✅ | — | — |
+| Opening balances, stock receipts, adjustments | ✅ any store | — | — | ✅ assigned stores | — | — |
+| View stores & per-store balances | ✅ | ✅ | — | ✅ | — | ✅ |
+| Create store / edit store | ✅ | — | — | ✅ (creator is assigned; edit assigned stores) | — | — |
+| Assign storekeepers to stores | ✅ | — | — | — | — | — |
+| Dispatch transfer | ✅ | — | — | from assigned store | — | — |
+| Confirm transfer receipt | ✅ | — | — | into assigned store, **not the dispatcher** | — | — |
+| Cancel in-transit transfer | ✅ | — | — | dispatcher only | — | — |
+| Record return to store (against voucher) | ✅ | — | — | into assigned store | — | — |
+| Start / enter / submit stock count | ✅ | — | — | assigned store | — | — |
+| Approve / reject stock count | ✅ (not the counter) | ✅ (not the counter) | — | — | — | — |
+| View transfers, returns, counts | all | all | — | own stores (transfers) / all | — | all |
 | View stock balances & ledger | ✅ | ✅ | ✅ | ✅ | ✅ (balance only) | ✅ |
 | Create / submit material request | ✅¹ | — | assigned projects | — | assigned projects | — |
 | PM-step approve/reject | substitute only (D2) | — | **own projects only**, never own request | — | — | — |
 | Overall-step approve/reject | — | ✅ (not requester, not PM-step approver) | — | — | — | — |
-| Issue materials | — | — | — | ✅ (only OVERALL_APPROVED / PARTIALLY_ISSUED) | — | — |
+| Issue materials | — | — | — | ✅ from assigned store (only OVERALL_APPROVED / PARTIALLY_ISSUED; site store only to its project) | — | — |
 | Acknowledge receipt | — | — | requester | records named recipient | requester | — |
 | View requests | all | all | managed projects + own | approved/issuable + issued | own | all |
 | Record / edit project expenses | ✅ | — | — | — | — | ✅ |
@@ -32,3 +42,6 @@ Roles (`users.role`): `admin` (Owner/Admin), `overall_manager`, `project_manager
 2. Overall approver ≠ requester **and** ≠ PM-step approver of the same version.
 3. The storekeeper issues only. They cannot approve, and approving users cannot issue.
 4. Inactive users (`is_active = false`) cannot log in.
+5. A transfer is received by a different person from the one who dispatched it.
+6. A stock count is approved by Admin/Overall Manager, never by the person who counted.
+7. Store scoping is re-checked inside every stock service (`Store::assertOperable`), not only on routes.

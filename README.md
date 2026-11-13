@@ -1,6 +1,6 @@
 # Construction Store & Project CMS (Phase 1 MVP)
 
-Laravel 12 web app for a construction company: projects, one central store, two-level material approvals, controlled race-safe issuing, project expenses and reports. Scope: see `docs/MVP_SCOPE.md`.
+Laravel 12 web app for a construction company: projects, a central store plus project site stores (transfers, returns, stock counts), two-level material approvals, controlled race-safe issuing, project expenses and reports. Scope: see `docs/MVP_SCOPE.md`.
 
 ## Quick start (local)
 ```bash
@@ -11,11 +11,11 @@ php artisan migrate --seed              # base data + DEMO data (non-production 
 php artisan storage:link
 php artisan serve                       # http://127.0.0.1:8000
 ```
-Demo logins (password `Demo12345`): owner@, overall@, pm1@, pm2@, store@, accounts@, staff1@, staff2@ `demo.test`.
+Demo logins (password `Demo12345`): owner@, overall@, pm1@, pm2@, store@ (main store), sitestore@ (Kira site store), accounts@, staff1@, staff2@ `demo.test`.
 
 ## Tests
 ```bash
-php artisan test                                         # 49 feature tests (SQLite in-memory)
+php artisan test                                         # feature tests (SQLite in-memory)
 DB_DATABASE=cms_concurrency_test php artisan cms:concurrency-test   # MySQL parallel-issue proof (staging only)
 ```
 
@@ -31,10 +31,14 @@ DB_DATABASE=cms_concurrency_test php artisan cms:concurrency-test   # MySQL para
 | `docs/BACKLOG.md` | Prioritised backlog, done vs pending vs deferred |
 | `docs/DEPLOYMENT.md` | Shared-hosting deploy, cron, backup & restore |
 | `docs/USER_MANUAL.md` | Quick manual per role |
+| `CHANGELOG.md` | Changes per phase |
 
 ## Where the rules live
 - `app/Services/RequestWorkflow.php`: approval state machine and separation of duties
 - `app/Services/IssueService.php`: transaction + `lockForUpdate` issuance, voucher, acknowledgment
-- `app/Services/StockService.php`: receipts, opening balances, adjustments, weighted average cost
+- `app/Services/StockService.php`: receipts, opening balances, adjustments, weighted average cost (per store)
+- `app/Services/StockTransferService.php`, `StockReturnService.php`, `StockCountService.php`: transfers, returns, counts
+- `app/Models/Store.php` (`operableBy`, `assertOperable`): which stores a user may move stock in
+- `app/Support/Idempotency.php`: duplicate-post protection
 - `app/Services/ProjectCostService.php`: materials issued + cash expenses (no double count)
 - `app/Providers/AppServiceProvider.php`: all authorization gates

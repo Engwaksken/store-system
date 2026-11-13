@@ -20,15 +20,20 @@ class PageSmokeTest extends TestCase
         $pages = ['dashboard', 'projects.index', 'requests.index', 'issues.index', 'items.index', 'receipts.index', 'catalog.setup', 'approvals.index',
             'expenses.index', 'expenses.create', 'reports.index', 'reports.stock', 'reports.movements', 'reports.pending', 'reports.issued', 'reports.expenses',
             'reports.project-cost', 'users.index', 'users.create', 'activity.index', 'settings.edit', 'projects.create', 'items.create', 'receipts.create',
-            'adjustments.create', 'requests.create', 'password.change'];
+            'adjustments.create', 'requests.create', 'password.change',
+            'stores.index', 'stores.create', 'transfers.index', 'transfers.create', 'returns.index', 'counts.index', 'counts.create'];
         $detail = [
             fn () => route('projects.show', Project::first()),
             fn () => route('requests.show', \App\Models\MaterialRequest::first()),
             fn () => route('issues.show', \App\Models\MaterialIssue::first()),
             fn () => route('items.show', \App\Models\InventoryItem::first()),
             fn () => route('receipts.show', \App\Models\StockReceipt::first()),
+            fn () => route('stores.show', \App\Models\Store::first()),
+            fn () => route('transfers.show', \App\Models\StockTransfer::first()),
+            fn () => route('returns.show', \App\Models\StockReturn::first()),
+            fn () => route('counts.show', \App\Models\StockCount::first()),
         ];
-        foreach (['owner', 'overall', 'pm1', 'store', 'accounts', 'staff1'] as $who) {
+        foreach (['owner', 'overall', 'pm1', 'store', 'sitestore', 'accounts', 'staff1'] as $who) {
             $user = User::where('email', "{$who}@demo.test")->sole();
             foreach ($pages as $page) {
                 $status = $this->actingAs($user)->get(route($page))->status();

@@ -8,6 +8,7 @@ use App\Models\InventoryItem;
 use App\Models\InventoryUnit;
 use App\Models\MaterialRequest;
 use App\Models\Project;
+use App\Models\Store;
 use App\Models\User;
 use App\Services\RequestWorkflow;
 use App\Services\StockService;
@@ -25,6 +26,7 @@ trait BuildsFixtures
         $this->pm = User::factory()->role(Role::ProjectManager)->create();
         $this->otherPm = User::factory()->role(Role::ProjectManager)->create();
         $this->store = User::factory()->role(Role::Storekeeper)->create();
+        $this->store->stores()->attach(Store::DEFAULT_ID);
         $this->accountant = User::factory()->role(Role::Accountant)->create();
         $this->staff = User::factory()->role(Role::Staff)->create();
         $this->outsider = User::factory()->role(Role::Staff)->create();
@@ -70,6 +72,6 @@ trait BuildsFixtures
 
     protected function onHand(InventoryItem $item): string
     {
-        return (string) $item->balance()->first()->on_hand;
+        return $item->fresh()->onHand();
     }
 }

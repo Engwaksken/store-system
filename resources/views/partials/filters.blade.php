@@ -1,6 +1,11 @@
-{{-- expects: $fields (array of 'project','item','type','dates','status'), $projects, $items --}}
+{{-- expects: $fields (array of 'store','project','item','type','dates'), $stores, $projects, $items --}}
 <form method="GET" class="card filters">
     <div class="grid grid-4">
+        @if(in_array('store', $fields))
+            <div><label>Store</label><select name="store_id"><option value="">All stores</option>
+                @foreach($stores as $s)<option value="{{ $s->id }}" @selected(request('store_id') == $s->id)>{{ $s->code }} – {{ $s->name }}</option>@endforeach
+            </select></div>
+        @endif
         @if(in_array('project', $fields))
             <div><label>Project</label><select name="project_id"><option value="">All</option>
                 @foreach($projects as $p)<option value="{{ $p->id }}" @selected(request('project_id') == $p->id)>{{ $p->code }} – {{ $p->name }}</option>@endforeach
@@ -13,7 +18,7 @@
         @endif
         @if(in_array('type', $fields))
             <div><label>Movement type</label><select name="type"><option value="">All</option>
-                @foreach(['opening','receipt','issue','adjustment'] as $t)<option @selected(request('type') === $t)>{{ $t }}</option>@endforeach
+                @foreach(['opening','receipt','issue','return','adjustment','transfer_out','transfer_in','transfer_cancel'] as $t)<option value="{{ $t }}" @selected(request('type') === $t)>{{ str_replace('_', ' ', $t) }}</option>@endforeach
             </select></div>
         @endif
         @if(in_array('dates', $fields))

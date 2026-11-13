@@ -1,4 +1,4 @@
-# Prioritised Backlog & Status (12 Nov 2026)
+# Prioritised Backlog & Status (13 Nov 2026)
 
 Legend: ✅ done and covered by automated tests · 🟡 done, needs owner or staging verification · ⬜ open · ⛔ deferred to Phase 2 (not started, not promised).
 
@@ -40,10 +40,22 @@ Legend: ✅ done and covered by automated tests · 🟡 done, needs owner or sta
 | B-25 | E-mail alerts along the chain: PM on submit, Overall after PM, storekeeper and requester after final approval, requester on rejection and on issue. Sent after commit; mail failure never blocks a decision. | ✅ `PolishFeaturesTest` (4 tests) |
 | B-26 | Opening-balance CSV template download and all-or-nothing import | ✅ `PolishFeaturesTest` (3 tests) |
 
+## Phase 2: multi-store stock control
+| ID | Item | Status | Evidence |
+|---|---|---|---|
+| B-27 | Stores (central / project site), storekeeper assignment, per-store balances; existing data migrated to MAIN | ✅ | `StoreTransferRoutesTest`, `MultiStoreStockTest` |
+| B-28 | Receipts, opening balances, adjustments and issues per store; server-side store scoping | ✅ | `test_storekeeper_cannot_receive_into_or_adjust_an_unassigned_store`, `test_site_store_cannot_issue_to_another_project...` |
+| B-29 | Two-step transfers: dispatch → receive by a different person; shortfall reason; cancel while in transit | ✅ | `test_dispatch_then_receive_by_a_different_storekeeper`, `test_short_receipt_needs_reason...`, `test_cancel_returns_stock_to_source` |
+| B-30 | Returns to store against the voucher; project credited at voucher cost; cannot exceed what is out | ✅ | `test_return_credits_project_once_and_cannot_exceed_what_is_out` |
+| B-31 | Stock counts: frozen book qty, reasons for variances, independent approval posts adjustments | ✅ | `test_count_variance_posts_only_after_independent_approval_with_reason` |
+| B-32 | Idempotency keys on receipts, issues, transfers, returns | ✅ | `test_duplicate_issue_post_with_same_key_does_not_double_post` |
+| B-33 | Ledger reconciles per store × item after transfers, issues, returns, adjustments | ✅ | `test_transfer_and_return_reconcile_across_stores` |
+| B-34 | Upgrade drill: run the Phase 2 migration on a copy of the live Phase 1 database | ⬜ | Fresh migration verified on MariaDB 10.4 (full suite); repeat on a production copy before go-live |
+
 ## Owner decisions still open (defaults in effect, see MVP_SCOPE §5)
 1. Name the Overall Manager and the primary Storekeeper (D1).
 2. Confirm the substitute PM-step reviewer when a PM requests on their own project (default: Owner/Admin, D2).
 3. Provide the hosting account and domain, project list, and opening stock count.
 
 ## Deferred: Phase 2, explicitly excluded
-Multiple stores and transfers · purchasing/RFQ/PO · supplier balances and portal · BOQ · payroll · equipment · native mobile app · offline sync · barcode/RFID · SMS/WhatsApp · accounting integration · multi-company · advanced analytics · bulk legacy migration.
+purchasing/RFQ/PO (Phase 3) · supplier balances and portal · BOQ · payroll · equipment · native mobile app · offline sync · barcode/RFID · SMS/WhatsApp · accounting integration · multi-company · advanced analytics · bulk legacy migration.

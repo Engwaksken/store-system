@@ -11,7 +11,7 @@ class StockReceipt extends Model
 {
     use Immutable;
 
-    protected $fillable = ['receipt_no', 'type', 'supplier_name', 'reference', 'received_on', 'notes', 'total_value', 'received_by'];
+    protected $fillable = ['receipt_no', 'type', 'supplier_name', 'reference', 'received_on', 'notes', 'total_value', 'received_by', 'store_id', 'idempotency_key'];
 
     protected function casts(): array
     {
@@ -26,5 +26,10 @@ class StockReceipt extends Model
     public function receiver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'received_by');
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
     }
 }

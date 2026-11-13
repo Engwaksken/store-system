@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\InventoryItem;
 use App\Models\StockReceipt;
+use App\Models\Store;
 use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -15,7 +16,7 @@ class StockController extends Controller
     {
         Gate::authorize('view-stock-ledger');
 
-        return view('receipts.index', ['receipts' => StockReceipt::with('receiver')->withCount('lines')->latest('id')->paginate(25)]);
+        return view('receipts.index', ['receipts' => StockReceipt::with('receiver', 'store')->withCount('lines')->latest('id')->paginate(25)]);
     }
 
     public function create(Request $request)
@@ -25,6 +26,7 @@ class StockController extends Controller
         return view('receipts.create', [
             'items' => InventoryItem::with('unit')->where('is_active', true)->orderBy('name')->get(),
             'type' => $request->query('type') === 'opening' ? 'opening' : 'purchase',
+            'stores' => Store::operableBy($request->user())->orderBy('id')->get(),
         ]);
     }
 
@@ -33,6 +35,8 @@ class StockController extends Controller
         Gate::authorize('manage-stock');
         $data = $request->validate([
             'type' => 'required|in:opening,purchase',
+            'store_id' => 'nullable|integer|exists:stores,id',
+            'idempotency_key' => 'nullable|string|max:64',
             'received_on' => 'required|date|before_or_equal:today',
             'supplier_name' => 'nullable|required_if:type,purchase|string|max:255',
             'reference' => 'nullable|string|max:100',
@@ -43,16 +47,19 @@ class StockController extends Controller
             'lines.*.unit_cost' => 'nullable|required_with:lines.*.item_id|numeric|min:0',
         ]);
         $lines = array_values(array_filter($data['lines'], fn ($l) => ! empty($l['item_id'])));
+        $data['store_id'] ??= Store::DEFAULT_ID;
         $receipt = $stock->receive($request->user(), $data, $lines);
 
-        return redirect()->route('receipts.show', $receipt)->with('status', "Stock recorded: {$receipt->receipt_no}.");
+        return redirect()->route('receipts.show', $receipt)->with('status', $receipt->wasRecentlyCreated
+            ? "Stock recorded: {$receipt->receipt_no}." : "{$receipt->receipt_no} was already recorded; it was not posted twice.");
     }
 
     /** B-26: blank CSV template listing every item that has no stock history yet. */
-    public function openingTemplate()
+    public function openingTemplate(Request $request)
     {
         Gate::authorize('manage-stock');
-        $items = InventoryItem::whereDoesntHave('movements')->where('is_active', true)->orderBy('sku')->get();
+        $storeId = $request->integer('store_id', Store::DEFAULT_ID);
+        $items = InventoryItem::whereDoesntHave('movements', fn ($m) => $m->where('store_id', $storeId))->where('is_active', true)->orderBy('sku')->get();
 
         return response()->streamDownload(function () use ($items) {
             $out = fopen('php://output', 'w');
@@ -70,6 +77,7 @@ class StockController extends Controller
         Gate::authorize('manage-stock');
         $data = $request->validate([
             'file' => 'required|file|mimes:csv,txt|max:2048',
+            'store_id' => 'nullable|integer|exists:stores,id',
             'received_on' => 'required|date|before_or_equal:today',
         ]);
 
@@ -107,7 +115,7 @@ class StockController extends Controller
         }
 
         $receipt = $stock->receive($request->user(), [
-            'type' => 'opening', 'received_on' => $data['received_on'],
+            'type' => 'opening', 'received_on' => $data['received_on'], 'store_id' => (int) ($data['store_id'] ?? \App\Models\Store::DEFAULT_ID),
             'notes' => 'Imported from '.$request->file('file')->getClientOriginalName(),
         ], $lines);
 
@@ -118,14 +126,19 @@ class StockController extends Controller
     {
         Gate::authorize('view-stock-ledger');
 
-        return view('receipts.show', ['receipt' => $receipt->load('lines.item.unit', 'receiver')]);
+        return view('receipts.show', ['receipt' => $receipt->load('lines.item.unit', 'receiver', 'store')]);
     }
 
-    public function createAdjustment()
+    public function createAdjustment(Request $request)
     {
         Gate::authorize('manage-stock');
+        $stores = Store::operableBy($request->user())->orderBy('id')->get();
+        $storeId = $request->integer('store_id', $stores->first()?->id ?? Store::DEFAULT_ID);
 
-        return view('receipts.adjust', ['items' => InventoryItem::with('balance', 'unit')->orderBy('name')->get()]);
+        return view('receipts.adjust', [
+            'stores' => $stores, 'storeId' => $storeId,
+            'items' => InventoryItem::with(['unit', 'balances' => fn ($q) => $q->where('store_id', $storeId)])->orderBy('name')->get(),
+        ]);
     }
 
     public function storeAdjustment(Request $request, StockService $stock)
@@ -133,10 +146,11 @@ class StockController extends Controller
         Gate::authorize('manage-stock');
         $data = $request->validate([
             'item_id' => 'required|exists:inventory_items,id',
+            'store_id' => 'nullable|integer|exists:stores,id',
             'qty_delta' => 'required|numeric|not_in:0',
             'reason' => 'required|string|min:5|max:500',
         ]);
-        $adj = $stock->adjust($request->user(), (int) $data['item_id'], (string) $data['qty_delta'], $data['reason']);
+        $adj = $stock->adjust($request->user(), (int) $data['item_id'], (string) $data['qty_delta'], $data['reason'], (int) ($data['store_id'] ?? \App\Models\Store::DEFAULT_ID));
 
         return redirect()->route('items.show', $data['item_id'])->with('status', "Adjustment {$adj->adjustment_no} posted.");
     }

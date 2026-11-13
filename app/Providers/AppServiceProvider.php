@@ -9,6 +9,8 @@ use App\Models\Expense;
 use App\Models\MaterialIssue;
 use App\Models\MaterialRequest;
 use App\Models\Project;
+use App\Models\StockCount;
+use App\Models\Store;
 use App\Models\User;
 use App\Services\RequestWorkflow;
 use Illuminate\Support\Facades\Gate;
@@ -42,7 +44,10 @@ class AppServiceProvider extends ServiceProvider
             }
             $issueQueueCount = $user && Gate::allows('issue-stock')
                 ? MaterialRequest::whereIn('status', [RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value])->count() : 0;
-            $view->with(compact('approvalCount', 'issueQueueCount'));
+            $transferInboxCount = $user && $user->hasRole(Role::Admin, Role::Storekeeper)
+                ? \App\Models\StockTransfer::where('status', 'in_transit')->where('dispatched_by', '!=', $user->id)
+                    ->whereIn('to_store_id', Store::operableBy($user)->select('id'))->count() : 0;
+            $view->with(compact('approvalCount', 'issueQueueCount', 'transferInboxCount'));
         });
     }
 
@@ -67,6 +72,16 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-stock', fn (User $u) => true);
         Gate::define('view-stock-ledger', $is(Role::Admin, Role::OverallManager, Role::ProjectManager, Role::Storekeeper, Role::Accountant));
         Gate::define('view-stock-value', $is(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant));
+        // Store-level scoping (which store) is enforced again inside every stock service via Store::assertOperable.
+        Gate::define('operate-stores', fn (User $u) => $u->hasRole(Role::Admin, Role::Storekeeper) && Store::operableBy($u)->exists());
+        Gate::define('record-return', fn (User $u, MaterialIssue $i) => $u->hasRole(Role::Admin, Role::Storekeeper) && Store::operableBy($u)->exists()
+            && $i->lines()->get()->contains(fn ($l) => bccomp((string) $l->qty, $l->returnedQty(), 3) > 0));
+        Gate::define('view-returns', $is(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant));
+        Gate::define('view-counts', $is(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant));
+        Gate::define('start-count', fn (User $u) => $u->hasRole(Role::Admin, Role::Storekeeper) && Store::operableBy($u)->exists());
+        Gate::define('edit-count', fn (User $u, StockCount $c) => $c->status === 'draft' && ($u->id === $c->counted_by || $u->isAdmin()));
+        Gate::define('decide-count', fn (User $u, StockCount $c) => $c->status === 'submitted' && $u->id !== $c->counted_by
+            && $u->hasRole(Role::Admin, Role::OverallManager));
 
         // Material requests
         Gate::define('create-request', fn (User $u) => $u->isAdmin()

@@ -21,4 +21,22 @@ class MaterialIssueLine extends Model
     {
         return $this->belongsTo(InventoryItem::class, 'item_id');
     }
+
+    public function issue(): BelongsTo
+    {
+        return $this->belongsTo(MaterialIssue::class, 'material_issue_id');
+    }
+
+    public function returnLines(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(StockReturnLine::class);
+    }
+
+    /** Quantity already returned to store (derived; issue lines themselves are immutable). */
+    public function returnedQty(): string
+    {
+        $rows = $this->relationLoaded('returnLines') ? $this->returnLines : $this->returnLines()->get();
+
+        return $rows->reduce(fn ($c, $r) => bcadd($c, (string) $r->qty, 3), '0.000');
+    }
 }

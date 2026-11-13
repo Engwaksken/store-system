@@ -20,7 +20,7 @@ class DashboardController extends Controller
         $user = $request->user();
 
         $projects = Project::visibleTo($user)->whereIn('status', ['planned', 'active'])->orderBy('code')->get();
-        $lowStock = InventoryItem::with('balance', 'unit')->where('is_active', true)->get()->filter->isLowStock()->values();
+        $lowStock = InventoryItem::with('balances', 'unit')->where('is_active', true)->get()->filter->isLowStock()->values();
 
         // "My queue": work waiting for this user specifically.
         $awaitingMe = MaterialRequest::with('project', 'requester')

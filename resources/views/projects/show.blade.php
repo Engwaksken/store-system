@@ -10,11 +10,11 @@
 @if($cost)
 <div class="grid grid-4" style="margin-bottom:1.25rem">
     <div class="stat navy"><div class="label">Budget</div><div class="value">{{ ugx($cost->budget) }}</div></div>
-    <div class="stat"><div class="label">Materials issued</div><div class="value">{{ ugx($cost->materials) }}</div></div>
+    <div class="stat"><div class="label">Materials (net of returns)</div><div class="value">{{ ugx($cost->materials) }}</div></div>
     <div class="stat gold"><div class="label">Cash expenses</div><div class="value">{{ ugx($cost->expenses) }}</div></div>
     <div @class(['stat', 'bad' => bccomp($cost->remaining, '0', 2) < 0])><div class="label">Remaining</div><div class="value">{{ ugx($cost->remaining) }}</div></div>
 </div>
-<p class="hint" style="margin-top:-.75rem">Materials are valued at average cost when issued. Store purchases count only when issued to this project, so nothing is counted twice.</p>
+<p class="hint" style="margin-top:-.75rem">Materials are valued at average cost when issued; returns to store are credited at the same cost. Store purchases count only when issued to this project, so nothing is counted twice.</p>
 @endif
 
 <div class="grid grid-2">

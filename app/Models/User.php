@@ -46,6 +46,12 @@ class User extends Authenticatable
         return $this->belongsToMany(Project::class)->withTimestamps();
     }
 
+    /** Stores this user (storekeeper) is assigned to. */
+    public function stores(): BelongsToMany
+    {
+        return $this->belongsToMany(Store::class)->withTimestamps();
+    }
+
     public function managedProjects(): HasMany
     {
         return $this->hasMany(Project::class, 'manager_id');

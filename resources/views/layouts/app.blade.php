@@ -29,8 +29,20 @@
 
         <div class="nav-group">Store</div>
         <a href="{{ route('items.index') }}" @class(['active' => request()->routeIs('items.*')])>Stock &amp; items</a>
+        @can('viewAny', App\Models\Store::class)
+            <a href="{{ route('stores.index') }}" @class(['active' => request()->routeIs('stores.*')])>Stores</a>
+        @endcan
         @can('view-stock-ledger')
             <a href="{{ route('receipts.index') }}" @class(['active' => request()->routeIs('receipts.*', 'adjustments.*')])>Receipts</a>
+        @endcan
+        @can('viewAny', App\Models\StockTransfer::class)
+            <a href="{{ route('transfers.index') }}" @class(['active' => request()->routeIs('transfers.*')])>Transfers @if($transferInboxCount)<span class="count">{{ $transferInboxCount }}</span>@endif</a>
+        @endcan
+        @can('view-returns')
+            <a href="{{ route('returns.index') }}" @class(['active' => request()->routeIs('returns.*')])>Returns</a>
+        @endcan
+        @can('view-counts')
+            <a href="{{ route('counts.index') }}" @class(['active' => request()->routeIs('counts.*')])>Stock counts</a>
         @endcan
         @can('manage-catalog')
             <a href="{{ route('catalog.setup') }}" @class(['active' => request()->routeIs('catalog.*')])>Categories &amp; units</a>

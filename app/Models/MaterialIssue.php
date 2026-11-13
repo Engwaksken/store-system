@@ -13,7 +13,7 @@ class MaterialIssue extends Model
 {
     use Immutable;
 
-    protected $fillable = ['issue_no', 'material_request_id', 'project_id', 'issued_by', 'recipient_name', 'issued_at', 'total_value', 'notes'];
+    protected $fillable = ['issue_no', 'material_request_id', 'project_id', 'issued_by', 'recipient_name', 'issued_at', 'total_value', 'notes', 'store_id', 'idempotency_key'];
 
     protected function casts(): array
     {
@@ -43,5 +43,15 @@ class MaterialIssue extends Model
     public function acknowledgment(): HasOne
     {
         return $this->hasOne(IssueAcknowledgment::class);
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
+    }
+
+    public function returns(): HasMany
+    {
+        return $this->hasMany(StockReturn::class);
     }
 }

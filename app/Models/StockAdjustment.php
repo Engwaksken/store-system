@@ -10,7 +10,7 @@ class StockAdjustment extends Model
 {
     use Immutable;
 
-    protected $fillable = ['adjustment_no', 'item_id', 'qty_delta', 'reason', 'actor_id'];
+    protected $fillable = ['adjustment_no', 'item_id', 'store_id', 'stock_count_id', 'qty_delta', 'reason', 'actor_id'];
 
     protected function casts(): array
     {
@@ -25,5 +25,10 @@ class StockAdjustment extends Model
     public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_id');
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
     }
 }

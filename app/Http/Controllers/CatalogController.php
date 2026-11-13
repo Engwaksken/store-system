@@ -15,7 +15,7 @@ class CatalogController extends Controller
     public function index(Request $request)
     {
         Gate::authorize('view-stock');
-        $items = InventoryItem::with('category', 'unit', 'balance')
+        $items = InventoryItem::with('category', 'unit', 'balances')
             ->when($request->filled('q'), fn ($q) => $q->where(fn ($w) => $w->where('name', 'like', "%{$request->q}%")->orWhere('sku', 'like', "%{$request->q}%")))
             ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->integer('category_id')))
             ->orderBy('name')->get();
@@ -30,10 +30,10 @@ class CatalogController extends Controller
     {
         Gate::authorize('view-stock');
         $movements = Gate::allows('view-stock-ledger')
-            ? $item->movements()->with('project', 'actor')->latest('id')->paginate(50)
+            ? $item->movements()->with('project', 'actor', 'store')->latest('id')->paginate(50)
             : null;
 
-        return view('items.show', ['item' => $item->load('category', 'unit', 'balance'), 'movements' => $movements]);
+        return view('items.show', ['item' => $item->load('category', 'unit', 'balances.store'), 'movements' => $movements]);
     }
 
     public function setup()

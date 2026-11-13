@@ -28,6 +28,7 @@ Stock is only deducted when the storekeeper issues. Approval reserves nothing.
 - **Approvals** lists requests that the PM has approved.
 - Give the final decision. You may reduce quantities further (never above the PM's figure).
 - You cannot decide on a request you approved at PM level.
+- **Stock counts** submitted by storekeepers wait for your approval. Check the reasons for each difference, then approve (posts the differences to stock) or reject with a comment.
 - You can create and edit projects and assign staff, and view all reports and the activity log.
 
 ## Storekeeper
@@ -38,6 +39,13 @@ Stock is only deducted when the storekeeper issues. Approval reserves nothing.
 - **Opening balances** is used once per item at go-live. For many items, click *Download the template*, fill in qty and unit_cost in Excel, save as CSV and upload it. If any row is wrong, nothing is imported and the errors are listed. **Adjustment** is for counted differences or damage, and needs a reason. Stock can never go below zero.
 - Rows highlighted on *Stock & items* are at or below the minimum level, so reorder those.
 
+### Several stores (central + site stores)
+- You can only receive, issue, transfer, count or adjust in the stores you are assigned to (ask the admin). Every form has a **Store** selector; on-hand figures shown are for that store.
+- **Transfers → New transfer**: pick the source store, the destination and the quantities, then dispatch. The stock leaves your store immediately and shows *In transit*.
+- At the destination, a **different** storekeeper opens the transfer (the *Transfers* menu shows a count of transfers waiting for you), counts what arrived and confirms. If less arrived, type the reason; the difference is written off. The dispatcher can cancel a transfer only while it is still in transit.
+- **Return to store**: open the issue voucher and click *Return to store* when unused material comes back. You cannot return more than is still out on the voucher. The project is credited at the voucher cost.
+- **Stock counts → New count** creates a count sheet with the book quantities frozen. Enter what you physically count (0 if none), give a reason for every difference, save, and **Submit for approval**. Nothing changes in stock until the Owner/Admin or Overall Manager approves; then each difference is posted as an adjustment.
+
 ## Accountant
 - **Expenses → Record expense** is for cash paid directly for a project: labour, transport, hire, direct site purchases. Attach the receipt photo or PDF.
 - **Do not** record materials bought into the store as an expense. They are a stock receipt, and become project cost when issued.
@@ -46,6 +54,7 @@ Stock is only deducted when the storekeeper issues. Approval reserves nothing.
 ## Owner / Admin
 - **Users**: add people, set role, deactivate leavers, or reset a password (the user must then change it).
 - **Settings**: company details and logo shown on vouchers, and expense categories.
+- **Stores**: add site stores (linked to their project) and tick which storekeepers may operate each store.
 - **Activity log**: who did what and when.
 - The dashboard shows work waiting, low stock, and each project's budget against cost.
 

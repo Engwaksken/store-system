@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Stock & items')
 @section('content')
-<div class="page-head"><div><h1>Stock &amp; items</h1><p>Single central store. Rows highlighted are at or below minimum level.</p></div>
+<div class="page-head"><div><h1>Stock &amp; items</h1><p>On hand is the total across all stores; open an item for the per-store split. Highlighted rows are at or below minimum level.</p></div>
     <div class="actions">
         @can('manage-catalog')<a class="btn" href="{{ route('items.create') }}">+ New item</a>@endcan
         @can('manage-stock')<a class="btn secondary" href="{{ route('receipts.create', ['type' => 'opening']) }}">Opening balances</a><a class="btn secondary" href="{{ route('adjustments.create') }}">Adjustment</a>@endcan

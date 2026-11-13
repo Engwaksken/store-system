@@ -5,10 +5,12 @@ namespace App\Services;
 use App\Models\Expense;
 use App\Models\MaterialIssue;
 use App\Models\Project;
+use App\Models\StockReturn;
 use Illuminate\Support\Collection;
 
 /**
- * Project cost = materials ISSUED from the store (valued at issue-time average cost)
+ * Project cost = materials ISSUED from a store (valued at issue-time average cost)
+ *              − materials RETURNED to a store (credited at the same voucher cost)
  *              + cash EXPENSES recorded against the project.
  *
  * Store purchases (stock receipts) are deliberately excluded: they are company stock, not project
@@ -22,11 +24,14 @@ class ProjectCostService
         $ids = $projects->pluck('id');
         $materials = MaterialIssue::whereIn('project_id', $ids)->groupBy('project_id')
             ->selectRaw('project_id, SUM(total_value) as v')->pluck('v', 'project_id');
+        $returns = StockReturn::whereIn('project_id', $ids)->groupBy('project_id')
+            ->selectRaw('project_id, SUM(total_value) as v')->pluck('v', 'project_id');
         $expenses = Expense::whereIn('project_id', $ids)->groupBy('project_id')
             ->selectRaw('project_id, SUM(amount) as v')->pluck('v', 'project_id');
 
-        return $projects->map(function (Project $p) use ($materials, $expenses) {
-            $m = bcadd((string) ($materials[$p->id] ?? 0), '0', 2);
+        return $projects->map(function (Project $p) use ($materials, $returns, $expenses) {
+            $returned = bcadd((string) ($returns[$p->id] ?? 0), '0', 2);
+            $m = bcsub(bcadd((string) ($materials[$p->id] ?? 0), '0', 2), $returned, 2);
             $e = bcadd((string) ($expenses[$p->id] ?? 0), '0', 2);
             $total = bcadd($m, $e, 2);
 
@@ -34,6 +39,7 @@ class ProjectCostService
                 'project' => $p,
                 'budget' => (string) $p->budget,
                 'materials' => $m,
+                'returned' => $returned,
                 'expenses' => $e,
                 'total' => $total,
                 'remaining' => bcsub((string) $p->budget, $total, 2),

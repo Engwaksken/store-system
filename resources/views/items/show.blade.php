@@ -8,15 +8,27 @@
     <div class="stat gold"><div class="label">Minimum level</div><div class="value">{{ qty($item->min_level) }}</div></div>
     @can('view-stock-value')<div class="stat navy"><div class="label">Average cost (UGX)</div><div class="value">{{ ugx($item->avg_cost) }}</div></div>@endcan
 </div>
+@if($item->balances->where('on_hand', '!=', 0)->isNotEmpty())
+<div class="card table-wrap"><h2>By store</h2><table>
+    <thead><tr><th>Store</th><th class="num">On hand</th></tr></thead>
+    <tbody>@foreach($item->balances->where('on_hand', '!=', 0)->sortBy('store_id') as $b)<tr><td><a href="{{ route('stores.show', $b->store_id) }}">{{ $b->store->label() }}</a></td><td class="num">{{ qty($b->on_hand) }}</td></tr>@endforeach</tbody>
+</table></div>
+@endif
 @if($movements)
 <div class="card"><h2>Stock ledger</h2><div class="table-wrap"><table>
-    <thead><tr><th>Date</th><th>Type</th><th class="num">Change</th><th class="num">Balance</th><th class="num">Unit cost</th><th>Project</th><th>Source</th><th>By</th></tr></thead>
+    <thead><tr><th>Date</th><th>Store</th><th>Type</th><th class="num">Change</th><th class="num">Store balance</th><th class="num">Unit cost</th><th>Project</th><th>Source</th><th>By</th></tr></thead>
     <tbody>@forelse($movements as $m)
-        <tr><td class="nowrap">{{ $m->created_at->format('Y-m-d H:i') }}</td><td>{{ $m->movement_type }}</td><td class="num">{{ $m->qty_delta > 0 ? '+' : '' }}{{ qty($m->qty_delta) }}</td><td class="num">{{ qty($m->balance_after) }}</td>
+        <tr><td class="nowrap">{{ $m->created_at->format('Y-m-d H:i') }}</td><td>{{ $m->store->code }}</td><td>{{ str_replace('_', ' ', $m->movement_type) }}</td><td class="num">{{ $m->qty_delta > 0 ? '+' : '' }}{{ qty($m->qty_delta) }}</td><td class="num">{{ qty($m->balance_after) }}</td>
             <td class="num">{{ ugx($m->unit_cost) }}</td><td>{{ $m->project?->code }}</td>
-            <td>@if($m->source_type === 'material_issue')<a href="{{ route('issues.show', $m->source_id) }}">Voucher</a>@elseif($m->source_type === 'stock_receipt')<a href="{{ route('receipts.show', $m->source_id) }}">Receipt</a>@else Adjustment @endif</td>
+            <td>@switch($m->source_type)
+                @case('material_issue')<a href="{{ route('issues.show', $m->source_id) }}">Voucher</a>@break
+                @case('stock_receipt')<a href="{{ route('receipts.show', $m->source_id) }}">Receipt</a>@break
+                @case('stock_transfer')<a href="{{ route('transfers.show', $m->source_id) }}">Transfer</a>@break
+                @case('stock_return')<a href="{{ route('returns.show', $m->source_id) }}">Return</a>@break
+                @default Adjustment
+            @endswitch</td>
             <td>{{ $m->actor->name }}</td></tr>
-    @empty <tr><td colspan="8" class="empty">No movements yet.</td></tr> @endforelse</tbody>
+    @empty <tr><td colspan="9" class="empty">No movements yet.</td></tr> @endforelse</tbody>
 </table></div><div class="pagination">{{ $movements->links() }}</div></div>
 @endif
 @endsection

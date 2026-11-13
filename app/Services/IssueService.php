@@ -14,8 +14,10 @@ use App\Models\MaterialIssue;
 use App\Models\MaterialIssueLine;
 use App\Models\MaterialRequest;
 use App\Models\StockMovement;
+use App\Models\Store;
 use App\Models\User;
 use App\Support\Decimal;
+use App\Support\Idempotency;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 
@@ -32,11 +34,21 @@ class IssueService
     {
     }
 
-    /** @param array<int|string, mixed> $qtys request_line_id => qty to issue now */
-    public function issue(User $storekeeper, MaterialRequest $req, array $qtys, string $recipientName, ?string $notes = null): MaterialIssue
+    /**
+     * @param array<int|string, mixed> $qtys request_line_id => qty to issue now
+     * @param ?int $storeId store to issue from (default: main store); the storekeeper must be assigned to it
+     * @param ?string $idempotencyKey one-time form key; a repeated post returns the first voucher
+     */
+    public function issue(User $storekeeper, MaterialRequest $req, array $qtys, string $recipientName, ?string $notes = null,
+        ?int $storeId = null, ?string $idempotencyKey = null): MaterialIssue
     {
         if ($storekeeper->role !== Role::Storekeeper || ! $storekeeper->is_active) {
             throw new AuthorizationException('Only the storekeeper can issue materials.');
+        }
+        $storeId ??= Store::DEFAULT_ID;
+        $store = Store::assertOperable($storekeeper, $storeId);
+        if ($store->project_id !== null && $store->project_id !== $req->project_id) {
+            throw new WorkflowException("{$store->name} is a site store for another project and cannot issue to {$req->project->code}.");
         }
         $recipientName = trim($recipientName);
         if ($recipientName === '') {
@@ -60,7 +72,7 @@ class IssueService
             throw new WorkflowException('Enter a quantity for at least one item.');
         }
 
-        return DB::transaction(function () use ($storekeeper, $req, $wanted, $recipientName, $notes) {
+        return Idempotency::run(MaterialIssue::class, $idempotencyKey, fn () => DB::transaction(function () use ($storekeeper, $req, $wanted, $recipientName, $notes, $storeId, $idempotencyKey) {
             $req = MaterialRequest::whereKey($req->id)->lockForUpdate()->firstOrFail();
             if (! $req->status->isIssuable()) {
                 throw new WorkflowException("Request {$req->request_no} is {$req->status->label()} and cannot be issued.");
@@ -74,8 +86,9 @@ class IssueService
             }
 
             $itemIds = $lines->only(array_keys($wanted))->pluck('item_id')->unique()->sort()->values()->all();
-            $balances = InventoryBalance::whereIn('item_id', $itemIds)->orderBy('item_id')->lockForUpdate()->get()->keyBy('item_id');
-            $items = InventoryItem::whereIn('id', $itemIds)->get()->keyBy('id');
+            // Lock order everywhere: request → lines → items → balances (ascending ids).
+            $items = InventoryItem::whereIn('id', $itemIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $balances = InventoryBalance::lockRows($storeId, $itemIds);
 
             // Validate everything and price the voucher before writing anything.
             $total = '0';
@@ -88,14 +101,14 @@ class IssueService
                 }
                 $onHand = (string) $balances[$line->item_id]->on_hand;
                 if (Decimal::cmp($qty, $onHand) > 0) {
-                    throw new WorkflowException("{$item->name}: cannot issue {$qty}; only {$onHand} in stock.");
+                    throw new WorkflowException("{$item->name}: cannot issue {$qty}; only {$onHand} in stock at this store.");
                 }
                 $total = bcadd($total, bcmul($qty, Decimal::of($item->avg_cost, 4), 2), 2);
             }
 
             $issue = MaterialIssue::create([
                 'issue_no' => DocumentSequence::next('IV'), 'material_request_id' => $req->id,
-                'project_id' => $req->project_id, 'issued_by' => $storekeeper->id,
+                'project_id' => $req->project_id, 'store_id' => $storeId, 'idempotency_key' => $idempotencyKey, 'issued_by' => $storekeeper->id,
                 'recipient_name' => $recipientName, 'issued_at' => now(), 'total_value' => $total, 'notes' => $notes,
             ]);
 
@@ -114,7 +127,7 @@ class IssueService
                 $line->forceFill(['issued_qty' => bcadd((string) $line->issued_qty, $qty, 3)])->save();
                 $balance->update(['on_hand' => $newOnHand]);
                 StockMovement::create([
-                    'item_id' => $item->id, 'movement_type' => 'issue', 'qty_delta' => bcmul($qty, '-1', 3),
+                    'item_id' => $item->id, 'store_id' => $storeId, 'movement_type' => 'issue', 'qty_delta' => bcmul($qty, '-1', 3),
                     'unit_cost' => $cost, 'balance_after' => $newOnHand, 'project_id' => $req->project_id,
                     'source_type' => 'material_issue', 'source_id' => $issue->id, 'actor_id' => $storekeeper->id,
                 ]);
@@ -127,7 +140,7 @@ class IssueService
             $this->notifier->issued($issue);
 
             return $issue;
-        });
+        }));
     }
 
     /** D8: requester confirms collection, or storekeeper records the named recipient's acknowledgment. */

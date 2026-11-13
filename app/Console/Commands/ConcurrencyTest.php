@@ -43,6 +43,7 @@ class ConcurrencyTest extends Command
         Artisan::call('migrate:fresh', ['--force' => true]);
 
         $sk = User::create(['name' => 'Store', 'email' => 'sk@race.test', 'password' => 'x', 'role' => Role::Storekeeper]);
+        $sk->stores()->attach(\App\Models\Store::DEFAULT_ID);
         $pm = User::create(['name' => 'PM', 'email' => 'pm@race.test', 'password' => 'x', 'role' => Role::ProjectManager]);
         $om = User::create(['name' => 'OM', 'email' => 'om@race.test', 'password' => 'x', 'role' => Role::OverallManager]);
         $st = User::create(['name' => 'Staff', 'email' => 'st@race.test', 'password' => 'x', 'role' => Role::Staff]);

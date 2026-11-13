@@ -10,6 +10,7 @@ use App\Models\MaterialIssueLine;
 use App\Models\MaterialRequest;
 use App\Models\Project;
 use App\Models\StockMovement;
+use App\Models\StockReturnLine;
 use App\Services\ProjectCostService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -33,11 +34,12 @@ class ReportController extends Controller
     {
         Gate::authorize('view-reports');
         $showValue = Gate::allows('view-stock-value');
-        $rows = InventoryItem::with('category', 'unit', 'balance')->orderBy('name')->get()->map(function ($i) use ($showValue) {
-            $row = [$i->sku, $i->name, $i->category->name, $i->unit->abbreviation, $i->onHand(), (string) $i->min_level, $i->isLowStock() ? 'LOW' : ''];
+        $storeId = $request->filled('store_id') ? $request->integer('store_id') : null;
+        $rows = InventoryItem::with('category', 'unit', 'balances')->orderBy('name')->get()->map(function ($i) use ($showValue, $storeId) {
+            $row = [$i->sku, $i->name, $i->category->name, $i->unit->abbreviation, $i->onHand($storeId), (string) $i->min_level, $i->isLowStock() ? 'LOW' : ''];
             if ($showValue) {
                 $row[] = (string) $i->avg_cost;
-                $row[] = bcmul($i->onHand(), (string) $i->avg_cost, 2);
+                $row[] = bcmul($i->onHand($storeId), (string) $i->avg_cost, 2);
             }
 
             return $row;
@@ -47,26 +49,28 @@ class ReportController extends Controller
             array_push($headers, 'Avg cost (UGX)', 'Stock value (UGX)');
         }
 
-        return $this->respond($request, 'Stock summary', $headers, $rows, numeric: [4, 5, 7, 8], totals: $showValue ? [8] : [], money: [7, 8]);
+        return $this->respond($request, 'Stock summary', $headers, $rows, numeric: [4, 5, 7, 8], totals: $showValue ? [8] : [], money: [7, 8], filters: ['store'],
+            note: 'Without a store filter, quantities are company-wide. Minimum level and LOW status always use company-wide stock.');
     }
 
     public function movements(Request $request)
     {
         Gate::authorize('view-stock-ledger');
-        $q = StockMovement::with('item.unit', 'project', 'actor')
+        $q = StockMovement::with('item.unit', 'project', 'actor', 'store')
+            ->when($request->filled('store_id'), fn ($q) => $q->where('store_id', $request->integer('store_id')))
             ->when($request->filled('item_id'), fn ($q) => $q->where('item_id', $request->integer('item_id')))
             ->when($request->filled('project_id'), fn ($q) => $q->where('project_id', $request->integer('project_id')))
             ->when($request->filled('type'), fn ($q) => $q->where('movement_type', $request->type))
             ->tap(fn ($q) => $this->dateRange($q, $request, 'created_at'))
             ->orderBy('id');
         $rows = $q->limit(5000)->get()->map(fn ($m) => [
-            $m->created_at->format('Y-m-d H:i'), $m->item->sku, $m->item->name, $m->movement_type,
+            $m->created_at->format('Y-m-d H:i'), $m->store->code, $m->item->sku, $m->item->name, $m->movement_type,
             (string) $m->qty_delta, (string) $m->balance_after, (string) $m->unit_cost,
             $m->project?->code ?? '', strtoupper(str_replace('_', ' ', $m->source_type)).' #'.$m->source_id, $m->actor->name,
         ]);
 
-        return $this->respond($request, 'Stock movement ledger', ['Date', 'SKU', 'Item', 'Type', 'Qty change', 'Balance after', 'Unit cost', 'Project', 'Source', 'By'],
-            $rows, numeric: [4, 5, 6], filters: ['item', 'project', 'type', 'dates'], money: [6]);
+        return $this->respond($request, 'Stock movement ledger', ['Date', 'Store', 'SKU', 'Item', 'Type', 'Qty change', 'Store balance after', 'Unit cost', 'Project', 'Source', 'By'],
+            $rows, numeric: [5, 6, 7], filters: ['store', 'item', 'project', 'type', 'dates'], money: [7]);
     }
 
     public function pending(Request $request)
@@ -96,10 +100,27 @@ class ReportController extends Controller
             ->groupBy('projects.code', 'projects.name', 'inventory_items.sku', 'inventory_items.name')
             ->orderBy('projects.code')->orderBy('inventory_items.name')
             ->selectRaw('projects.code, projects.name as project_name, inventory_items.sku, inventory_items.name as item_name, SUM(material_issue_lines.qty) as qty, SUM(material_issue_lines.line_value) as value');
-        $rows = $q->get()->map(fn ($r) => [$r->code, $r->project_name, $r->sku, $r->item_name, bcadd((string) $r->qty, '0', 3), bcadd((string) $r->value, '0', 2)]);
+        $returned = StockReturnLine::query()
+            ->join('stock_returns', 'stock_returns.id', '=', 'stock_return_lines.stock_return_id')
+            ->join('projects', 'projects.id', '=', 'stock_returns.project_id')
+            ->join('inventory_items', 'inventory_items.id', '=', 'stock_return_lines.item_id')
+            ->tap(fn ($q) => $this->scopeProjects($q, $request, 'stock_returns.project_id'))
+            ->tap(fn ($q) => $this->dateRange($q, $request, 'stock_returns.returned_at'))
+            ->groupBy('projects.code', 'inventory_items.sku')
+            ->selectRaw('projects.code, inventory_items.sku, SUM(stock_return_lines.qty) as qty, SUM(stock_return_lines.line_value) as value')
+            ->get()->keyBy(fn ($r) => $r->code.'|'.$r->sku);
+        $rows = $q->get()->map(function ($r) use ($returned) {
+            $ret = $returned->get($r->code.'|'.$r->sku);
+            $rq = bcadd((string) ($ret->qty ?? 0), '0', 3);
+            $rv = bcadd((string) ($ret->value ?? 0), '0', 2);
+            $v = bcadd((string) $r->value, '0', 2);
 
-        return $this->respond($request, 'Materials issued by project', ['Project', 'Project name', 'SKU', 'Item', 'Qty issued', 'Value (UGX)'],
-            $rows, numeric: [4, 5], totals: [5], filters: ['project', 'dates'], money: [5]);
+            return [$r->code, $r->project_name, $r->sku, $r->item_name, bcadd((string) $r->qty, '0', 3), $v, $rq, $rv, bcsub($v, $rv, 2)];
+        });
+
+        return $this->respond($request, 'Materials issued by project', ['Project', 'Project name', 'SKU', 'Item', 'Qty issued', 'Issued value', 'Qty returned', 'Returned value', 'Net cost (UGX)'],
+            $rows, numeric: [4, 5, 6, 7, 8], totals: [5, 7, 8], filters: ['project', 'dates'], money: [5, 7, 8],
+            note: 'Returns are credited at the cost on the original voucher. Returns dated outside the filter period are not shown.');
     }
 
     public function expenses(Request $request)
@@ -176,6 +197,7 @@ class ReportController extends Controller
             'projects' => in_array('project', $filters) ? Project::visibleTo($user)
                 ->when($user->role === Role::ProjectManager, fn ($q) => $q->where('manager_id', $user->id))->orderBy('code')->get() : collect(),
             'items' => in_array('item', $filters) ? InventoryItem::orderBy('name')->get() : collect(),
+            'stores' => in_array('store', $filters) ? \App\Models\Store::orderBy('id')->get() : collect(),
         ]);
     }
 

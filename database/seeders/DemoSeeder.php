@@ -12,7 +12,11 @@ use App\Models\Project;
 use App\Models\User;
 use App\Services\IssueService;
 use App\Services\RequestWorkflow;
+use App\Services\StockCountService;
+use App\Services\StockReturnService;
 use App\Services\StockService;
+use App\Services\StockTransferService;
+use App\Models\Store;
 use Illuminate\Database\Seeder;
 
 /**
@@ -32,6 +36,7 @@ class DemoSeeder extends Seeder
         $pm1 = $mk('Peter Kato (PM)', 'pm1@demo.test', Role::ProjectManager);
         $pm2 = $mk('Ruth Nakato (PM)', 'pm2@demo.test', Role::ProjectManager);
         $sk = $mk('Moses Store', 'store@demo.test', Role::Storekeeper);
+        $sk2 = $mk('Agnes Site Store', 'sitestore@demo.test', Role::Storekeeper);
         $acc = $mk('Joan Accounts', 'accounts@demo.test', Role::Accountant);
         $s1 = $mk('Brian Site', 'staff1@demo.test', Role::Staff);
         $s2 = $mk('Esther Site', 'staff2@demo.test', Role::Staff);
@@ -40,6 +45,10 @@ class DemoSeeder extends Seeder
         $p2 = Project::create(['code' => 'PRJ-002', 'name' => 'Ntinda Apartments Phase 1', 'client' => 'Private client', 'location' => 'Ntinda', 'status' => 'active', 'budget' => 420000000, 'manager_id' => $pm2->id, 'start_date' => now()->subMonth(), 'created_by' => $owner->id]);
         $p1->members()->sync([$s1->id]);
         $p2->members()->sync([$s2->id]);
+
+        $sk->stores()->attach(Store::DEFAULT_ID);
+        $site = Store::create(['code' => 'KIRA-SITE', 'name' => 'Kira Site Store', 'type' => 'site', 'project_id' => $p1->id, 'location' => 'Kira']);
+        $site->users()->attach([$sk2->id, $sk->id]);
 
         // [sku, name, category, unit, min level, unit cost, opening qty]
         $spec = [
@@ -99,6 +108,21 @@ class DemoSeeder extends Seeder
         $wf->submit($s2, $r4);
         $wf->pmDecide($pm2, $r4, 'rejected', 'Quantity too high for this stage; resubmit for level 1 only.');
 
+        // Stores: one received transfer to the Kira site store, one still in transit, a return and a count awaiting approval.
+        $transfers = app(StockTransferService::class);
+        $t1 = $transfers->dispatch($sk, Store::DEFAULT_ID, $site->id, [['item_id' => $items[0]->id, 'qty' => 40], ['item_id' => $items[6]->id, 'qty' => 30]], 'Lorry UAX 123B');
+        $t1Lines = $t1->lines()->orderBy('item_id')->get();
+        $transfers->receive($sk2, $t1, [$t1Lines[0]->id => 40, $t1Lines[1]->id => 28], [$t1Lines[1]->id => 'Two pieces split in transit'], 'Offloaded at site');
+        $transfers->dispatch($sk, Store::DEFAULT_ID, $site->id, [['item_id' => $items[5]->id, 'qty' => 10]], 'Pick-up');
+        app(StockReturnService::class)->record($sk, $issue, [$issue->lines()->orderBy('id')->first()->id => 5], 'Brian Site', 'Excess after slab casting, bags intact');
+        $counts = app(StockCountService::class);
+        $count = $counts->create($sk2, $site->id, null, 'Weekly site count');
+        $counts->record($sk2, $count, $count->lines()->get()->mapWithKeys(fn ($l) => [$l->id => [
+            'counted_qty' => (float) $l->system_qty > 0 && $l->item_id === $items[0]->id ? (float) $l->system_qty - 1 : (float) $l->system_qty,
+            'reason' => $l->item_id === $items[0]->id ? 'One bag hardened (water damage)' : null,
+        ]])->all());
+        $counts->submit($sk2, $count);
+
         $ec = fn (string $n) => ExpenseCategory::where('name', $n)->value('id');
         $rows = [
             [$p1, 'Casual labour', 1850000, 'cash', 'Weekly casuals week 1', 12],
@@ -110,6 +134,6 @@ class DemoSeeder extends Seeder
             Expense::create(['project_id' => $p->id, 'category_id' => $ec($c), 'incurred_on' => now()->subDays($daysAgo), 'amount' => $amt, 'payment_mode' => $mode, 'description' => $desc, 'recorded_by' => $acc->id]);
         }
 
-        $this->command?->info('Demo data loaded. All demo accounts use password Demo12345: owner@, overall@, pm1@, pm2@, store@, accounts@, staff1@, staff2@demo.test');
+        $this->command?->info('Demo data loaded. All demo accounts use password Demo12345: owner@, overall@, pm1@, pm2@, store@, sitestore@, accounts@, staff1@, staff2@demo.test');
     }
 }

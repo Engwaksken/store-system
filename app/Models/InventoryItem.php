@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class InventoryItem extends Model
 {
@@ -14,12 +13,6 @@ class InventoryItem extends Model
     protected function casts(): array
     {
         return ['min_level' => 'decimal:3', 'avg_cost' => 'decimal:4', 'is_active' => 'boolean'];
-    }
-
-    protected static function booted(): void
-    {
-        // Every item has exactly one balance row in the single store.
-        static::created(fn (self $item) => InventoryBalance::create(['item_id' => $item->id, 'on_hand' => 0]));
     }
 
     public function category(): BelongsTo
@@ -32,9 +25,10 @@ class InventoryItem extends Model
         return $this->belongsTo(InventoryUnit::class, 'unit_id');
     }
 
-    public function balance(): HasOne
+    /** One row per store that has ever held the item (rows are created on first movement). */
+    public function balances(): HasMany
     {
-        return $this->hasOne(InventoryBalance::class, 'item_id');
+        return $this->hasMany(InventoryBalance::class, 'item_id');
     }
 
     public function movements(): HasMany
@@ -42,11 +36,18 @@ class InventoryItem extends Model
         return $this->hasMany(StockMovement::class, 'item_id');
     }
 
-    public function onHand(): string
+    /** On-hand quantity in one store, or company-wide when $storeId is null. */
+    public function onHand(?int $storeId = null): string
     {
-        return (string) ($this->balance?->on_hand ?? '0.000');
+        $rows = $this->relationLoaded('balances') ? $this->balances : $this->balances()->get();
+        if ($storeId !== null) {
+            $rows = $rows->where('store_id', $storeId);
+        }
+
+        return $rows->reduce(fn ($c, $b) => bcadd($c, (string) $b->on_hand, 3), '0.000');
     }
 
+    /** Minimum level applies to company-wide stock. */
     public function isLowStock(): bool
     {
         return bccomp((string) $this->min_level, '0', 3) > 0

@@ -67,7 +67,7 @@ class MaterialRequestController extends Controller
     public function show(MaterialRequest $materialRequest)
     {
         Gate::authorize('view-request', $materialRequest);
-        $materialRequest->load('project', 'requester', 'projectManager', 'lines.item.unit', 'lines.item.balance', 'approvals.approver', 'issues.acknowledgment');
+        $materialRequest->load('project', 'requester', 'projectManager', 'lines.item.unit', 'lines.item.balances', 'approvals.approver', 'issues.acknowledgment');
 
         return view('requests.show', ['req' => $materialRequest, 'wf' => $this->wf]);
     }
@@ -147,7 +147,7 @@ class MaterialRequestController extends Controller
     {
         return [
             'projects' => Project::requestableBy($request->user())->orderBy('code')->get(),
-            'items' => InventoryItem::with('unit', 'balance')->where('is_active', true)->orderBy('name')->get(),
+            'items' => InventoryItem::with('unit', 'balances')->where('is_active', true)->orderBy('name')->get(),
         ];
     }
 

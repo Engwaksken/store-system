@@ -13,7 +13,7 @@ class StockMovement extends Model
 
     public const UPDATED_AT = null;
 
-    protected $fillable = ['item_id', 'movement_type', 'qty_delta', 'unit_cost', 'balance_after', 'project_id', 'source_type', 'source_id', 'actor_id'];
+    protected $fillable = ['item_id', 'store_id', 'movement_type', 'qty_delta', 'unit_cost', 'balance_after', 'project_id', 'source_type', 'source_id', 'actor_id'];
 
     protected function casts(): array
     {
@@ -23,6 +23,11 @@ class StockMovement extends Model
     public function item(): BelongsTo
     {
         return $this->belongsTo(InventoryItem::class, 'item_id');
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
     }
 
     public function project(): BelongsTo
