@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/auth_controller.dart';
 
@@ -28,7 +27,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider);
     return Scaffold(
-      backgroundColor: Brand.navy,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -36,23 +35,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const BrandMark(size: 84),
-                const SizedBox(height: 20),
-                Text(
-                  AppConfig.appName,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
+                const BrandLogo(width: 220),
                 const SizedBox(height: 32),
                 if (state is AuthRestoreFailed) ...[
-                  const Icon(Icons.cloud_off_outlined, color: Colors.white70, size: 36),
+                  const Icon(Icons.cloud_off_outlined, color: Colors.black45, size: 36),
                   const SizedBox(height: 12),
                   Text(
                     state.message,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Brand.navy),
                   ),
                   const SizedBox(height: 20),
                   FilledButton.icon(
@@ -62,14 +53,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   ),
                   TextButton(
                     onPressed: () => ref.read(authControllerProvider.notifier).logout(),
-                    style: TextButton.styleFrom(foregroundColor: Colors.white),
+                    style: TextButton.styleFrom(foregroundColor: Brand.navy),
                     child: const Text('Sign in as someone else'),
                   ),
                 ] else
                   const SizedBox(
                     width: 28,
                     height: 28,
-                    child: CircularProgressIndicator(strokeWidth: 3, color: Brand.gold),
+                    child: CircularProgressIndicator(strokeWidth: 3, color: Brand.navy),
                   ),
               ],
             ),
@@ -80,26 +71,42 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 }
 
-/// Simple brand mark: gold rounded square with a navy "K".
+/// Company mark (the favicon uploaded in the web app's Settings), assets/branding/favicon.png.
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.size = 64});
   final double size;
 
   @override
   Widget build(BuildContext context) => Semantics(
-        label: 'Kemmy Store logo',
+        label: 'Company logo',
         image: true,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(color: Brand.gold, borderRadius: BorderRadius.circular(size * 0.24)),
-          alignment: Alignment.center,
-          child: ExcludeSemantics(
-            child: Text(
-              'K',
-              style: TextStyle(color: Brand.navy, fontSize: size * 0.55, fontWeight: FontWeight.w800, height: 1),
-            ),
-          ),
-        ),
+        child: Image.asset('assets/branding/favicon.png', width: size, height: size, fit: BoxFit.contain),
       );
+}
+
+/// Full company logo (the logo uploaded in the web app's Settings), assets/branding/logo.png.
+/// The artwork has a white background, so on dark surfaces pass [onDark] to set it on a white tile.
+class BrandLogo extends StatelessWidget {
+  const BrandLogo({super.key, this.width = 200, this.onDark = false});
+  final double width;
+  final bool onDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final image = Semantics(
+      label: 'Company logo',
+      image: true,
+      child: Image.asset('assets/branding/logo.png', width: width, fit: BoxFit.contain),
+    );
+    if (!onDark) return image;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 16, offset: Offset(0, 6))],
+      ),
+      child: image,
+    );
+  }
 }

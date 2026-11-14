@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/providers.dart';
-import '../../../core/config/app_config.dart';
 import '../../../core/fake/fake_backend.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/auth_controller.dart';
@@ -81,14 +80,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 440),
               child: Column(
                 children: [
-                  const BrandMark(size: 64),
-                  const SizedBox(height: 14),
-                  Text(
-                    AppConfig.appName,
-                    style: theme.textTheme.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 4),
-                  Text('Construction store management', style: TextStyle(color: Colors.white.withValues(alpha: 0.8))),
+                  const BrandLogo(width: 150, onDark: true),
+                  const SizedBox(height: 16),
+                  Text('Store management system', style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontWeight: FontWeight.w600)),
                   const SizedBox(height: 24),
                   Card(
                     child: Padding(
