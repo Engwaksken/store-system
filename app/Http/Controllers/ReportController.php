@@ -26,11 +26,47 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ReportController extends Controller
 {
+    /** Report groups, in display order, for the landing page. */
+    public const GROUPS = [
+        'stock' => ['Stock', 'fa-boxes-stacked', 'What is in the stores and how it moved.'],
+        'procurement' => ['Procurement & approvals', 'fa-clipboard-check', 'Requests in the pipeline and money already promised.'],
+        'finance' => ['Project finance', 'fa-chart-pie', 'Spend against budget, by project, cost code and BOQ line.'],
+    ];
+
+    /**
+     * Presentation only: name, one-line description, icon, landing-page group and gate of each report.
+     * The gate mirrors the Gate::authorize() call in the report's action, so the landing page lists exactly
+     * the reports the user may open.
+     */
+    public const CATALOG = [
+        'reports.stock' => ['Stock summary', 'Balances, minimum levels and stock value per item.', 'fa-boxes-stacked', 'stock', 'view-reports'],
+        'reports.movements' => ['Stock movement ledger', 'Every receipt, issue, transfer and adjustment, with the running store balance.', 'fa-right-left', 'stock', 'view-stock-ledger'],
+        'reports.pending' => ['Pending approvals & issues', 'Who each open request is waiting on, and for how long.', 'fa-hourglass-half', 'procurement', 'view-reports'],
+        'reports.commitments' => ['Open commitments', 'Approved POs not yet received and approved claims not yet paid.', 'fa-file-signature', 'procurement', 'view-finance-reports'],
+        'reports.project-cost' => ['Project budget vs cost', 'Budget, actual and committed cost per project, with over-budget flags.', 'fa-scale-balanced', 'finance', 'view-finance-reports'],
+        'reports.cost-codes' => ['Budget by cost code', 'Budget vs committed vs actual, and the variance, per cost code.', 'fa-sitemap', 'finance', 'view-finance-reports'],
+        'reports.boq' => ['Consumption per BOQ line', 'Materials used against each bill-of-quantities line.', 'fa-list-check', 'finance', 'view-finance-reports'],
+        'reports.issued' => ['Materials issued by project', 'Quantities and value issued, less returns, per project and item.', 'fa-truck-ramp-box', 'finance', 'view-finance-reports'],
+        'reports.expenses' => ['Cash expenses by project', 'Cash spend per project and expense category.', 'fa-money-bill-wave', 'finance', 'view-finance-reports'],
+    ];
+
+    /** Screen-only column hints (exports are unchanged): headers shown as badges, and percentage headers shown with a bar. */
+    private const BADGE_COLUMNS = ['Status', 'Flag'];
+    private const PERCENT_COLUMNS = ['Used', 'Actual+committed'];
+
     public function index()
     {
         Gate::authorize('view-reports');
 
-        return view('reports.index');
+        $reports = collect(self::CATALOG)
+            ->filter(fn ($r) => Gate::allows($r[4]))
+            ->map(fn ($r, $route) => ['route' => $route, 'name' => $r[0], 'description' => $r[1], 'icon' => $r[2], 'group' => $r[3]])
+            ->groupBy('group');
+
+        return view('reports.index', [
+            'groups' => collect(self::GROUPS)->filter(fn ($g, $key) => $reports->has($key))
+                ->map(fn ($g, $key) => ['name' => $g[0], 'icon' => $g[1], 'description' => $g[2], 'reports' => $reports[$key]]),
+        ]);
     }
 
     public function stock(Request $request)
@@ -262,14 +298,111 @@ class ReportController extends Controller
 
         $user = $request->user();
 
+        $route = $request->route()?->getName();
+        $meta = self::CATALOG[$route] ?? null;
+
         return view('reports.table', [
             'title' => $title, 'headers' => $headers, 'rows' => $rows, 'numeric' => $numeric, 'money' => $money, 'sum' => $sum,
             'filters' => $filters, 'note' => $note,
+            // Presentation only, derived from the rows above.
+            'description' => $meta[1] ?? null, 'icon' => $meta[2] ?? 'fa-table',
+            'badgeCols' => array_keys(array_intersect($headers, self::BADGE_COLUMNS)),
+            'percentCols' => array_keys(array_intersect($headers, self::PERCENT_COLUMNS)),
+            'kpis' => $this->kpis($route, $headers, $rows, $sum),
             'projects' => in_array('project', $filters) ? Project::visibleTo($user)
                 ->when($user->role === Role::ProjectManager, fn ($q) => $q->where('manager_id', $user->id))->orderBy('code')->get() : collect(),
             'items' => in_array('item', $filters) ? InventoryItem::orderBy('name')->get() : collect(),
             'stores' => in_array('store', $filters) ? \App\Models\Store::orderBy('id')->get() : collect(),
         ]);
+    }
+
+    /**
+     * Headline figures for the strip above a report table, computed only from the rows already fetched
+     * (so they always agree with the table and the exports). Each card: [label, value, icon, tone].
+     */
+    private function kpis(?string $route, array $headers, $rows, array $sum): array
+    {
+        $n = $rows->count();
+        $col = fn (int $i) => $rows->pluck($i);
+        $total = fn (int $i) => $sum[$i] ?? $col($i)->reduce(fn ($c, $v) => bcadd($c, is_numeric($v) ? (string) $v : '0', 2), '0');
+        $count = fn (int $i, string ...$values) => $col($i)->filter(fn ($v) => in_array($v, $values, true))->count();
+        $cur = currency();
+
+        switch ($route) {
+            case 'reports.stock':
+                $low = $count(6, 'LOW');
+
+                return array_values(array_filter([
+                    ['Items', number_format($n), 'fa-boxes-stacked', 'navy'],
+                    ['Below minimum level', number_format($low), 'fa-triangle-exclamation', $low ? 'bad' : ''],
+                    count($headers) > 8 ? ['Stock value ('.$cur.')', ugx($total(8)), 'fa-coins', 'gold'] : null,
+                ]));
+            case 'reports.movements':
+                return [
+                    ['Movements', number_format($n).($n >= 5000 ? ' (limit)' : ''), 'fa-right-left', 'navy'],
+                    ['Items moved', number_format($col(2)->unique()->count()), 'fa-cubes', ''],
+                    ['Stores', number_format($col(1)->unique()->count()), 'fa-warehouse', 'gold'],
+                ];
+            case 'reports.pending':
+                $days = $col(7)->filter(fn ($v) => $v !== '')->map(fn ($v) => (float) $v);
+                $late = $days->filter(fn ($d) => $d > 7)->count();
+
+                return [
+                    ['Open requests', number_format($n), 'fa-inbox', 'navy'],
+                    ['Average wait (days)', $days->count() ? number_format($days->avg(), 1) : '-', 'fa-hourglass-half', 'gold'],
+                    ['Longest wait (days)', $days->count() ? number_format($days->max()) : '-', 'fa-clock', ''],
+                    ['Waiting over 7 days', number_format($late), 'fa-triangle-exclamation', $late ? 'bad' : ''],
+                ];
+            case 'reports.issued':
+                return [
+                    ['Projects', number_format($col(0)->unique()->count()), 'fa-helmet-safety', 'navy'],
+                    ['Issued value ('.$cur.')', ugx($total(5)), 'fa-truck-ramp-box', ''],
+                    ['Returned value ('.$cur.')', ugx($total(7)), 'fa-rotate-left', 'gold'],
+                    ['Net cost ('.$cur.')', ugx($total(8)), 'fa-coins', 'navy'],
+                ];
+            case 'reports.expenses':
+                return [
+                    ['Projects', number_format($col(0)->unique()->count()), 'fa-helmet-safety', 'navy'],
+                    ['Expense entries', number_format($col(3)->sum(fn ($v) => (int) $v)), 'fa-receipt', ''],
+                    ['Total amount ('.$cur.')', ugx($total(4)), 'fa-money-bill-wave', 'gold'],
+                ];
+            case 'reports.project-cost':
+                $over = $count(10, 'OVER');
+
+                return [
+                    ['Budget ('.$cur.')', ugx($total(3)), 'fa-wallet', 'navy'],
+                    ['Actual cost ('.$cur.')', ugx($total(6)), 'fa-coins', ''],
+                    ['Committed ('.$cur.')', ugx($total(7)), 'fa-file-signature', 'gold'],
+                    ['Over / near budget', number_format($over).' / '.number_format($count(10, 'WARN')), 'fa-triangle-exclamation', $over ? 'bad' : ''],
+                ];
+            case 'reports.cost-codes':
+                return [
+                    ['Budget ('.$cur.')', ugx($total(2)), 'fa-wallet', 'navy'],
+                    ['Actual ('.$cur.')', ugx($total(5)), 'fa-coins', ''],
+                    ['Committed ('.$cur.')', ugx($total(6)), 'fa-file-signature', 'gold'],
+                    ['Variance ('.$cur.')', ugx($total(7)), 'fa-scale-balanced', bccomp($total(7), '0', 2) < 0 ? 'bad' : 'navy'],
+                ];
+            case 'reports.boq':
+                $amount = $total(6);
+
+                return [
+                    ['BOQ lines', number_format($n), 'fa-list-check', 'navy'],
+                    ['BOQ amount ('.$cur.')', ugx($amount), 'fa-wallet', ''],
+                    ['Materials used ('.$cur.')', ugx($total(7)), 'fa-cubes', 'gold'],
+                    ['Overall used', bccomp($amount, '0', 2) > 0 ? number_format((float) bcdiv(bcmul($total(7), '100', 2), $amount, 2), 1).'%' : '-', 'fa-percent', ''],
+                ];
+            case 'reports.commitments':
+                $sumOf = fn ($c) => $c->reduce(fn ($t, $r) => bcadd($t, (string) ($r[6] ?: '0'), 2), '0');
+
+                return [
+                    ['Open documents', number_format($n), 'fa-file-lines', 'navy'],
+                    ['Open POs ('.$cur.')', ugx($sumOf($rows->where(1, 'Purchase order'))), 'fa-cart-shopping', ''],
+                    ['Approved claims ('.$cur.')', ugx($sumOf($rows->where(1, 'Approved claim'))), 'fa-receipt', 'gold'],
+                    ['Total committed ('.$cur.')', ugx($total(6)), 'fa-file-signature', 'navy'],
+                ];
+        }
+
+        return [['Rows', number_format($n), 'fa-table', 'navy']];
     }
 
     private function csv(string $filename, array $headers, $rows, array $sum): StreamedResponse

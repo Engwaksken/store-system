@@ -771,7 +771,8 @@
             var pages = Math.ceil(rows.length / size);
             var pager = el('nav', 'table-pager');
             pager.setAttribute('aria-label', 'Table pages');
-            table.insertAdjacentElement('afterend', pager);
+            // A scroll box marked data-pager-anchor (reports) keeps the pager below, outside the scrolling area.
+            (table.closest('[data-pager-anchor]') || table).insertAdjacentElement('afterend', pager);
             var current = 0;
             function show(p) {
                 current = Math.max(0, Math.min(pages - 1, p));
