@@ -5,7 +5,7 @@
 
 <x-stats :cards="[
     ['Currency', $currentCurrency, 'fa-money-bill-wave', 'navy'],
-    ['Expense categories', $expenseCategories->count(), 'fa-tags'],
+    ['Appearance', \App\Support\Theme::isDefault() ? 'Default' : 'Custom', 'fa-swatchbook'],
     ['Logo / favicon', ($logoPath ? 'Logo' : 'No logo').' · '.($faviconPath ? 'Favicon' : 'No favicon'), 'fa-image', $logoPath && $faviconPath ? '' : 'gold'],
     ['PO owner limit ('.currency().')', ugx($values['po_owner_threshold'] ?? \App\Services\PurchasingService::DEFAULT_OWNER_THRESHOLD), 'fa-scale-balanced', 'gold'],
 ]" />
@@ -40,6 +40,37 @@
                     @if($faviconPath)<label class="check"><input type="checkbox" name="remove_favicon" value="1"> Remove current favicon</label>@endif
                     <p class="hint">The small icon in the browser tab. A square PNG of 64 x 64 works best.</p></div>
             </div>
+        </div>
+    </x-tab>
+
+    <x-tab title="Appearance" icon="fa-swatchbook" name="appearance">
+        <div class="settings-pane">
+            <p class="hint" style="margin-top:0">Changes preview on this page as you pick them. Click <strong>Save settings</strong> to apply them for everyone.</p>
+            <div class="theme-colors">
+                @foreach(['theme_primary' => ['Primary colour', 'Sidebar and headings', '--navy'], 'theme_accent' => ['Accent colour', 'Highlights, badges and the active tab', '--gold'], 'theme_action' => ['Button colour', 'Buttons and links', '--teal']] as $key => [$label, $hint, $var])
+                    <div class="field"><label for="{{ $key }}">{{ $label }}</label>
+                        <div class="color-pick"><input id="{{ $key }}" type="color" name="{{ $key }}" value="{{ old($key, $theme[$key]) }}" data-theme-var="{{ $var }}"><code data-color-code>{{ old($key, $theme[$key]) }}</code></div>
+                        <p class="hint">{{ $hint }}</p></div>
+                @endforeach
+            </div>
+            <div class="form-grid">
+                <div class="field"><label for="theme_font">Font</label><select id="theme_font" name="theme_font" data-theme-var="--font">
+                    @foreach(\App\Support\Theme::FONTS as $k => [$label, $stack])<option value="{{ $k }}" data-css="{{ $stack }}" style="font-family: {{ $stack }}" @selected(old('theme_font', $theme['theme_font']) === $k)>{{ $label }}</option>@endforeach</select></div>
+                <div class="field"><label for="theme_size">Text size</label><select id="theme_size" name="theme_size" data-theme-var="--base-size">
+                    @foreach(\App\Support\Theme::SIZES as $k => [$label, $px])<option value="{{ $k }}" data-css="{{ $px }}" @selected(old('theme_size', $theme['theme_size']) === $k)>{{ $label }} ({{ $px }})</option>@endforeach</select></div>
+                <div class="field"><label for="theme_corners">Corners</label><select id="theme_corners" name="theme_corners" data-theme-var="--radius">
+                    @foreach(\App\Support\Theme::CORNERS as $k => [$label, $r, $rs])<option value="{{ $k }}" data-css="{{ $r }}" data-css-sm="{{ $rs }}" @selected(old('theme_corners', $theme['theme_corners']) === $k)>{{ $label }}</option>@endforeach</select></div>
+                <div class="field"><label for="theme_sidebar">Sidebar style</label><select id="theme_sidebar" name="theme_sidebar">
+                    @foreach(\App\Support\Theme::SIDEBARS as $k => $label)<option value="{{ $k }}" @selected(old('theme_sidebar', $theme['theme_sidebar']) === $k)>{{ $label }}</option>@endforeach</select>
+                    <p class="hint">The sidebar style shows after saving.</p></div>
+            </div>
+            <div class="theme-preview" aria-hidden="true">
+                <span class="btn small"><i class="fas fa-floppy-disk"></i> Button</span>
+                <span class="btn small gold"><i class="fas fa-star"></i> Accent</span>
+                <span class="btn small secondary">Secondary</span>
+                <a>A link</a> <span class="badge approved">Approved</span> <span class="badge pending">Pending</span>
+            </div>
+            <label class="check" style="margin-top:.75rem"><input type="checkbox" name="reset_theme" value="1"> Restore the default look (navy, gold and teal) when saving</label>
         </div>
     </x-tab>
 

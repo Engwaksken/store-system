@@ -533,6 +533,25 @@
         });
     }
 
+    /* ---------- Settings > Appearance: preview colours, font, size and corners before saving ---------- */
+    function initThemePreview() {
+        var root = document.documentElement.style;
+        document.querySelectorAll('[data-theme-var]').forEach(function (f) {
+            f.addEventListener('input', function () {
+                if (f.tagName === 'SELECT') {
+                    var opt = f.options[f.selectedIndex];
+                    root.setProperty(f.dataset.themeVar, opt.dataset.css);
+                    if (opt.dataset.cssSm) { root.setProperty('--radius-sm', opt.dataset.cssSm); }
+                } else {
+                    root.setProperty(f.dataset.themeVar, f.value);
+                    var code = f.parentNode.querySelector('[data-color-code]');
+                    if (code) { code.textContent = f.value.toUpperCase(); }
+                    if (f.dataset.themeVar === '--navy') { root.setProperty('--navy-2', f.value); }
+                }
+            });
+        });
+    }
+
     /* ---------- Print buttons ---------- */
     function initPrint() {
         document.addEventListener('click', function (e) {
@@ -546,6 +565,7 @@
         initLines();
         initPrint();
         initMoney();
+        initThemePreview();
         initTabs(document);
         enhance(document);
         initModals();

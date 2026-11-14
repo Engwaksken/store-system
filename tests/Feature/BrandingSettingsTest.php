@@ -76,6 +76,31 @@ class BrandingSettingsTest extends TestCase
         $this->save(['currency' => 'XXX'])->assertSessionHasErrors('currency');
     }
 
+    public function test_admin_changes_colours_font_and_style_and_can_restore_the_default(): void
+    {
+        $this->get(route('login'))->assertDontSee('<style id="theme">', false);   // default look: no override
+
+        $this->save([
+            'theme_primary' => '#7b1e1e', 'theme_accent' => '#f5f5f5', 'theme_action' => '#1d4ed8',
+            'theme_font' => 'verdana', 'theme_size' => 'large', 'theme_corners' => 'square', 'theme_sidebar' => 'light',
+        ])->assertSessionHasNoErrors();
+
+        $css = \App\Support\Theme::css();
+        $this->assertStringContainsString('--navy: #7B1E1E;', $css);
+        $this->assertStringContainsString('--on-gold: #7B1E1E;', $css);   // light accent gets dark text
+        $this->assertStringContainsString('--on-teal: #FFFFFF;', $css);   // dark button gets white text
+        $this->assertStringContainsString('Verdana', $css);
+        $this->assertStringContainsString('--base-size: 16px;', $css);
+        $this->assertStringContainsString('--side-bg: #FFFFFF;', $css);
+        $this->get(route('dashboard'))->assertSee('<style id="theme">', false);
+
+        $this->save(['theme_primary' => 'red', 'theme_font' => 'comic'])->assertSessionHasErrors(['theme_primary', 'theme_font']);
+
+        $this->save(['reset_theme' => '1'])->assertSessionHasNoErrors();
+        $this->assertTrue(\App\Support\Theme::isDefault());
+        $this->assertSame('', \App\Support\Theme::css());
+    }
+
     public function test_favicon_must_be_png_or_ico_and_non_admins_cannot_change_branding(): void
     {
         $this->save(['favicon' => UploadedFile::fake()->create('icon.pdf', 10, 'application/pdf')])->assertSessionHasErrors('favicon');

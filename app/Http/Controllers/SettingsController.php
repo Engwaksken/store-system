@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\AppSetting;
 use App\Models\ExpenseCategory;
 use App\Support\Currency;
+use App\Support\Theme;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -23,6 +24,7 @@ class SettingsController extends Controller
             'values' => collect(self::KEYS)->mapWithKeys(fn ($k) => [$k => AppSetting::get($k)]),
             'expenseCategories' => ExpenseCategory::orderBy('name')->get(),
             'currentCurrency' => Currency::code(),
+            'theme' => Theme::values(),
         ]);
     }
 
@@ -42,12 +44,29 @@ class SettingsController extends Controller
             'favicon' => 'nullable|file|mimes:png,ico|max:256',
             'remove_logo' => 'nullable|boolean',
             'remove_favicon' => 'nullable|boolean',
+            'theme_primary' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_accent' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_action' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_font' => ['nullable', Rule::in(array_keys(Theme::FONTS))],
+            'theme_size' => ['nullable', Rule::in(array_keys(Theme::SIZES))],
+            'theme_corners' => ['nullable', Rule::in(array_keys(Theme::CORNERS))],
+            'theme_sidebar' => ['nullable', Rule::in(array_keys(Theme::SIDEBARS))],
+            'reset_theme' => 'nullable|boolean',
         ]);
         $before = Currency::code();
         $data['currency'] ??= $before;
         foreach (self::KEYS as $k) {
             AppSetting::put($k, $data[$k] ?? null);
         }
+        $themeBefore = Theme::values();
+        foreach (array_keys(Theme::DEFAULTS) as $k) {
+            if ($request->boolean('reset_theme')) {
+                AppSetting::put($k, null);
+            } elseif (! empty($data[$k])) {
+                AppSetting::put($k, str_starts_with($data[$k], '#') ? strtoupper($data[$k]) : $data[$k]);
+            }
+        }
+        $themeChanged = $themeBefore !== Theme::values();
         foreach (['logo', 'favicon'] as $asset) {
             if ($request->hasFile($asset)) {
                 // A new file name on every upload, so browsers do not keep showing the old cached image.
@@ -59,7 +78,9 @@ class SettingsController extends Controller
                 AppSetting::put($asset.'_path', null);
             }
         }
-        ActivityLog::record('settings.updated', 'Company settings updated'.($before !== $data['currency'] ? " (currency {$before} -> {$data['currency']})" : ''));
+        ActivityLog::record('settings.updated', 'Company settings updated'
+            .($before !== $data['currency'] ? " (currency {$before} -> {$data['currency']})" : '')
+            .($themeChanged ? ($request->boolean('reset_theme') ? ' (appearance reset to default)' : ' (appearance changed)') : ''));
 
         return back()->with('status', 'Settings saved.');
     }
