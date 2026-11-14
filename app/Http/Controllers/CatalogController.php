@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\InventoryCategory;
 use App\Models\InventoryItem;
 use App\Models\InventoryUnit;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -15,13 +16,12 @@ class CatalogController extends Controller
     public function index(Request $request)
     {
         Gate::authorize('view-stock');
-        $items = InventoryItem::with('category', 'unit', 'balances')
-            ->when($request->filled('q'), fn ($q) => $q->where(fn ($w) => $w->where('name', 'like', "%{$request->q}%")->orWhere('sku', 'like', "%{$request->q}%")))
+        // "Low stock" = same rule as InventoryItem::isLowStock(): a minimum is set and the total across all stores is at or below it.
+        $query = InventoryItem::with('category', 'unit', 'balances')
             ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->integer('category_id')))
-            ->orderBy('name')->get();
-        if ($request->boolean('low')) {
-            $items = $items->filter->isLowStock()->values();
-        }
+            ->when($request->boolean('low'), fn ($q) => $q->where('min_level', '>', 0)
+                ->whereRaw('(select coalesce(sum(b.on_hand), 0) from inventory_balances b where b.item_id = inventory_items.id) <= inventory_items.min_level'))
+            ->orderBy('name');
 
         $all = InventoryItem::with('balances')->get();
         $stats = [
@@ -31,7 +31,24 @@ class CatalogController extends Controller
             'categories' => InventoryCategory::count(),
         ];
 
-        return view('items.index', ['items' => $items, 'categories' => InventoryCategory::orderBy('name')->get(), 'stats' => $stats]);
+        $storeId = $request->integer('store_id') ?: null;
+        $columns = [
+            'SKU' => fn ($i) => $i->sku, 'Item' => fn ($i) => $i->name, 'Category' => fn ($i) => $i->category->name,
+            'On hand' => [fn ($i) => $i->onHand($storeId), 'qty'], 'Unit' => fn ($i) => $i->unit->abbreviation,
+            'Min level' => [fn ($i) => $i->min_level, 'qty'],
+        ];
+        if (Gate::allows('view-stock-value')) {
+            $columns['Avg cost'] = [fn ($i) => $i->avg_cost, 'money'];
+            $columns['Stock value'] = [fn ($i) => bcmul($i->onHand($storeId), (string) $i->avg_cost, 2), 'money'];
+        }
+        $columns += ['Active' => fn ($i) => $i->is_active ? 'Yes' : 'No', 'Low stock' => fn ($i) => $i->isLowStock() ? 'Yes' : 'No'];
+        $categories = InventoryCategory::orderBy('name')->get();
+
+        return ListPage::make($request, $query, 'Stock and items')
+            ->store(fn ($q, $id) => $q->whereHas('balances', fn ($b) => $b->where('store_id', $id)))
+            ->search(['sku', 'name'], 'SKU or name')
+            ->columns($columns)->totals(isset($columns['Stock value']) ? ['Stock value'] : [])
+            ->respond(fn ($items, $list) => view('items.index', ['items' => $items, 'list' => $list, 'storeId' => $storeId, 'categories' => $categories, 'stats' => $stats]));
     }
 
     public function show(InventoryItem $item)

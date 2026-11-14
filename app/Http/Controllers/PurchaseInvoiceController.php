@@ -6,6 +6,7 @@ use App\Models\PurchaseInvoice;
 use App\Models\PurchaseOrder;
 use App\Models\SupplierPayment;
 use App\Services\PurchaseInvoiceService;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -16,10 +17,10 @@ class PurchaseInvoiceController extends Controller
     public function index(Request $request)
     {
         Gate::authorize('view-invoices');
-        $invoices = PurchaseInvoice::with('supplier', 'order')
+        $query = PurchaseInvoice::with('supplier', 'order.project')
             ->when($request->filled('payment_status'), fn ($q) => $q->where('payment_status', $request->payment_status))
             ->when($request->filled('match_status'), fn ($q) => $q->where('match_status', $request->match_status))
-            ->latest('id')->paginate(25)->withQueryString();
+            ->latest('id');
 
         $open = PurchaseInvoice::where('payment_status', '!=', 'paid');
         $stats = [
@@ -29,7 +30,26 @@ class PurchaseInvoiceController extends Controller
             'balance' => (clone $open)->sum(\Illuminate\Support\Facades\DB::raw('total - amount_paid')),
         ];
 
-        return view('invoices.index', compact('invoices', 'stats'));
+        return ListPage::make($request, $query, 'Supplier invoices')
+            ->period('invoice_date', 'Invoice date')
+            ->project(fn ($q, $id) => $q->whereHas('order', fn ($o) => $o->where('project_id', $id)))
+            ->store(fn ($q, $id) => $q->whereHas('order', fn ($o) => $o->where('store_id', $id)))
+            ->search(fn ($q, $term) => $q->where(function ($w) use ($term) {
+                $like = '%'.addcslashes($term, '%_\\').'%';
+                $w->where('pi_no', 'like', $like)->orWhere('supplier_invoice_no', 'like', $like)
+                    ->orWhereHas('supplier', fn ($s) => $s->where('name', 'like', $like))
+                    ->orWhereHas('order', fn ($o) => $o->where('po_no', 'like', $like));
+            }), 'Ref, supplier invoice, supplier or PO')
+            ->columns([
+                'Ref' => fn ($i) => $i->pi_no, 'Supplier invoice' => fn ($i) => $i->supplier_invoice_no, 'Supplier' => fn ($i) => $i->supplier->name,
+                'PO' => fn ($i) => $i->order->po_no, 'Project' => fn ($i) => $i->order->project?->code,
+                'Date' => fn ($i) => $i->invoice_date->format('Y-m-d'), 'Due' => fn ($i) => $i->due_date?->format('Y-m-d'),
+                'Total' => [fn ($i) => $i->total, 'money'], 'Paid' => [fn ($i) => $i->amount_paid, 'money'], 'Balance' => [fn ($i) => $i->balance(), 'money'],
+                'Match' => fn ($i) => PurchaseInvoice::MATCH[$i->match_status] ?? $i->match_status,
+                'Payment' => fn ($i) => PurchaseInvoice::PAYMENT[$i->payment_status] ?? $i->payment_status,
+            ])
+            ->totals(['Total', 'Paid', 'Balance'])
+            ->respond(fn ($invoices, $list) => view('invoices.index', ['invoices' => $invoices, 'list' => $list, 'stats' => $stats]));
     }
 
     public function create(PurchaseOrder $po)

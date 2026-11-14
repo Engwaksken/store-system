@@ -666,6 +666,18 @@
         }).catch(function () { say('Push could not start in this browser.'); });
     }
 
+    /* ---------- List filters: show From/To only for "Custom dates" ---------- */
+    function initListFilters() {
+        document.addEventListener('change', function (e) {
+            var sel = e.target;
+            if (!sel.matches || !sel.matches('[data-period-select]')) { return; }
+            var dates = sel.form.querySelector('[data-period-dates]');
+            if (!dates) { return; }
+            dates.hidden = sel.value !== 'custom';
+            if (sel.value !== 'custom') { dates.querySelectorAll('input').forEach(function (i) { i.value = ''; }); }
+        });
+    }
+
     /* ---------- Print buttons ---------- */
     function initPrint() {
         document.addEventListener('click', function (e) {
@@ -682,6 +694,7 @@
         initThemePreview();
         initLiveNotifications();
         initPush();
+        initListFilters();
         initTabs(document);
         enhance(document);
         initModals();

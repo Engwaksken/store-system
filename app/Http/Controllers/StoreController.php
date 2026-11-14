@@ -8,6 +8,7 @@ use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -16,17 +17,26 @@ class StoreController extends Controller
     public function index(Request $request)
     {
         Gate::authorize('viewAny', Store::class);
-        $stores = Store::with('project', 'users')->withCount(['balances as stocked_items' => fn ($q) => $q->where('on_hand', '>', 0)])
-            ->orderBy('id')->paginate(25);
+        $query = Store::with('project', 'users')->withCount(['balances as stocked_items' => fn ($q) => $q->where('on_hand', '>', 0)])
+            ->orderBy('id');
 
         $mine = Store::operableBy($request->user())->pluck('id');
-
-        return view('stores.index', ['stores' => $stores, 'mine' => $mine, 'stats' => [
+        $stats = [
             'total' => Store::count(),
             'active' => Store::where('is_active', true)->count(),
             'site' => Store::where('type', 'site')->count(),
             'mine' => $mine->count(),
-        ]]);
+        ];
+
+        return ListPage::make($request, $query, 'Stores')
+            ->project('project_id')->search(['code', 'name', 'location'], 'Code, name or location')
+            ->columns([
+                'Code' => fn ($s) => $s->code, 'Name' => fn ($s) => $s->name, 'Type' => fn ($s) => Store::TYPES[$s->type] ?? $s->type,
+                'Project' => fn ($s) => $s->project?->code, 'Location' => fn ($s) => $s->location,
+                'Storekeepers' => fn ($s) => $s->users->pluck('name')->implode(', '), 'Items in stock' => [fn ($s) => $s->stocked_items, 'number'],
+                'Status' => fn ($s) => $s->is_active ? 'Active' : 'Inactive',
+            ])
+            ->respond(fn ($stores, $list) => view('stores.index', ['stores' => $stores, 'list' => $list, 'mine' => $mine, 'stats' => $stats]));
     }
 
     public function create()

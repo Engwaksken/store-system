@@ -1,8 +1,8 @@
 {{-- expects: $fields (array of 'store','project','item','type','dates'), $stores, $projects, $items --}}
-<form method="GET" class="card filters">
-    <div class="grid grid-4">
+<form method="GET" class="card filters list-filters">
+    <div class="filter-grid">
         @if(in_array('store', $fields))
-            <div><label>Store</label><select name="store_id"><option value="">All stores</option>
+            <div><label>Branch / store</label><select name="store_id"><option value="">All branches</option>
                 @foreach($stores as $s)<option value="{{ $s->id }}" @selected(request('store_id') == $s->id)>{{ $s->code }} - {{ $s->name }}</option>@endforeach
             </select></div>
         @endif
@@ -22,8 +22,13 @@
             </select></div>
         @endif
         @if(in_array('dates', $fields))
-            <div><label>From</label><input type="date" name="from" value="{{ request('from') }}"></div>
-            <div><label>To</label><input type="date" name="to" value="{{ request('to') }}"></div>
+            @php($period = \App\Support\ListPage::periodKeyFor(request()))
+            <div><label for="r_period">Period</label><select id="r_period" name="period" data-period-select>
+                @foreach(\App\Support\ListPage::PERIODS as $k => $label)<option value="{{ $k }}" @selected($period === $k)>{{ $label }}</option>@endforeach</select></div>
+            <div class="period-dates" data-period-dates @if($period !== 'custom') hidden @endif>
+                <div><label for="r_from">From</label><input id="r_from" type="date" name="from" value="{{ request('from') }}"></div>
+                <div><label for="r_to">To</label><input id="r_to" type="date" name="to" value="{{ request('to') }}"></div>
+            </div>
         @endif
     </div>
     <div class="actions" style="margin-top:.75rem"><button class="btn small">Apply</button><a class="btn secondary small" href="{{ url()->current() }}">Reset</a></div>

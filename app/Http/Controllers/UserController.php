@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\Role;
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -13,18 +14,29 @@ use Illuminate\Validation\Rules\Password;
 /** Admin-only user management. Users are deactivated, never deleted (audit trail). */
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         Gate::authorize('manage-users');
 
-        $users = User::orderBy('name')->get();
+        $stats = [
+            'total' => User::count(),
+            'active' => User::where('is_active', true)->count(),
+            'inactive' => User::where('is_active', false)->count(),
+            'admins' => User::where('role', Role::Admin->value)->where('is_active', true)->count(),
+        ];
+        $query = User::query()
+            ->when($request->filled('role'), fn ($q) => $q->where('role', $request->query('role')))
+            ->when($request->query('status') === 'active', fn ($q) => $q->where('is_active', true))
+            ->when($request->query('status') === 'inactive', fn ($q) => $q->where('is_active', false))
+            ->orderBy('name');
 
-        return view('users.index', ['users' => $users, 'stats' => [
-            'total' => $users->count(),
-            'active' => $users->where('is_active', true)->count(),
-            'inactive' => $users->where('is_active', false)->count(),
-            'admins' => $users->filter(fn ($u) => $u->role === \App\Enums\Role::Admin && $u->is_active)->count(),
-        ]]);
+        return ListPage::make($request, $query, 'Users')
+            ->search(['name', 'email', 'phone'], 'Name, e-mail or phone')
+            ->columns([
+                'Name' => fn ($u) => $u->name, 'E-mail' => fn ($u) => $u->email, 'Role' => fn ($u) => $u->role->label(),
+                'Phone' => fn ($u) => $u->phone, 'Status' => fn ($u) => $u->is_active ? 'Active' : 'Inactive',
+            ])
+            ->respond(fn ($users, $list) => view('users.index', ['users' => $users, 'list' => $list, 'stats' => $stats]));
     }
 
     public function create()

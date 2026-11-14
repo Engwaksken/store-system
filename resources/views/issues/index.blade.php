@@ -16,11 +16,12 @@
     @empty<tr><td colspan="5" class="empty">No approved requests waiting.</td></tr>@endforelse</tbody>
 </table></div></div>
 @endcan
+<x-list-filters :list="$list" />
 <div class="card"><h2>Vouchers</h2><div class="table-wrap"><table>
-    <thead><tr><th>Voucher</th><th>Request</th><th>Project</th><th>Issued</th><th>By</th><th>Recipient</th><th>Acknowledged</th></tr></thead>
-    <tbody>@forelse($issues as $i)<tr><td><a href="{{ route('issues.show', $i) }}">{{ $i->issue_no }}</a></td><td>{{ $i->request->request_no }}</td><td>{{ $i->project->code }}</td>
+    <thead><tr><th>Voucher</th><th>Request</th><th>Project</th><th>Store</th><th>Issued</th><th>By</th><th>Recipient</th><th>Acknowledged</th></tr></thead>
+    <tbody>@forelse($issues as $i)<tr><td><a href="{{ route('issues.show', $i) }}">{{ $i->issue_no }}</a></td><td>{{ $i->request->request_no }}</td><td>{{ $i->project->code }}</td><td>{{ $i->store?->code ?? '-' }}</td>
         <td>{{ $i->issued_at->format('d M Y H:i') }}</td><td>{{ $i->issuer->name }}</td><td>{{ $i->recipient_name }}</td>
         <td>@if($i->acknowledgment)<span class="badge approved">Yes</span>@else<span class="badge pending">Pending</span>@endif</td></tr>
-    @empty<tr><td colspan="7" class="empty">No vouchers yet.</td></tr>@endforelse</tbody>
+    @empty<tr><td colspan="8" class="empty">No vouchers{{ $list->isFiltered() ? ' match these filters' : ' yet' }}.</td></tr>@endforelse</tbody>
 </table></div><div class="pagination">{{ $issues->links() }}</div></div>
 @endsection

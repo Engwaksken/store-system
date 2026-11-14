@@ -5,21 +5,32 @@ namespace App\Http\Controllers;
 use App\Models\StockCount;
 use App\Models\Store;
 use App\Services\StockCountService;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class StockCountController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         Gate::authorize('view-counts');
 
         $byStatus = StockCount::query()->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
+        $stats = ['total' => (int) $byStatus->sum(), 'draft' => (int) ($byStatus['draft'] ?? 0), 'submitted' => (int) ($byStatus['submitted'] ?? 0), 'approved' => (int) ($byStatus['approved'] ?? 0)];
 
-        return view('counts.index', [
-            'counts' => StockCount::with('store', 'counter', 'decider')->withCount('lines')->latest('id')->paginate(25),
-            'stats' => ['total' => (int) $byStatus->sum(), 'draft' => (int) ($byStatus['draft'] ?? 0), 'submitted' => (int) ($byStatus['submitted'] ?? 0), 'approved' => (int) ($byStatus['approved'] ?? 0)],
-        ]);
+        $query = StockCount::with('store', 'counter', 'decider')->withCount('lines')
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+            ->latest('id');
+
+        return ListPage::make($request, $query, 'Stock counts')
+            ->period('created_at', 'Created')->store()->search(['count_no', 'notes'], 'Count number or notes')
+            ->columns([
+                'Count' => fn ($c) => $c->count_no, 'Store' => fn ($c) => $c->store->code, 'Counted by' => fn ($c) => $c->counter->name,
+                'Created' => fn ($c) => $c->created_at->format('Y-m-d'), 'Submitted' => fn ($c) => $c->submitted_at?->format('Y-m-d'),
+                'Lines' => [fn ($c) => $c->lines_count, 'number'], 'Status' => fn ($c) => $c->statusLabel(),
+                'Decided by' => fn ($c) => $c->decider?->name, 'Decided' => fn ($c) => $c->decided_at?->format('Y-m-d'),
+            ])
+            ->respond(fn ($counts, $list) => view('counts.index', ['counts' => $counts, 'list' => $list, 'stats' => $stats]));
     }
 
     public function create(Request $request)

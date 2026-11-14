@@ -4,11 +4,15 @@
 <div class="page-head"><div><h1>Cost codes</h1><p>Company-wide codes for project budgets, BOQ lines, purchase orders and expenses.</p></div>
     @can('manage-cost-codes')<div class="actions"><button type="button" class="btn" data-modal-target="#cc-create"><i class="fas fa-plus"></i> Add cost code</button></div>@endcan</div>
 <x-stats :cards="[
-    ['Cost codes', $codes->count(), 'fa-hashtag', 'navy'],
-    ['Active', $codes->where('is_active', true)->count(), 'fa-circle-check'],
-    ['Inactive', $codes->where('is_active', false)->count(), 'fa-circle-pause', 'gold'],
-    ['Categories used', $codes->pluck('category')->unique()->count(), 'fa-layer-group'],
+    ['Cost codes', $stats['total'], 'fa-hashtag', 'navy'],
+    ['Active', $stats['active'], 'fa-circle-check'],
+    ['Inactive', $stats['inactive'], 'fa-circle-pause', 'gold'],
+    ['Categories used', $stats['categories'], 'fa-layer-group'],
 ]" />
+<x-list-filters :list="$list">
+    <div><label for="f_category">Category</label><select id="f_category" name="category"><option value="">All categories</option>@foreach(\App\Models\CostCode::CATEGORIES as $k => $v)<option value="{{ $k }}" @selected(request('category') === $k)>{{ $v }}</option>@endforeach</select></div>
+    <div><label for="f_status">Status</label><select id="f_status" name="status"><option value="">All</option><option value="active" @selected(request('status') === 'active')>Active</option><option value="inactive" @selected(request('status') === 'inactive')>Inactive</option></select></div>
+</x-list-filters>
 <div class="card table-wrap"><table>
     <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Status</th>@can('manage-cost-codes')<th></th>@endcan</tr></thead>
     <tbody>@forelse($codes as $c)
@@ -24,8 +28,9 @@
                         <button class="btn">Save</button>
                     </form>
                 </template></td>@endcan</tr>
-    @empty <tr><td colspan="5" class="empty">No cost codes yet.</td></tr> @endforelse</tbody>
+    @empty <tr><td colspan="5" class="empty">{{ $list->isFiltered() ? 'No cost codes match these filters.' : 'No cost codes yet.' }}</td></tr> @endforelse</tbody>
 </table></div>
+<div class="pagination">{{ $codes->links() }}</div>
 @can('manage-cost-codes')
 <template id="cc-create" data-title="Add cost code">
     <form method="POST" action="{{ route('cost-codes.store') }}">@csrf

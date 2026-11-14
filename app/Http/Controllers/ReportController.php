@@ -213,13 +213,15 @@ class ReportController extends Controller
         }
     }
 
+    /** Period preset (this month, last quarter ...) or custom from/to, shared with the list pages. */
     private function dateRange(Builder $q, Request $request, string $column): void
     {
-        if ($request->filled('from')) {
-            $q->whereDate($column, '>=', $request->date('from'));
+        [$from, $to] = \App\Support\ListPage::rangeFor($request);
+        if ($from) {
+            $q->whereDate($column, '>=', $from->toDateString());
         }
-        if ($request->filled('to')) {
-            $q->whereDate($column, '<=', $request->date('to'));
+        if ($to) {
+            $q->whereDate($column, '<=', $to->toDateString());
         }
     }
 
@@ -248,8 +250,11 @@ class ReportController extends Controller
 
                 return response()->download($path, $file.'.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])->deleteFileAfterSend();
             case 'pdf':
-                $filterText = collect($request->only(['store_id', 'project_id', 'item_id', 'type', 'from', 'to']))->filter()
-                    ->map(fn ($v, $k) => str_replace('_id', '', $k).': '.$v)->implode(' · ');
+                [$from, $to] = \App\Support\ListPage::rangeFor($request);
+                $filterText = collect($request->only(['store_id', 'project_id', 'item_id', 'type']))->filter()
+                    ->map(fn ($v, $k) => str_replace('_id', '', $k).': '.$v)
+                    ->when($from || $to, fn ($c) => $c->prepend('Period: '.($from?->format('d M Y') ?? 'start').' - '.($to?->format('d M Y') ?? 'today')))
+                    ->implode(' · ');
 
                 return Pdf::download('pdf.report', compact('title', 'headers', 'rows', 'numeric', 'money', 'sum', 'note', 'filterText'), $file.'.pdf',
                     count($headers) > 7 ? 'landscape' : 'portrait');

@@ -9,6 +9,7 @@ use App\Models\ExpenseCategory;
 use App\Models\ExpenseClaim;
 use App\Models\Project;
 use App\Services\ExpenseClaimService;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -25,11 +26,19 @@ class ExpenseClaimController extends Controller
             'paid' => (int) ($counts['paid'] ?? 0),
             'unpaid_value' => ExpenseClaim::visibleTo($request->user())->where('status', 'approved')->sum('amount'),
         ];
-        $claims = ExpenseClaim::visibleTo($request->user())->with('project', 'claimant', 'category')
+        $query = ExpenseClaim::visibleTo($request->user())->with('project', 'claimant', 'category')
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
-            ->latest('id')->paginate(25)->withQueryString();
+            ->latest('id');
 
-        return view('claims.index', compact('claims', 'stats'));
+        return ListPage::make($request, $query, 'Expense claims')
+            ->period('incurred_on', 'Incurred')->project()->search(['claim_no', 'description'], 'Claim number or description')
+            ->columns([
+                'Claim' => fn ($c) => $c->claim_no, 'Date' => fn ($c) => $c->incurred_on->format('Y-m-d'), 'Project' => fn ($c) => $c->project->code,
+                'Claimant' => fn ($c) => $c->claimant->name, 'Category' => fn ($c) => $c->category->name, 'Description' => fn ($c) => $c->description,
+                'Amount' => [fn ($c) => $c->amount, 'money'], 'Status' => fn ($c) => $c->statusLabel(),
+            ])
+            ->totals(['Amount'])
+            ->respond(fn ($claims, $list) => view('claims.index', ['claims' => $claims, 'list' => $list, 'stats' => $stats]));
     }
 
     public function create(Request $request)

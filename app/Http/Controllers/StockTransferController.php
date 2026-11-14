@@ -7,6 +7,7 @@ use App\Models\InventoryItem;
 use App\Models\StockTransfer;
 use App\Models\Store;
 use App\Services\StockTransferService;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -15,14 +16,27 @@ class StockTransferController extends Controller
     public function index(Request $request)
     {
         Gate::authorize('viewAny', StockTransfer::class);
-        $transfers = StockTransfer::visibleTo($request->user())->with(['fromStore', 'toStore', 'dispatcher'])->withCount('lines')
+        $query = StockTransfer::visibleTo($request->user())->with(['fromStore', 'toStore', 'dispatcher', 'receiver'])->withCount('lines')
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
-            ->latest('id')->paginate(25)->withQueryString();
+            ->latest('id');
 
         $counts = StockTransfer::visibleTo($request->user())->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
         $stats = ['total' => (int) $counts->sum(), 'in_transit' => (int) ($counts['in_transit'] ?? 0), 'received' => (int) ($counts['received'] ?? 0), 'cancelled' => (int) ($counts['cancelled'] ?? 0)];
 
-        return view('transfers.index', compact('transfers', 'stats'));
+        return ListPage::make($request, $query, 'Stock transfers')
+            ->period('dispatched_at', 'Dispatched')
+            // Project = the transfer leaves from or arrives at that project's site store.
+            ->project(fn ($q, $id) => $q->where(fn ($w) => $w->whereHas('fromStore', fn ($s) => $s->where('project_id', $id))
+                ->orWhereHas('toStore', fn ($s) => $s->where('project_id', $id))))
+            ->store(fn ($q, $id) => $q->where(fn ($w) => $w->where('from_store_id', $id)->orWhere('to_store_id', $id)))
+            ->search(['transfer_no', 'notes'], 'Transfer number or notes')
+            ->columns([
+                'Transfer' => fn ($t) => $t->transfer_no, 'From' => fn ($t) => $t->fromStore->code, 'To' => fn ($t) => $t->toStore->code,
+                'Dispatched' => fn ($t) => $t->dispatched_at->format('Y-m-d H:i'), 'By' => fn ($t) => $t->dispatcher->name,
+                'Lines' => [fn ($t) => $t->lines_count, 'number'], 'Status' => fn ($t) => $t->statusLabel(),
+                'Received' => fn ($t) => $t->received_at?->format('Y-m-d H:i'), 'Received by' => fn ($t) => $t->receiver?->name,
+            ])
+            ->respond(fn ($transfers, $list) => view('transfers.index', ['transfers' => $transfers, 'list' => $list, 'stats' => $stats]));
     }
 
     public function create(Request $request)

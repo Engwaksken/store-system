@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\PushSubscription;
 use App\Notifications\WorkflowAlert;
+use App\Support\ListPage;
 use App\Support\PushSender;
 use Illuminate\Http\Request;
 
@@ -14,15 +15,24 @@ class NotificationController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+        $stats = [
+            'total' => $user->notifications()->count(),
+            'unread' => $user->unreadNotifications()->count(),
+            'week' => $user->notifications()->where('created_at', '>=', now()->subDays(7))->count(),
+        ];
+        // Only the signed-in user's own notifications (newest first, as the relation orders them).
+        $query = $user->notifications()->getQuery()
+            ->when($request->boolean('unread'), fn ($q) => $q->whereNull('read_at'));
 
-        return view('notifications.index', [
-            'notifications' => $user->notifications()->paginate(30),
-            'stats' => [
-                'total' => $user->notifications()->count(),
-                'unread' => $user->unreadNotifications()->count(),
-                'week' => $user->notifications()->where('created_at', '>=', now()->subDays(7))->count(),
-            ],
-        ]);
+        return ListPage::make($request, $query, 'Notifications')
+            ->period('created_at', 'Received')
+            ->search(fn ($q, $term) => $q->where('data', 'like', '%'.addcslashes($term, '%_\\').'%'), 'Subject or details')
+            ->perPage(30)
+            ->columns([
+                'Subject' => fn ($n) => $n->data['subject'] ?? '', 'Details' => fn ($n) => $n->data['body'] ?? '',
+                'Date' => fn ($n) => $n->created_at->format('Y-m-d H:i'), 'Read' => fn ($n) => $n->read_at ? 'Yes' : 'No',
+            ])
+            ->respond(fn ($notifications, $list) => view('notifications.index', ['notifications' => $notifications, 'list' => $list, 'stats' => $stats]));
     }
 
     /** Mark as read and go to the document the alert is about (only same-site URLs are followed). */

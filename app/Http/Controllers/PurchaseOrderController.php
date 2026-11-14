@@ -10,6 +10,7 @@ use App\Models\Store;
 use App\Models\Supplier;
 use App\Services\GoodsReceiptService;
 use App\Services\PurchasingService;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -18,10 +19,10 @@ class PurchaseOrderController extends Controller
     public function index(Request $request)
     {
         Gate::authorize('view-purchasing');
-        $orders = PurchaseOrder::visibleTo($request->user())->with('supplier', 'store', 'project')
+        $query = PurchaseOrder::visibleTo($request->user())->with('supplier', 'store', 'project')
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->when($request->filled('supplier_id'), fn ($q) => $q->where('supplier_id', $request->integer('supplier_id')))
-            ->latest('id')->paginate(25)->withQueryString();
+            ->latest('id');
 
         $counts = PurchaseOrder::visibleTo($request->user())->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
         $stats = [
@@ -30,8 +31,18 @@ class PurchaseOrderController extends Controller
             'open' => (int) ($counts['approved'] ?? 0) + (int) ($counts['partially_received'] ?? 0),
             'open_value' => PurchaseOrder::visibleTo($request->user())->whereIn('status', ['approved', 'partially_received'])->sum('total'),
         ];
+        $suppliers = Supplier::orderBy('name')->get();
 
-        return view('pos.index', ['orders' => $orders, 'suppliers' => Supplier::orderBy('name')->get(), 'stats' => $stats]);
+        return ListPage::make($request, $query, 'Purchase orders')
+            ->period('order_date', 'Order date')->project()->store()->search(['po_no', 'notes'], 'PO number or notes')
+            ->columns([
+                'PO' => fn ($o) => $o->po_no, 'Date' => fn ($o) => $o->order_date->format('Y-m-d'), 'Supplier' => fn ($o) => $o->supplier->name,
+                'Project' => fn ($o) => $o->project?->code, 'Deliver to' => fn ($o) => $o->store->code,
+                'Expected on' => fn ($o) => $o->expected_on?->format('Y-m-d'), 'Total' => [fn ($o) => $o->total, 'money'],
+                'Status' => fn ($o) => $o->statusLabel(),
+            ])
+            ->totals(['Total'])
+            ->respond(fn ($orders, $list) => view('pos.index', ['orders' => $orders, 'list' => $list, 'suppliers' => $suppliers, 'stats' => $stats]));
     }
 
     public function create(Request $request)

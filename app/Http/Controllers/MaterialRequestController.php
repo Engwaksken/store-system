@@ -7,6 +7,7 @@ use App\Models\InventoryItem;
 use App\Models\MaterialRequest;
 use App\Models\Project;
 use App\Services\RequestWorkflow;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -19,43 +20,55 @@ class MaterialRequestController extends Controller
 
     public function index(Request $request)
     {
-        $requests = MaterialRequest::visibleTo($request->user())->with('project', 'requester')
+        $query = MaterialRequest::visibleTo($request->user())->with('project', 'requester')
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
-            ->when($request->filled('project_id'), fn ($q) => $q->where('project_id', $request->integer('project_id')))
-            ->latest('id')->paginate(25)->withQueryString();
+            ->latest('id');
 
         $counts = MaterialRequest::visibleTo($request->user())->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
         $n = fn (RequestStatus ...$s) => collect($s)->sum(fn ($x) => (int) ($counts[$x->value] ?? 0));
+        $stats = [
+            'total' => (int) $counts->sum(),
+            'pending' => $n(RequestStatus::Submitted, RequestStatus::PmApproved),
+            'ready' => $n(RequestStatus::OverallApproved, RequestStatus::PartiallyIssued),
+            'done' => $n(RequestStatus::FullyIssued),
+        ];
 
-        return view('requests.index', [
-            'stats' => [
-                'total' => (int) $counts->sum(),
-                'pending' => $n(RequestStatus::Submitted, RequestStatus::PmApproved),
-                'ready' => $n(RequestStatus::OverallApproved, RequestStatus::PartiallyIssued),
-                'done' => $n(RequestStatus::FullyIssued),
-            ],
-            'requests' => $requests,
-            'projects' => Project::visibleTo($request->user())->orderBy('code')->get(),
-        ]);
+        return ListPage::make($request, $query, 'Material requests')
+            ->period('created_at', 'Raised')->project()->search(['request_no', 'purpose'], 'Request number or purpose')
+            ->columns([
+                'Request' => fn ($r) => $r->request_no, 'Version' => fn ($r) => $r->version, 'Project' => fn ($r) => $r->project->code,
+                'Requester' => fn ($r) => $r->requester->name, 'Purpose' => fn ($r) => $r->purpose,
+                'Raised' => fn ($r) => $r->created_at->format('Y-m-d'), 'Needed on' => fn ($r) => $r->needed_on?->format('Y-m-d'),
+                'Status' => fn ($r) => $r->status->label(),
+            ])
+            ->respond(fn ($requests, $list) => view('requests.index', ['requests' => $requests, 'list' => $list, 'stats' => $stats]));
     }
 
     /** Requests waiting for the current user's decision. */
     public function approvals(Request $request)
     {
         Gate::authorize('approve-any');
-        $pending = MaterialRequest::with('project', 'requester', 'lines', 'approvals')
-            ->whereIn('status', [RequestStatus::Submitted->value, RequestStatus::PmApproved->value])
-            ->oldest('submitted_at')->get()
-            ->filter(fn ($r) => Gate::allows('pm-decide', $r) || Gate::allows('overall-decide', $r))->values();
+        $mine = fn ($rows) => $rows->filter(fn ($r) => Gate::allows('pm-decide', $r) || Gate::allows('overall-decide', $r))->values();
+        $base = fn () => MaterialRequest::with('project', 'requester', 'lines', 'approvals')
+            ->whereIn('status', [RequestStatus::Submitted->value, RequestStatus::PmApproved->value])->oldest('submitted_at');
 
+        $all = $mine($base()->get());
         $stats = [
-            'pending' => $pending->count(),
-            'pm' => $pending->where('status', RequestStatus::Submitted)->count(),
-            'overall' => $pending->where('status', RequestStatus::PmApproved)->count(),
-            'oldest' => $pending->first()?->submitted_at?->diffForHumans(null, true) ?? '-',
+            'pending' => $all->count(),
+            'pm' => $all->where('status', RequestStatus::Submitted)->count(),
+            'overall' => $all->where('status', RequestStatus::PmApproved)->count(),
+            'oldest' => $all->first()?->submitted_at?->diffForHumans(null, true) ?? '-',
         ];
 
-        return view('requests.approvals', compact('pending', 'stats'));
+        return ListPage::make($request, $base(), 'Requests waiting for my decision')
+            ->period('submitted_at', 'Submitted')->project()->search(['request_no', 'purpose'], 'Request number or purpose')
+            ->afterQuery($mine)
+            ->columns([
+                'Request' => fn ($r) => $r->request_no, 'Version' => fn ($r) => $r->version, 'Project' => fn ($r) => $r->project->code,
+                'Requester' => fn ($r) => $r->requester->name, 'Purpose' => fn ($r) => $r->purpose, 'Stage' => fn ($r) => $r->status->label(),
+                'Lines' => [fn ($r) => $r->lines->count(), 'number'], 'Submitted' => fn ($r) => $r->submitted_at?->format('Y-m-d H:i'),
+            ])
+            ->respond(fn ($pending, $list) => view('requests.approvals', ['pending' => $pending, 'list' => $list, 'stats' => $stats]));
     }
 
     public function create(Request $request)

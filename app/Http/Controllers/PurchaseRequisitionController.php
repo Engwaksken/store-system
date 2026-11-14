@@ -9,6 +9,7 @@ use App\Models\Store;
 use App\Models\Supplier;
 use App\Models\SupplierQuote;
 use App\Services\PurchasingService;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -17,14 +18,23 @@ class PurchaseRequisitionController extends Controller
     public function index(Request $request)
     {
         Gate::authorize('view-purchasing');
-        $prs = PurchaseRequisition::visibleTo($request->user())->with('project', 'store', 'requester')->withCount('lines')
+        $query = PurchaseRequisition::visibleTo($request->user())->with('project', 'store', 'requester')->withCount('lines')
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
-            ->latest('id')->paginate(25)->withQueryString();
+            ->latest('id');
 
         $counts = PurchaseRequisition::visibleTo($request->user())->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
         $stats = ['total' => (int) $counts->sum(), 'submitted' => (int) ($counts['submitted'] ?? 0), 'approved' => (int) ($counts['approved'] ?? 0), 'ordered' => (int) ($counts['ordered'] ?? 0)];
 
-        return view('prs.index', compact('prs', 'stats'));
+        return ListPage::make($request, $query, 'Purchase requisitions')
+            ->period('created_at', 'Raised')->project()->store()->search(['pr_no', 'purpose'], 'PR number or purpose')
+            ->columns([
+                'PR' => fn ($pr) => $pr->pr_no, 'Raised' => fn ($pr) => $pr->created_at->format('Y-m-d'), 'Project' => fn ($pr) => $pr->project?->code ?? 'Stock',
+                'Deliver to' => fn ($pr) => $pr->store->code, 'Purpose' => fn ($pr) => $pr->purpose, 'Requested by' => fn ($pr) => $pr->requester->name,
+                'Needed on' => fn ($pr) => $pr->needed_on?->format('Y-m-d'), 'Lines' => [fn ($pr) => $pr->lines_count, 'number'],
+                'Est. total' => [fn ($pr) => $pr->estimated_total, 'money'], 'Status' => fn ($pr) => $pr->statusLabel(),
+            ])
+            ->totals(['Est. total'])
+            ->respond(fn ($prs, $list) => view('prs.index', ['prs' => $prs, 'list' => $list, 'stats' => $stats]));
     }
 
     public function create(Request $request)

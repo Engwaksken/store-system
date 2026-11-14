@@ -6,27 +6,44 @@ use App\Models\InventoryItem;
 use App\Models\StockReceipt;
 use App\Models\Store;
 use App\Services\StockService;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 /** Opening balances, purchase receipts and adjustments. Issues live in IssueController. */
 class StockController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         Gate::authorize('view-stock-ledger');
 
         $types = StockReceipt::toBase()->selectRaw('type, count(*) as n')->groupBy('type')->pluck('n', 'type');
+        $stats = [
+            'total' => (int) $types->sum(),
+            'purchase' => (int) ($types['purchase'] ?? 0),
+            'opening' => (int) ($types['opening'] ?? 0),
+            'month_value' => StockReceipt::where('received_on', '>=', now()->startOfMonth()->toDateString())->sum('total_value'),
+        ];
+        $query = StockReceipt::with('receiver', 'store', 'purchaseOrder')->withCount('lines')
+            ->when(in_array($request->query('type'), ['purchase', 'opening'], true), fn ($q) => $q->where('type', $request->query('type')))
+            ->latest('id');
 
-        return view('receipts.index', [
-            'receipts' => StockReceipt::with('receiver', 'store')->withCount('lines')->latest('id')->paginate(25),
-            'stats' => [
-                'total' => (int) $types->sum(),
-                'purchase' => (int) ($types['purchase'] ?? 0),
-                'opening' => (int) ($types['opening'] ?? 0),
-                'month_value' => StockReceipt::where('received_on', '>=', now()->startOfMonth()->toDateString())->sum('total_value'),
-            ],
-        ]);
+        return ListPage::make($request, $query, 'Stock receipts')
+            ->period('received_on', 'Received')
+            // A receipt belongs to a project when it was received into that project's site store or against that project's purchase order.
+            ->project(fn ($q, $id) => $q->where(fn ($w) => $w->whereHas('store', fn ($s) => $s->where('project_id', $id))
+                ->orWhereHas('purchaseOrder', fn ($p) => $p->where('project_id', $id))))
+            ->store('store_id')
+            ->search(['receipt_no', 'supplier_name', 'reference'], 'Receipt, supplier or reference')
+            ->columns([
+                'Receipt' => fn ($r) => $r->receipt_no, 'Type' => fn ($r) => $r->type, 'Store' => fn ($r) => $r->store->code,
+                'Date' => fn ($r) => $r->received_on->format('Y-m-d'), 'Supplier' => fn ($r) => $r->supplier_name,
+                'Reference' => fn ($r) => $r->reference, 'Purchase order' => fn ($r) => $r->purchaseOrder?->po_no,
+                'Lines' => [fn ($r) => $r->lines_count, 'number'], 'Value' => [fn ($r) => $r->total_value, 'money'],
+                'By' => fn ($r) => $r->receiver->name,
+            ])
+            ->totals(['Value'])
+            ->respond(fn ($receipts, $list) => view('receipts.index', ['receipts' => $receipts, 'list' => $list, 'stats' => $stats]));
     }
 
     public function create(Request $request)

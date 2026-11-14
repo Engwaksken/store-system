@@ -6,24 +6,34 @@ use App\Models\MaterialIssue;
 use App\Models\StockReturn;
 use App\Models\Store;
 use App\Services\StockReturnService;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 /** Returns of unused material from site back to a store, against the original issue voucher. */
 class StockReturnController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         Gate::authorize('view-returns');
 
-        return view('returns.index', [
-            'returns' => StockReturn::with('issue', 'project', 'store', 'receiver')->latest('id')->paginate(25),
-            'stats' => [
-                'total' => StockReturn::count(),
-                'month' => StockReturn::where('returned_at', '>=', now()->startOfMonth())->count(),
-                'value' => StockReturn::sum('total_value'),
-            ],
-        ]);
+        $stats = [
+            'total' => StockReturn::count(),
+            'month' => StockReturn::where('returned_at', '>=', now()->startOfMonth())->count(),
+            'value' => StockReturn::sum('total_value'),
+        ];
+
+        return ListPage::make($request, StockReturn::with('issue', 'project', 'store', 'receiver')->latest('id'), 'Returns to store')
+            ->period('returned_at', 'Returned')->project()->store()
+            ->search(['return_no', 'returned_by_name'], 'Return number or returned by')
+            ->columns([
+                'Return' => fn ($r) => $r->return_no, 'Date' => fn ($r) => $r->returned_at->format('Y-m-d'),
+                'Voucher' => fn ($r) => $r->issue->issue_no, 'Project' => fn ($r) => $r->project->code, 'Store' => fn ($r) => $r->store->code,
+                'Returned by' => fn ($r) => $r->returned_by_name, 'Reason' => fn ($r) => $r->reason,
+                'Value' => [fn ($r) => $r->total_value, 'money'], 'Received by' => fn ($r) => $r->receiver->name,
+            ])
+            ->totals(['Value'])
+            ->respond(fn ($returns, $list) => view('returns.index', ['returns' => $returns, 'list' => $list, 'stats' => $stats]));
     }
 
     public function create(Request $request, MaterialIssue $issue)

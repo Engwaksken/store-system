@@ -8,12 +8,14 @@
     ['At final stage', $stats['overall'], 'fa-user-shield'],
     ['Oldest waiting', $stats['oldest'], 'fa-clock', $stats['pending'] ? 'bad' : ''],
 ]" />
+<x-list-filters :list="$list" />
 <div class="card table-wrap"><table>
     <thead><tr><th>Request</th><th>Project</th><th>Requester</th><th>Stage</th><th class="num">Lines</th><th>Submitted</th><th></th></tr></thead>
     <tbody>@forelse($pending as $r)
         <tr><td>{{ $r->request_no }} <small class="muted">v{{ $r->version }}</small></td><td>{{ $r->project->code }}</td><td>{{ $r->requester->name }}</td>
             <td>@include('partials.status', ['status' => $r->status])</td><td class="num">{{ $r->lines->count() }}</td><td>{{ $r->submitted_at?->diffForHumans() }}</td>
             <td class="right"><a class="btn small" href="{{ route('requests.show', $r) }}">Review</a></td></tr>
-    @empty <tr><td colspan="7" class="empty">Nothing is waiting for you.</td></tr> @endforelse</tbody>
+    @empty <tr><td colspan="7" class="empty">{{ $list->isFiltered() ? 'Nothing waiting for you matches these filters.' : 'Nothing is waiting for you.' }}</td></tr> @endforelse</tbody>
 </table></div>
+<div class="pagination">{{ $pending->links() }}</div>
 @endsection

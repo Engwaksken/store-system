@@ -9,11 +9,9 @@
     ['On hold', $stats['on_hold'], 'fa-circle-pause', 'gold', route('projects.index', ['status' => 'on_hold'])],
     ['Completed', $stats['completed'], 'fa-flag-checkered', '', route('projects.index', ['status' => 'completed'])],
 ]" />
-<form method="GET" class="card filters"><div class="grid grid-3">
-    <div><label>Search</label><input type="text" name="q" value="{{ request('q') }}" placeholder="Code or name"></div>
-    <div><label>Status</label><select name="status"><option value="">All</option>@foreach(\App\Models\Project::STATUSES as $s)<option @selected(request('status') === $s)>{{ $s }}</option>@endforeach</select></div>
-    <div><label>&nbsp;</label><button class="btn small">Filter</button></div>
-</div></form>
+<x-list-filters :list="$list">
+    <div><label for="f_status">Status</label><select id="f_status" name="status"><option value="">All statuses</option>@foreach(\App\Models\Project::STATUSES as $s)<option value="{{ $s }}" @selected(request('status') === $s)>{{ $s }}</option>@endforeach</select></div>
+</x-list-filters>
 <div class="card table-wrap"><table>
     <thead><tr><th>Code</th><th>Name</th><th>Client / location</th><th>Manager</th><th>Team</th><th>Status</th>@can('view-finance-reports')<th class="num">Budget ({{ currency() }})</th>@endcan @can('manage-projects')<th></th>@endcan</tr></thead>
     <tbody>@forelse($projects as $p)
@@ -21,7 +19,7 @@
             <td>{{ $p->manager?->name ?? '-' }}</td><td>{{ $p->members_count }}</td><td><span class="badge muted">{{ $p->status }}</span></td>
             @can('view-finance-reports')<td class="num">@can('view-project-finance', $p){{ ugx($p->budget) }}@else - @endcan</td>@endcan
             @can('manage-projects')<td class="right"><a class="btn-icon" data-modal href="{{ route('projects.edit', $p) }}" title="Edit {{ $p->code }}" aria-label="Edit {{ $p->code }}"><i class="fas fa-pen"></i></a></td>@endcan</tr>
-    @empty <tr><td colspan="8" class="empty">No projects.</td></tr> @endforelse</tbody>
+    @empty <tr><td colspan="8" class="empty">No projects{{ $list->isFiltered() ? ' match these filters' : '' }}.</td></tr> @endforelse</tbody>
 </table></div>
 <div class="pagination">{{ $projects->links() }}</div>
 @endsection

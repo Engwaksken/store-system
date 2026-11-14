@@ -286,3 +286,13 @@ template { display: none; }
 .toast.fade-out { opacity: 0; transform: translateY(8px); }
 .push-panel { padding: .9rem 1rem; background: var(--bg); border-radius: var(--radius); }
 .push-status { margin-top: 0; }
+
+/* List filters (x-list-filters) */
+.list-filters .filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .75rem 1rem; align-items: end; }
+.list-filters .filter-search { grid-column: span 2; }
+.list-filters .period-dates { display: contents; }
+.list-filters .period-dates[hidden] { display: none; }
+.list-filters .filter-actions { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; margin-top: .85rem; }
+.filter-note { font-size: .85rem; }
+.list-filters label { font-size: .8rem; }
+@media (max-width: 600px) { .list-filters .filter-search { grid-column: auto; } .list-filters .filter-grid { grid-template-columns: 1fr 1fr; } }

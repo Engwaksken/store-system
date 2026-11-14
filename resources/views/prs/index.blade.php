@@ -9,16 +9,15 @@
     ['Approved', $stats['approved'], 'fa-file-circle-check', '', route('prs.index', ['status' => 'approved'])],
     ['Ordered', $stats['ordered'], 'fa-cart-shopping', '', route('prs.index', ['status' => 'ordered'])],
 ]" />
-<form method="GET" class="card filters"><div class="grid grid-4">
-    <div><label for="status">Status</label><select id="status" name="status"><option value="">All</option>@foreach(\App\Models\PurchaseRequisition::STATUSES as $k => $v)<option value="{{ $k }}" @selected(request('status') === $k)>{{ $v }}</option>@endforeach</select></div>
-    <div><label>&nbsp;</label><button class="btn small">Filter</button></div>
-</div></form>
+<x-list-filters :list="$list">
+    <div><label for="f_status">Status</label><select id="f_status" name="status"><option value="">All statuses</option>@foreach(\App\Models\PurchaseRequisition::STATUSES as $k => $v)<option value="{{ $k }}" @selected(request('status') === $k)>{{ $v }}</option>@endforeach</select></div>
+</x-list-filters>
 <div class="card table-wrap"><table>
     <thead><tr><th>PR</th><th>Project</th><th>Deliver to</th><th>Purpose</th><th>Requested by</th><th class="num">Est. total</th><th>Status</th></tr></thead>
     <tbody>@forelse($prs as $pr)
         <tr><td><a href="{{ route('prs.show', $pr) }}">{{ $pr->pr_no }}</a></td><td>{{ $pr->project?->code ?? 'Stock' }}</td><td>{{ $pr->store->code }}</td><td>{{ \Illuminate\Support\Str::limit($pr->purpose, 50) }}</td>
             <td>{{ $pr->requester->name }}</td><td class="num">{{ ugx($pr->estimated_total) }}</td><td><span class="badge {{ $pr->tone() }}">{{ $pr->statusLabel() }}</span></td></tr>
-    @empty <tr><td colspan="7" class="empty">No requisitions.</td></tr> @endforelse</tbody>
+    @empty <tr><td colspan="7" class="empty">No requisitions{{ $list->isFiltered() ? ' match these filters' : '' }}.</td></tr> @endforelse</tbody>
 </table></div>
 <div class="pagination">{{ $prs->links() }}</div>
 @endsection

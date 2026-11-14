@@ -20,7 +20,7 @@ use Illuminate\Database\Seeder;
  * Safe to run more than once: items are matched by SKU, and an opening balance is posted only for items that
  * have no stock history in the Main store yet. Stock goes through StockService (opening receipt + ledger),
  * so balances, average cost and reconciliation stay consistent. The receipt is posted by the first active
- * Owner/Admin and is marked "Sample opening stock" in its notes.
+ * Owner/Admin with the note "Opening stock".
  */
 class SampleCatalogSeeder extends Seeder
 {
@@ -84,7 +84,7 @@ class SampleCatalogSeeder extends Seeder
                 'type' => 'opening',
                 'store_id' => Store::DEFAULT_ID,
                 'received_on' => now()->toDateString(),
-                'notes' => 'Sample opening stock (SampleCatalogSeeder)',
+                'notes' => 'Opening stock',
             ], $lines);
             $this->command?->info("Opening stock posted to the Main store: {$receipt->receipt_no} (".count($lines).' items).');
         }

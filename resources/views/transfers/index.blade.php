@@ -9,17 +9,16 @@
     ['Received', $stats['received'], 'fa-circle-check', '', route('transfers.index', ['status' => 'received'])],
     ['Cancelled', $stats['cancelled'], 'fa-ban', '', route('transfers.index', ['status' => 'cancelled'])],
 ]" />
-<form method="GET" class="card filters"><div class="grid grid-4">
-    <div><label>Status</label><select name="status"><option value="">All</option>@foreach(\App\Models\StockTransfer::STATUSES as $k => $v)<option value="{{ $k }}" @selected(request('status') === $k)>{{ $v }}</option>@endforeach</select></div>
-    <div><label>&nbsp;</label><button class="btn small">Filter</button></div>
-</div></form>
+<x-list-filters :list="$list">
+    <div><label for="f_status">Status</label><select id="f_status" name="status"><option value="">All statuses</option>@foreach(\App\Models\StockTransfer::STATUSES as $k => $v)<option value="{{ $k }}" @selected(request('status') === $k)>{{ $v }}</option>@endforeach</select></div>
+</x-list-filters>
 <div class="card table-wrap"><table>
     <thead><tr><th>Transfer</th><th>From</th><th>To</th><th>Dispatched</th><th>By</th><th class="num">Lines</th><th>Status</th></tr></thead>
     <tbody>@forelse($transfers as $t)
         <tr><td><a href="{{ route('transfers.show', $t) }}">{{ $t->transfer_no }}</a></td><td>{{ $t->fromStore->code }}</td><td>{{ $t->toStore->code }}</td>
             <td class="nowrap">{{ $t->dispatched_at->format('d M Y H:i') }}</td><td>{{ $t->dispatcher->name }}</td><td class="num">{{ $t->lines_count }}</td>
             <td><span class="badge {{ $t->tone() }}">{{ $t->statusLabel() }}</span></td></tr>
-    @empty <tr><td colspan="7" class="empty">No transfers.</td></tr> @endforelse</tbody>
+    @empty <tr><td colspan="7" class="empty">No transfers{{ $list->isFiltered() ? ' match these filters' : '' }}.</td></tr> @endforelse</tbody>
 </table></div>
 <div class="pagination">{{ $transfers->links() }}</div>
 @endsection

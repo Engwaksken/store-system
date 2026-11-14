@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\Project;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -17,23 +18,31 @@ class ExpenseController extends Controller
     public function index(Request $request)
     {
         Gate::authorize('view-expenses');
-        $base = Expense::visibleTo($request->user())
-            ->when($request->filled('project_id'), fn ($q) => $q->where('project_id', $request->integer('project_id')))
-            ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->integer('category_id')))
-            ->when($request->filled('from'), fn ($q) => $q->whereDate('incurred_on', '>=', $request->date('from')))
-            ->when($request->filled('to'), fn ($q) => $q->whereDate('incurred_on', '<=', $request->date('to')));
+        $query = Expense::visibleTo($request->user())
+            ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->integer('category_id')));
 
-        return view('expenses.index', [
-            'expenses' => (clone $base)->with('project', 'category', 'recorder')->latest('incurred_on')->latest('id')->paginate(25)->withQueryString(),
-            'total' => (clone $base)->sum('amount'),
-            'stats' => [
-                'count' => (clone $base)->count(),
-                'month' => Expense::visibleTo($request->user())->where('incurred_on', '>=', now()->startOfMonth()->toDateString())->sum('amount'),
-                'no_proof' => (clone $base)->whereNull('receipt_path')->count(),
-            ],
-            'projects' => Project::visibleTo($request->user())->orderBy('code')->get(),
+        $list = ListPage::make($request, $query, 'Project expenses')
+            ->period('incurred_on', 'Incurred')->project()->search(['description', 'reference'], 'Description or reference')
+            ->columns([
+                'Date' => fn ($e) => $e->incurred_on->format('Y-m-d'), 'Project' => fn ($e) => $e->project->code, 'Category' => fn ($e) => $e->category->name,
+                'Description' => fn ($e) => $e->description, 'Mode' => fn ($e) => str_replace('_', ' ', $e->payment_mode), 'Reference' => fn ($e) => $e->reference,
+                'Amount' => [fn ($e) => $e->amount, 'money'], 'Proof' => fn ($e) => $e->receipt_path ? 'Yes' : 'No',
+            ])
+            ->totals(['Amount']);
+        // Stats and the total follow the same filters as the rows; "this month" stays company-wide for the user.
+        $filtered = $list->query();
+        $total = (clone $filtered)->sum('amount');
+        $stats = [
+            'count' => (clone $filtered)->count(),
+            'month' => Expense::visibleTo($request->user())->where('incurred_on', '>=', now()->startOfMonth()->toDateString())->sum('amount'),
+            'no_proof' => (clone $filtered)->whereNull('receipt_path')->count(),
+        ];
+        $filtered->with('project', 'category', 'recorder')->latest('incurred_on')->latest('id');
+
+        return $list->respond(fn ($expenses, $list) => view('expenses.index', [
+            'expenses' => $expenses, 'list' => $list, 'total' => $total, 'stats' => $stats,
             'categories' => ExpenseCategory::orderBy('name')->get(),
-        ]);
+        ]));
     }
 
     public function create()

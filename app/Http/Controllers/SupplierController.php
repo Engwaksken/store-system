@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Supplier;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -13,9 +14,9 @@ class SupplierController extends Controller
     public function index(Request $request)
     {
         Gate::authorize('view-suppliers');
-        $suppliers = Supplier::withCount('purchaseOrders')
-            ->when($request->filled('q'), fn ($q) => $q->where(fn ($w) => $w->where('name', 'like', "%{$request->q}%")->orWhere('code', 'like', "%{$request->q}%")))
-            ->orderBy('name')->paginate(25)->withQueryString();
+        $query = Supplier::withCount('purchaseOrders')
+            ->when($request->filled('status'), fn ($q) => $q->where('is_active', $request->status === 'active'))
+            ->orderBy('name');
 
         $stats = [
             'total' => Supplier::count(),
@@ -23,7 +24,16 @@ class SupplierController extends Controller
             'with_pos' => Supplier::has('purchaseOrders')->count(),
         ];
 
-        return view('suppliers.index', compact('suppliers', 'stats'));
+        // Suppliers are a master list shared by every branch and project: no period / project / branch filter.
+        return ListPage::make($request, $query, 'Suppliers')
+            ->search(['code', 'name', 'contact_person', 'phone', 'email'], 'Code, name, contact, phone or email')
+            ->columns([
+                'Code' => fn ($s) => $s->code, 'Name' => fn ($s) => $s->name, 'Contact' => fn ($s) => $s->contact_person,
+                'Phone' => fn ($s) => $s->phone, 'Email' => fn ($s) => $s->email, 'Address' => fn ($s) => $s->address,
+                'TIN' => fn ($s) => $s->tin, 'Terms' => fn ($s) => $s->payment_terms,
+                'POs' => [fn ($s) => $s->purchase_orders_count, 'number'], 'Status' => fn ($s) => $s->is_active ? 'Active' : 'Inactive',
+            ])
+            ->respond(fn ($suppliers, $list) => view('suppliers.index', ['suppliers' => $suppliers, 'list' => $list, 'stats' => $stats]));
     }
 
     public function create()

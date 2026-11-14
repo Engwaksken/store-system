@@ -10,6 +10,7 @@ use App\Models\MaterialRequest;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\ProjectCostService;
+use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -18,15 +19,27 @@ class ProjectController extends Controller
 {
     public function index(Request $request)
     {
-        $projects = Project::visibleTo($request->user())->with('manager')->withCount('members')
+        $query = Project::visibleTo($request->user())->with('manager')->withCount('members')
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
-            ->when($request->filled('q'), fn ($q) => $q->where(fn ($w) => $w->where('name', 'like', "%{$request->q}%")->orWhere('code', 'like', "%{$request->q}%")))
-            ->orderBy('code')->paginate(25)->withQueryString();
+            ->orderBy('code');
 
         $counts = Project::visibleTo($request->user())->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
         $stats = ['total' => (int) $counts->sum(), 'active' => (int) ($counts['active'] ?? 0), 'on_hold' => (int) ($counts['on_hold'] ?? 0), 'completed' => (int) ($counts['completed'] ?? 0)];
 
-        return view('projects.index', compact('projects', 'stats'));
+        $finance = Gate::allows('view-finance-reports');
+        $columns = [
+            'Code' => fn ($p) => $p->code, 'Name' => fn ($p) => $p->name, 'Client' => fn ($p) => $p->client, 'Location' => fn ($p) => $p->location,
+            'Manager' => fn ($p) => $p->manager?->name, 'Team' => [fn ($p) => $p->members_count, 'number'], 'Status' => fn ($p) => $p->status,
+            'Start' => fn ($p) => $p->start_date?->format('Y-m-d'), 'End' => fn ($p) => $p->end_date?->format('Y-m-d'),
+        ];
+        if ($finance) {
+            $columns['Budget'] = [fn ($p) => Gate::allows('view-project-finance', $p) ? $p->budget : null, 'money'];
+        }
+
+        return ListPage::make($request, $query, 'Projects')
+            ->period('start_date', 'Started')->search(['code', 'name', 'client', 'location'], 'Code, name, client or location')
+            ->columns($columns)->totals($finance ? ['Budget'] : [])
+            ->respond(fn ($projects, $list) => view('projects.index', ['projects' => $projects, 'list' => $list, 'stats' => $stats]));
     }
 
     public function create()
