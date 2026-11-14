@@ -137,6 +137,7 @@ class StockTransferService
             $transfer->update(['status' => 'received', 'received_by' => $actor->id, 'received_at' => now(), 'receive_notes' => $notes]);
             $short = collect($plan)->filter(fn ($p) => bccomp($p[1], (string) $p[0]->qty, 3) < 0)->count();
             ActivityLog::record('transfer.received', "Transfer {$transfer->transfer_no} received".($short ? " with {$short} short line(s)" : ''), $transfer);
+            app(WorkflowNotifier::class)->transferReceived($transfer, (int) $short);
 
             return $transfer;
         });
@@ -167,6 +168,7 @@ class StockTransferService
             }
             $transfer->update(['status' => 'cancelled', 'received_by' => $actor->id, 'received_at' => now(), 'receive_notes' => 'Cancelled: '.$reason]);
             ActivityLog::record('transfer.cancelled', "Transfer {$transfer->transfer_no} cancelled: {$reason}", $transfer);
+            app(WorkflowNotifier::class)->transferCancelled($transfer, $actor, $reason);
 
             return $transfer;
         });

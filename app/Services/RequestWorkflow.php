@@ -196,7 +196,9 @@ class RequestWorkflow
                 throw new AuthorizationException('Only the requester or admin can cancel.');
             }
             $this->assertStatus($req, RequestStatus::Draft, RequestStatus::Submitted);
+            $wasWithPm = $req->status === RequestStatus::Submitted;
             $req->forceFill(['status' => RequestStatus::Cancelled])->save();
+            $this->notifier->requestCancelled($req, $user, $wasWithPm, false);
             ActivityLog::record('request.cancelled', "Request {$req->request_no} cancelled", $req);
 
             return $req;

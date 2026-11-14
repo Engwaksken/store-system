@@ -13,11 +13,11 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'phone', 'is_active', 'must_change_password'];
+    protected $fillable = ['name', 'email', 'password', 'role', 'phone', 'is_active', 'must_change_password', 'notify_email', 'notify_push'];
 
     protected $hidden = ['password', 'remember_token'];
 
-    protected $attributes = ['role' => 'staff', 'is_active' => true, 'must_change_password' => false];
+    protected $attributes = ['role' => 'staff', 'is_active' => true, 'must_change_password' => false, 'notify_email' => true, 'notify_push' => true];
 
     protected function casts(): array
     {
@@ -26,6 +26,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => Role::class,
             'is_active' => 'boolean',
+            'notify_email' => 'boolean',
+            'notify_push' => 'boolean',
             'must_change_password' => 'boolean',
         ];
     }
@@ -62,5 +64,10 @@ class User extends Authenticatable
     {
         return $project->manager_id === $this->id
             || $project->members()->whereKey($this->id)->exists();
+    }
+
+    public function pushSubscriptions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
     }
 }

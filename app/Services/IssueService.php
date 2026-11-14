@@ -161,6 +161,7 @@ class IssueService
                 'recipient_name' => trim($recipientName) ?: $user->name, 'remarks' => $remarks, 'acknowledged_at' => now(),
             ]);
             ActivityLog::record('issue.acknowledged', "Voucher {$issue->issue_no} acknowledged by {$ack->recipient_name}", $issue);
+            $this->notifier->acknowledged($issue->setRelation('acknowledgment', $ack), $user);
 
             return $ack;
         });

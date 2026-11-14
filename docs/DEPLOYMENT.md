@@ -48,6 +48,13 @@ php artisan storage:link
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 chmod -R 775 storage bootstrap/cache
 ```
+Browser push notifications (once; needs HTTPS):
+```bash
+php artisan cms:push-keys      # writes VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT to .env
+php artisan config:cache
+```
+Keep the keys with the `.env` backup: new keys make every device turn push on again. If the command reports "Unable to create the key", PHP cannot find `openssl.cnf`; run `php artisan cms:push-keys --show` on another machine and paste the two lines into `.env`. Each user then opens **Notifications → Notification settings → Devices** and turns push on for every phone or computer they use (on iPhone/iPad, add the site to the Home Screen first). E-mail and in-app alerts work without this step.
+
 Cron (cPanel → Cron Jobs):
 ```
 * * * * * cd ~/cms && php artisan schedule:run >> /dev/null 2>&1

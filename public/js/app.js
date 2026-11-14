@@ -13,6 +13,7 @@
  *  - Placeholders: fields without a placeholder get one from their label.
  *  - Amounts:      money fields show thousands separators while typing (removed again on submit).
  *  - Tabs:         <x-tabs>/<x-tab> panels become a tab bar; the last tab used is remembered.
+ *  - Notifications: the bell polls once a minute and pops up new alerts; push on/off per device (sw.js).
  */
 (function () {
     'use strict';
@@ -552,6 +553,119 @@
         });
     }
 
+    /* ---------- Live notifications: bell count + pop-up for new alerts (polls once a minute) ---------- */
+    function showToast(n) {
+        var box = document.querySelector('.toast-stack');
+        if (!box) { box = el('div', 'toast-stack'); box.setAttribute('aria-live', 'polite'); document.body.appendChild(box); }
+        var t = el('a', 'toast toast-' + (n.kind || 'info'));
+        t.href = n.url;
+        t.innerHTML = '<i class="fas fa-bell"></i><span><strong></strong><small></small></span>';
+        t.querySelector('strong').textContent = n.subject;
+        t.querySelector('small').textContent = n.body.length > 140 ? n.body.slice(0, 137) + '...' : n.body;
+        box.appendChild(t);
+        setTimeout(function () { t.classList.add('fade-out'); setTimeout(function () { t.remove(); }, 600); }, 8000);
+    }
+
+    function initLiveNotifications() {
+        var bell = document.querySelector('[data-bell]');
+        if (!bell || !window.fetch) { return; }
+        var since = bell.dataset.since;
+        function setCount(n) {
+            var c = bell.querySelector('.count');
+            if (n > 0) {
+                if (!c) { c = el('span', 'count'); bell.appendChild(document.createTextNode(' ')); bell.appendChild(c); }
+                c.textContent = n;
+            } else if (c) { c.remove(); }
+            bell.setAttribute('aria-label', 'Notifications, ' + n + ' unread');
+        }
+        function poll() {
+            if (document.hidden) { return; }
+            fetch(bell.dataset.pollUrl + '?since=' + encodeURIComponent(since), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) {
+                    if (!d) { return; }
+                    since = d.now;
+                    setCount(d.unread);
+                    d.fresh.forEach(showToast);
+                })
+                .catch(function () { /* offline: try again next minute */ });
+        }
+        setInterval(poll, 60000);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) { poll(); } });
+    }
+
+    /* ---------- Browser push: turn on/off for this device (Notification settings page) ---------- */
+    function urlBase64ToUint8Array(base64) {
+        var padding = '='.repeat((4 - base64.length % 4) % 4);
+        var raw = window.atob((base64 + padding).replace(/-/g, '+').replace(/_/g, '/'));
+        var out = new Uint8Array(raw.length);
+        for (var i = 0; i < raw.length; i++) { out[i] = raw.charCodeAt(i); }
+        return out;
+    }
+
+    function initPush() {
+        var panel = document.querySelector('[data-push]');
+        if (!panel) { return; }
+        var status = panel.querySelector('[data-push-status]');
+        var onBtn = panel.querySelector('[data-push-enable]');
+        var offBtn = panel.querySelector('[data-push-disable]');
+        var token = document.querySelector('meta[name=csrf-token]').content;
+        function say(text) { status.textContent = text; }
+        function show(subscribed) { onBtn.hidden = subscribed; offBtn.hidden = !subscribed; }
+        function send(url, method, body) {
+            return fetch(url, { method: method, credentials: 'same-origin', body: JSON.stringify(body),
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': token } })
+                .then(function (r) { if (!r.ok) { throw new Error('server'); } });
+        }
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+            say('This browser cannot receive push notifications. On iPhone or iPad, add this site to the Home Screen first.');
+            return;
+        }
+        if (!window.isSecureContext) { say('Push needs the site to be opened over HTTPS.'); return; }
+
+        navigator.serviceWorker.register('/sw.js').then(function (reg) {
+            return reg.pushManager.getSubscription().then(function (sub) {
+                if (Notification.permission === 'denied') {
+                    say('Notifications are blocked for this site in the browser settings. Allow them there, then reload this page.');
+                    return;
+                }
+                if (sub) {
+                    // Re-send so the server knows this device belongs to the person signed in now.
+                    send(panel.dataset.subscribeUrl, 'POST', sub.toJSON()).catch(function () {});
+                    say('Push is on for this device.');
+                } else {
+                    say('Push is off for this device.');
+                }
+                show(!!sub);
+
+                onBtn.addEventListener('click', function () {
+                    onBtn.disabled = true;
+                    Notification.requestPermission().then(function (perm) {
+                        if (perm !== 'granted') { throw new Error('denied'); }
+                        return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(panel.dataset.vapid) });
+                    }).then(function (s) {
+                        return send(panel.dataset.subscribeUrl, 'POST', s.toJSON());
+                    }).then(function () {
+                        say('Push is on for this device. Reloading...');
+                        window.location.reload();
+                    }).catch(function (e) {
+                        onBtn.disabled = false;
+                        say(e.message === 'denied' ? 'You did not allow notifications. Click again and choose Allow.' : 'Could not turn push on. Check your connection and try again.');
+                    });
+                });
+                offBtn.addEventListener('click', function () {
+                    offBtn.disabled = true;
+                    reg.pushManager.getSubscription().then(function (s) {
+                        if (!s) { return null; }
+                        var endpoint = s.endpoint;
+                        return s.unsubscribe().then(function () { return send(panel.dataset.unsubscribeUrl, 'DELETE', { endpoint: endpoint }); });
+                    }).then(function () { window.location.reload(); })
+                        .catch(function () { offBtn.disabled = false; say('Could not turn push off. Try again.'); });
+                });
+            });
+        }).catch(function () { say('Push could not start in this browser.'); });
+    }
+
     /* ---------- Print buttons ---------- */
     function initPrint() {
         document.addEventListener('click', function (e) {
@@ -566,6 +680,8 @@
         initPrint();
         initMoney();
         initThemePreview();
+        initLiveNotifications();
+        initPush();
         initTabs(document);
         enhance(document);
         initModals();

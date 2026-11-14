@@ -142,6 +142,7 @@ class StockCountService
             }
             $count->update(['status' => $decision, 'decided_by' => $actor->id, 'decided_at' => now(), 'decision_reason' => $reason]);
             ActivityLog::record('count.'.$decision, "Stock count {$count->count_no} {$decision}", $count);
+            app(WorkflowNotifier::class)->countDecided($count);
 
             return $count;
         });

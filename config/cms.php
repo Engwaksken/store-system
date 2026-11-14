@@ -11,4 +11,10 @@ return [
     // Daily reminders for work pending longer than this many days; escalate to the Owner/Admin after escalation_days.
     'reminder_days' => (int) env('CMS_REMINDER_DAYS', 2),
     'escalation_days' => (int) env('CMS_ESCALATION_DAYS', 5),
+    // Browser push (Web Push / VAPID). Generate the keys once with `php artisan cms:push-keys`; push is off until they are set.
+    'push' => [
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+        'subject' => env('VAPID_SUBJECT', env('APP_URL', 'mailto:admin@example.com')),
+    ],
 ];

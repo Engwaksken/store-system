@@ -2,7 +2,8 @@
 @section('title', 'Notifications')
 @section('content')
 <div class="page-head"><div><h1>Notifications</h1><p>Approvals, deliveries, reminders and budget alerts for you.</p></div>
-    <form method="POST" action="{{ route('notifications.read-all') }}">@csrf<button class="btn secondary">Mark all as read</button></form></div>
+    <div class="actions"><a class="btn secondary" href="{{ route('notifications.settings') }}"><i class="fas fa-gear"></i> Notification settings</a>
+    <form method="POST" action="{{ route('notifications.read-all') }}" class="inline-form">@csrf<button class="btn secondary"><i class="fas fa-check-double"></i> Mark all as read</button></form></div></div>
 <x-stats :cards="[
     ['Notifications', $stats['total'], 'fa-bell', 'navy'],
     ['Unread', $stats['unread'], 'fa-envelope', $stats['unread'] ? 'gold' : ''],

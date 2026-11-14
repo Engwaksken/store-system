@@ -45,6 +45,12 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('notifications/{id}', [NotificationController::class, 'open'])->whereUuid('id')->name('notifications.open');
     Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::get('notifications-poll', [NotificationController::class, 'poll'])->middleware('throttle:20,1')->name('notifications.poll');
+    Route::get('account/notifications', [NotificationController::class, 'settings'])->name('notifications.settings');
+    Route::put('account/notifications', [NotificationController::class, 'updateSettings'])->name('notifications.settings.update');
+    Route::post('account/notifications/test', [NotificationController::class, 'test'])->middleware('throttle:5,1')->name('notifications.test');
+    Route::post('push-subscriptions', [NotificationController::class, 'subscribe'])->middleware('throttle:20,1')->name('push.subscribe');
+    Route::delete('push-subscriptions/{subscription?}', [NotificationController::class, 'unsubscribe'])->name('push.unsubscribe');
 
     // Administration
     Route::resource('users', UserController::class)->except(['show', 'destroy']);

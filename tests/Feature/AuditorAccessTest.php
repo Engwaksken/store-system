@@ -27,7 +27,9 @@ class AuditorAccessTest extends TestCase
     ];
 
     /** Mutating routes every signed-in user may use on their own account. */
-    private const PERSONAL = ['logout', 'password.change.update', 'notifications.read-all'];
+    /** Routes that change only the signed-in user's own account (password, own notifications, own push devices). */
+    private const PERSONAL = ['logout', 'password.change.update', 'notifications.read-all',
+        'notifications.settings.update', 'notifications.test', 'push.subscribe', 'push.unsubscribe'];
 
     public function test_auditor_reads_everything_and_writes_nothing(): void
     {

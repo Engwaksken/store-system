@@ -38,6 +38,28 @@ class WorkflowNotifier
     public function pmApproved(MaterialRequest $req): void
     {
         $this->send($this->role(Role::OverallManager), "Final approval needed: {$req->request_no}", "Material request {$req->request_no} for project {$req->project->code} was approved by the Project Manager and needs the Overall Manager decision.", route('requests.show', $req), 'Open request');
+        $this->send(User::whereKey($req->requester_id)->get(), "PM approved: {$req->request_no}", "Your material request {$req->request_no} was approved by the Project Manager and is now waiting for the final approval.", route('requests.show', $req), 'Open request', 'ok');
+    }
+
+    /** A pending request was withdrawn: whoever was due to decide no longer needs to. */
+    public function requestCancelled(MaterialRequest $req, User $by, bool $wasWithPm, bool $wasWithOverall): void
+    {
+        $to = collect();
+        if ($wasWithPm) {
+            $to = $req->project_manager_id ? User::whereKey($req->project_manager_id)->get() : $this->role(Role::Admin);
+        } elseif ($wasWithOverall) {
+            $to = $this->role(Role::OverallManager);
+        }
+        if ($by->id !== $req->requester_id) {
+            $to = $to->merge(User::whereKey($req->requester_id)->get());
+        }
+        $this->send($to->where('id', '!=', $by->id), "Cancelled: {$req->request_no}", "Material request {$req->request_no} for project {$req->project->code} was cancelled by {$by->name}. No decision is needed.", route('requests.show', $req), 'Open request', 'bad');
+    }
+
+    public function acknowledged(MaterialIssue $issue, User $by): void
+    {
+        $this->send(User::whereKey($issue->issued_by)->where('id', '!=', $by->id)->get(), "Receipt confirmed: {$issue->issue_no}",
+            "{$issue->acknowledgment->recipient_name} confirmed receiving the materials on voucher {$issue->issue_no} ({$issue->request->request_no}).", route('issues.show', $issue), 'Open voucher', 'ok');
     }
 
     public function overallApproved(MaterialRequest $req): void
@@ -65,6 +87,26 @@ class WorkflowNotifier
     {
         $to = $t->toStore->users()->where('users.id', '!=', $t->dispatched_by)->get();
         $this->send($to, "Incoming transfer: {$t->transfer_no}", "Transfer {$t->transfer_no} from {$t->fromStore->name} is on its way to {$t->toStore->name}. Confirm the quantities when it arrives.", route('transfers.show', $t), 'Open transfer');
+    }
+
+    public function transferReceived(StockTransfer $t, int $shortLines): void
+    {
+        $this->send(User::whereKey($t->dispatched_by)->get(), "Transfer received: {$t->transfer_no}",
+            "Transfer {$t->transfer_no} to {$t->toStore->name} was received".($shortLines ? " with {$shortLines} short line(s); see the reasons on the transfer." : ' in full.'),
+            route('transfers.show', $t), 'Open transfer', $shortLines ? 'bad' : 'ok');
+    }
+
+    public function transferCancelled(StockTransfer $t, User $by, string $reason): void
+    {
+        $to = $t->toStore->users()->get()->merge(User::whereKey($t->dispatched_by)->get())->where('id', '!=', $by->id);
+        $this->send($to, "Transfer cancelled: {$t->transfer_no}", "Transfer {$t->transfer_no} from {$t->fromStore->name} to {$t->toStore->name} was cancelled by {$by->name}: {$reason}. The stock went back to the source store.", route('transfers.show', $t), 'Open transfer', 'bad');
+    }
+
+    public function countDecided(StockCount $c): void
+    {
+        $this->send(User::whereKey($c->counted_by)->get(), "Stock count {$c->status}: {$c->count_no}",
+            "Your stock count {$c->count_no} for {$c->store->name} was {$c->status}".($c->status === 'approved' ? ' and the differences were posted to stock.' : ($c->decision_reason ? ": {$c->decision_reason}" : '.')),
+            route('counts.show', $c), 'Open count', $c->status === 'approved' ? 'ok' : 'bad');
     }
 
     public function countSubmitted(StockCount $c): void
