@@ -12,7 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Tests\TestCase;
 
-/** Every list page: period / project / branch / search filters, pagination and CSV / PDF export (App\Support\ListPage). */
+/** Every list page: period / project / store / search filters, pagination and CSV / PDF export (App\Support\ListPage). */
 class ListPagesTest extends TestCase
 {
     use RefreshDatabase;

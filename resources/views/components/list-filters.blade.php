@@ -1,6 +1,6 @@
 @props(['list'])
 {{-- Filter bar for list pages built with App\Support\ListPage: one row with search, period (+ custom dates),
-     project, branch (store), page-specific extras (slot), then Apply / Reset and CSV / PDF export. Wraps on small screens. --}}
+     project, store, page-specific extras (slot), then Apply / Reset and CSV / PDF export. Wraps on small screens. --}}
 @php
     [$from, $to] = $list->range();
     $period = $list->periodKey();
@@ -27,7 +27,7 @@
             </select></div>
         @endif
         @if($list->has('store'))
-            <div class="filter-field"><label for="f_store">Branch</label><select id="f_store" name="store_id"><option value="">All branches</option>
+            <div class="filter-field"><label for="f_store">{{ $list->storeLabel }}</label><select id="f_store" name="store_id"><option value="">All stores</option>
                 @foreach($list->storeOptions() as $s)<option value="{{ $s->id }}" @selected($list->storeId() === $s->id)>{{ $s->code }} - {{ $s->name }}</option>@endforeach
             </select></div>
         @endif

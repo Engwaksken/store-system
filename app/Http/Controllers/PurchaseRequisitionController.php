@@ -99,6 +99,28 @@ class PurchaseRequisitionController extends Controller
         return back()->with('status', 'Requisition '.$data['decision'].'.');
     }
 
+    /** Approve / reject / cancel the selected requisitions; each is checked on its own, the rest are skipped and listed. */
+    public function bulk(Request $request, PurchasingService $service)
+    {
+        // Refuse read-only roles up front; each requisition is still checked on its own.
+        abort_unless($request->user()->hasRole(\App\Enums\Role::Admin, \App\Enums\Role::OverallManager) || Gate::any(['create-pr', 'buy']), 403);
+        $data = $request->validate([
+            'action' => 'required|in:approve,reject,cancel',
+            'ids' => 'required|array|min:1|max:200',
+            'ids.*' => 'integer',
+            'reason' => 'nullable|required_if:action,reject|string|max:1000',
+        ], ['ids.required' => 'Select at least one requisition first.']);
+        $user = $request->user();
+        $prs = PurchaseRequisition::visibleTo($user)->whereIn('id', $data['ids'])->orderBy('id')->get();
+
+        return $this->bulkApply($prs, fn ($pr) => $pr->pr_no, fn (PurchaseRequisition $pr) => match ($data['action']) {
+            'approve', 'reject' => Gate::allows('decide-pr', $pr)
+                ? $service->decideRequisition($user, $pr, $data['action'] === 'approve' ? 'approved' : 'rejected', $data['reason'] ?? null)
+                : throw new \App\Exceptions\WorkflowException('it is not waiting for your approval'),
+            'cancel' => $service->cancelRequisition($user, $pr),
+        }, 'requisition', ['approve' => 'approved', 'reject' => 'rejected', 'cancel' => 'cancelled'][$data['action']]);
+    }
+
     public function cancel(Request $request, PurchaseRequisition $pr, PurchasingService $service)
     {
         Gate::authorize('view-pr', $pr);

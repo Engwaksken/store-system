@@ -50,7 +50,7 @@
                 <a href="{{ route('counts.index') }}" @class(['nav-link', 'active' => $is('counts.*')])><span><i class="fas fa-clipboard-check fa-fw"></i> Stock counts</span></a>
             @endcan
             @can('manage-catalog')
-                <a href="{{ route('catalog.setup') }}" @class(['nav-link', 'active' => $is('catalog.*')])><span><i class="fas fa-tags fa-fw"></i> Categories &amp; units</span></a>
+                <a href="{{ route('catalog.setup') }}" @class(['nav-link', 'active' => $is('catalog.*')])><span><i class="fas fa-tags fa-fw"></i> Catalog setup</span></a>
             @endcan
         </x-nav-group>
 

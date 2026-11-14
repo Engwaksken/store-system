@@ -103,9 +103,8 @@
     </x-tab>
 
     <x-tab title="Expense categories" icon="fa-tags" name="categories" :count="$expenseCategories->count()">
-        <div class="actions" style="margin-bottom:.75rem"><button type="button" class="btn small" data-modal-target="#expense-category-create"><i class="fas fa-plus"></i> Add category</button></div>
-        <table style="max-width:520px"><tbody>@forelse($expenseCategories as $c)<tr><td><i class="fas fa-tag muted"></i> {{ $c->name }}</td></tr>@empty<tr><td class="empty">No categories yet.</td></tr>@endforelse</tbody></table>
-        <p class="hint">Do not create a category for store stock purchases: those are recorded as stock receipts and charged to projects when issued.</p>
+        <p>Expense categories are now managed with item categories and units under <strong>Catalog setup</strong>, where you can add, edit, deactivate and delete them.</p>
+        <a class="btn small" href="{{ route('catalog.setup') }}#expense-categories"><i class="fas fa-arrow-right"></i> Open Catalog setup</a>
     </x-tab>
 </x-tabs>
     <div class="form-save"><button class="btn"><i class="fas fa-floppy-disk"></i> Save settings</button></div>
@@ -134,13 +133,6 @@
         </div>
         <input type="hidden" name="use_now" value="0"><label class="check field"><input type="checkbox" name="use_now" value="1" checked> Use it straight away</label>
         <button class="btn"><i class="fas fa-upload"></i> Upload &amp; add font</button>
-    </form>
-</template>
-
-<template id="expense-category-create" data-title="Add expense category">
-    <form method="POST" action="{{ route('settings.expense-categories.store') }}">@csrf
-        <div class="field"><label for="expense_category_name">Category name</label><input id="expense_category_name" type="text" name="name" required maxlength="100" placeholder="e.g. Transport"></div>
-        <button class="btn">Add category</button>
     </form>
 </template>
 @endsection

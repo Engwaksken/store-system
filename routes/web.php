@@ -80,6 +80,12 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::get('catalog/setup', [CatalogController::class, 'setup'])->name('catalog.setup');
     Route::post('catalog/categories', [CatalogController::class, 'storeCategory'])->name('catalog.categories.store');
     Route::post('catalog/units', [CatalogController::class, 'storeUnit'])->name('catalog.units.store');
+    Route::put('catalog/categories/{category}', [CatalogController::class, 'updateCategory'])->name('catalog.categories.update');
+    Route::put('catalog/units/{unit}', [CatalogController::class, 'updateUnit'])->name('catalog.units.update');
+    Route::post('catalog/expense-categories', [CatalogController::class, 'storeExpenseCategory'])->name('catalog.expense-categories.store');
+    Route::put('catalog/expense-categories/{expenseCategory}', [CatalogController::class, 'updateExpenseCategory'])->name('catalog.expense-categories.update');
+    Route::post('catalog/{type}/bulk-delete', [CatalogController::class, 'bulkDestroySetup'])->whereIn('type', ['categories', 'units', 'expense-categories'])->name('catalog.setup.bulk-delete');
+    Route::delete('catalog/{type}/{id}', [CatalogController::class, 'destroySetup'])->whereIn('type', ['categories', 'units', 'expense-categories'])->whereNumber('id')->name('catalog.setup.destroy');
     Route::get('items', [CatalogController::class, 'index'])->name('items.index');
     Route::get('items/import-template', [CatalogController::class, 'importTemplate'])->name('items.import-template');
     Route::post('items/import', [CatalogController::class, 'import'])->name('items.import');
@@ -128,6 +134,7 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::get('requests', [MaterialRequestController::class, 'index'])->name('requests.index');
     Route::get('requests/create', [MaterialRequestController::class, 'create'])->name('requests.create');
     Route::post('requests', [MaterialRequestController::class, 'store'])->name('requests.store');
+    Route::post('requests/bulk', [MaterialRequestController::class, 'bulk'])->middleware('throttle:30,1')->name('requests.bulk');
     Route::get('requests/{materialRequest}', [MaterialRequestController::class, 'show'])->name('requests.show');
     Route::get('requests/{materialRequest}/edit', [MaterialRequestController::class, 'edit'])->name('requests.edit');
     Route::put('requests/{materialRequest}', [MaterialRequestController::class, 'update'])->name('requests.update');
@@ -151,6 +158,7 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::get('purchase-requisitions', [PurchaseRequisitionController::class, 'index'])->name('prs.index');
     Route::get('purchase-requisitions/create', [PurchaseRequisitionController::class, 'create'])->name('prs.create');
     Route::post('purchase-requisitions', [PurchaseRequisitionController::class, 'store'])->name('prs.store');
+    Route::post('purchase-requisitions/bulk', [PurchaseRequisitionController::class, 'bulk'])->middleware('throttle:30,1')->name('prs.bulk');
     Route::get('purchase-requisitions/{pr}', [PurchaseRequisitionController::class, 'show'])->name('prs.show');
     Route::post('purchase-requisitions/{pr}/submit', [PurchaseRequisitionController::class, 'submit'])->name('prs.submit');
     Route::post('purchase-requisitions/{pr}/decide', [PurchaseRequisitionController::class, 'decide'])->name('prs.decide');
@@ -160,6 +168,7 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->name('pos.index');
     Route::get('purchase-orders/create', [PurchaseOrderController::class, 'create'])->name('pos.create');
     Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->name('pos.store');
+    Route::post('purchase-orders/bulk', [PurchaseOrderController::class, 'bulk'])->middleware('throttle:30,1')->name('pos.bulk');
     Route::get('purchase-orders/{po}', [PurchaseOrderController::class, 'show'])->name('pos.show');
     Route::get('purchase-orders/{po}/pdf', [PurchaseOrderController::class, 'pdf'])->name('pos.pdf');
     Route::post('purchase-orders/{po}/decide', [PurchaseOrderController::class, 'decide'])->name('pos.decide');

@@ -117,6 +117,34 @@ class PurchaseOrderController extends Controller
         return back()->with('status', "Purchase order {$data['decision']}.");
     }
 
+    /**
+     * Approve / reject / cancel the selected purchase orders. Decisions use the version shown on the page (versions[id]),
+     * so an order changed since is refused. Each order is checked on its own; the rest are skipped and listed.
+     */
+    public function bulk(Request $request, PurchasingService $service)
+    {
+        // Refuse read-only roles up front; each order is still checked on its own.
+        abort_unless($request->user()->hasRole(\App\Enums\Role::Admin, \App\Enums\Role::OverallManager) || Gate::allows('buy'), 403);
+        $data = $request->validate([
+            'action' => 'required|in:approve,reject,cancel',
+            'ids' => 'required|array|min:1|max:200',
+            'ids.*' => 'integer',
+            'versions' => 'array',
+            'versions.*' => 'integer',
+            'reason' => 'nullable|required_if:action,reject|required_if:action,cancel|string|max:1000',
+        ], ['ids.required' => 'Select at least one purchase order first.']);
+        $user = $request->user();
+        $orders = PurchaseOrder::visibleTo($user)->whereIn('id', $data['ids'])->orderBy('id')->get();
+
+        return $this->bulkApply($orders, fn ($po) => $po->po_no, fn (PurchaseOrder $po) => match ($data['action']) {
+            'approve', 'reject' => Gate::allows('decide-po', $po)
+                ? $service->decideOrder($user, $po, $data['action'] === 'approve' ? 'approved' : 'rejected', $data['reason'] ?? null,
+                    isset($data['versions'][$po->id]) ? (int) $data['versions'][$po->id] : null)
+                : throw new \App\Exceptions\WorkflowException('it is not waiting for your approval (or is above your approval limit)'),
+            'cancel' => Gate::allows('buy') ? $service->cancelOrder($user, $po, $data['reason']) : throw new \App\Exceptions\WorkflowException('only procurement can cancel'),
+        }, 'purchase order', ['approve' => 'approved', 'reject' => 'rejected', 'cancel' => 'cancelled'][$data['action']]);
+    }
+
     public function cancel(Request $request, PurchaseOrder $po, PurchasingService $service)
     {
         Gate::authorize('buy');

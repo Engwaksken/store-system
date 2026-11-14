@@ -24,7 +24,7 @@ class SupplierController extends Controller
             'with_pos' => Supplier::has('purchaseOrders')->count(),
         ];
 
-        // Suppliers are a master list shared by every branch and project: no period / project / branch filter.
+        // Suppliers are a master list shared by every store and project: no period / project / store filter.
         return ListPage::make($request, $query, 'Suppliers')
             ->search(['code', 'name', 'contact_person', 'phone', 'email'], 'Code, name, contact, phone or email')
             ->columns([

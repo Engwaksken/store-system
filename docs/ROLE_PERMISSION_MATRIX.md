@@ -26,8 +26,8 @@ Roles (`users.role`): `admin` (Owner/Admin), `overall_manager`, `project_manager
 | View transfers, returns, counts | all | all | — | own stores (transfers) / all | — | all |
 | View stock balances & ledger | ✅ | ✅ | ✅ | ✅ | ✅ (balance only) | ✅ |
 | Create / submit material request | ✅¹ | — | assigned projects | — | assigned projects | — |
-| PM-step approve/reject | substitute only (D2) | — | **own projects only**, never own request | — | — | — |
-| Overall-step approve/reject | — | ✅ (not requester, not PM-step approver) | — | — | — | — |
+| PM-step approve/reject | ✅ any request, never own (recorded as substitute) | — | **own projects only**, never own request | — | — | — |
+| Overall-step approve/reject | ✅ any request, never own | ✅ (not requester, not PM-step approver) | — | — | — | — |
 | Issue materials | — | — | — | ✅ from assigned store (only OVERALL_APPROVED / PARTIALLY_ISSUED; site store only to its project) | — | — |
 | Acknowledge receipt | — | — | requester | records named recipient | requester | — |
 | View requests | all | all | managed projects + own | approved/issuable + issued | own | all |
@@ -35,7 +35,7 @@ Roles (`users.role`): `admin` (Owner/Admin), `overall_manager`, `project_manager
 | View expenses | all | all | managed projects | — | — | all |
 | Reports & CSV | all | all | managed projects | stock reports | — | all |
 
-¹ Admin may request on any project. Because admin is never an approver except as the D2 substitute, an admin request goes PM → Overall in the normal way.
+¹ Admin may request on any project. The Owner/Admin may approve any request at either step, but never their own: an admin request goes PM → Overall in the normal way.
 
 ## Procurement (Phase 3)
 Full policy: `docs/PROCUREMENT.md`.

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\ExpenseCategory;
 use App\Models\InventoryCategory;
 use App\Models\InventoryItem;
 use App\Models\InventoryUnit;
@@ -61,11 +62,17 @@ class CatalogController extends Controller
         return view('items.show', ['item' => $item->load('category', 'unit', 'balances.store'), 'movements' => $movements]);
     }
 
+    /** Catalog setup: item categories, units of measure and (Owner/Admin) expense categories, one tab each. */
     public function setup()
     {
         Gate::authorize('manage-catalog');
 
-        return view('items.setup', ['categories' => InventoryCategory::withCount('items')->orderBy('name')->get(), 'units' => InventoryUnit::orderBy('name')->get()]);
+        return view('items.setup', [
+            'categories' => InventoryCategory::withCount('items')->orderBy('name')->get(),
+            'units' => InventoryUnit::withCount('items')->orderBy('name')->get(),
+            'expenseCategories' => Gate::allows('manage-settings')
+                ? ExpenseCategory::withCount('expenses', 'claims')->orderBy('name')->get() : collect(),
+        ]);
     }
 
     public function storeCategory(Request $request)
@@ -74,7 +81,17 @@ class CatalogController extends Controller
         $c = InventoryCategory::create($request->validate(['name' => 'required|string|max:100|unique:inventory_categories,name']));
         ActivityLog::record('catalog.category', "Category {$c->name} added", $c);
 
-        return back()->with('status', 'Category added.');
+        return $this->backTo('item-categories', 'Category added.');
+    }
+
+    public function updateCategory(Request $request, InventoryCategory $category)
+    {
+        Gate::authorize('manage-catalog');
+        $old = $category->name;
+        $category->update($request->validate(['name' => ['required', 'string', 'max:100', Rule::unique('inventory_categories', 'name')->ignore($category->id)]]));
+        ActivityLog::record('catalog.category_updated', "Category {$old} renamed to {$category->name}", $category);
+
+        return $this->backTo('item-categories', 'Category updated.');
     }
 
     public function storeUnit(Request $request)
@@ -86,7 +103,120 @@ class CatalogController extends Controller
         ]));
         ActivityLog::record('catalog.unit', "Unit {$u->abbreviation} added", $u);
 
-        return back()->with('status', 'Unit added.');
+        return $this->backTo('units', 'Unit added.');
+    }
+
+    public function updateUnit(Request $request, InventoryUnit $unit)
+    {
+        Gate::authorize('manage-catalog');
+        $old = $unit->abbreviation;
+        $unit->update($request->validate([
+            'name' => 'required|string|max:50',
+            'abbreviation' => ['required', 'string', 'max:15', Rule::unique('inventory_units', 'abbreviation')->ignore($unit->id)],
+        ]));
+        ActivityLog::record('catalog.unit_updated', "Unit {$old} updated ({$unit->name}, {$unit->abbreviation})", $unit);
+
+        return $this->backTo('units', 'Unit updated.');
+    }
+
+    public function storeExpenseCategory(Request $request)
+    {
+        Gate::authorize('manage-settings');
+        $c = ExpenseCategory::create($request->validate(['name' => 'required|string|max:100|unique:expense_categories,name']) + ['is_active' => true]);
+        ActivityLog::record('settings.expense_category', "Expense category {$c->name} added", $c);
+
+        return $this->backTo('expense-categories', 'Expense category added.');
+    }
+
+    public function updateExpenseCategory(Request $request, ExpenseCategory $expenseCategory)
+    {
+        Gate::authorize('manage-settings');
+        $old = $expenseCategory->name;
+        $data = $request->validate(['name' => ['required', 'string', 'max:100', Rule::unique('expense_categories', 'name')->ignore($expenseCategory->id)]]);
+        $expenseCategory->update($data + ['is_active' => $request->boolean('is_active')]);
+        ActivityLog::record('settings.expense_category_updated', "Expense category {$old} updated ({$expenseCategory->name}, "
+            .($expenseCategory->is_active ? 'active' : 'inactive').')', $expenseCategory);
+
+        return $this->backTo('expense-categories', 'Expense category updated.');
+    }
+
+    /**
+     * Setup record types: route segment => [model, gate, tab, label, log action].
+     * A record still in use is never deleted: items keep their category and unit, expenses and claims keep their category.
+     */
+    private const SETUP_TYPES = [
+        'categories' => [InventoryCategory::class, 'manage-catalog', 'item-categories', 'Category', 'catalog.category_deleted'],
+        'units' => [InventoryUnit::class, 'manage-catalog', 'units', 'Unit', 'catalog.unit_deleted'],
+        'expense-categories' => [ExpenseCategory::class, 'manage-settings', 'expense-categories', 'Expense category', 'settings.expense_category_deleted'],
+    ];
+
+    public function destroySetup(string $type, int $id)
+    {
+        [$model, , $tab, $label] = $this->setupType($type);
+        $record = $model::findOrFail($id);
+        if ($error = $this->deleteSetupRecord($type, $record)) {
+            return $this->backTo($tab, null)->withErrors(['setup' => $error]);
+        }
+
+        return $this->backTo($tab, "{$label} {$this->setupName($type, $record)} deleted.");
+    }
+
+    /** Delete the ticked records of one type; records in use are skipped and listed. */
+    public function bulkDestroySetup(Request $request, string $type)
+    {
+        [$model, , $tab] = $this->setupType($type);
+        $ids = $request->validate(['ids' => 'required|array|min:1|max:500', 'ids.*' => 'integer'], ['ids.required' => 'Select at least one row first.'])['ids'];
+        $done = 0;
+        $skipped = [];
+        foreach ($model::whereIn('id', $ids)->orderBy('id')->get() as $record) {
+            if ($error = $this->deleteSetupRecord($type, $record)) {
+                $skipped[] = $error;
+            } else {
+                $done++;
+            }
+        }
+        $response = $this->backTo($tab, "{$done} deleted.");
+
+        return $skipped ? $response->withErrors(['setup' => 'Skipped '.count($skipped).': '.implode(' ', $skipped)]) : $response;
+    }
+
+    private function setupType(string $type): array
+    {
+        abort_unless(isset(self::SETUP_TYPES[$type]), 404);
+        Gate::authorize(self::SETUP_TYPES[$type][1]);
+
+        return self::SETUP_TYPES[$type];
+    }
+
+    private function setupName(string $type, $record): string
+    {
+        return $type === 'units' ? "{$record->name} ({$record->abbreviation})" : $record->name;
+    }
+
+    /** Deletes the record, or returns why it cannot be deleted. */
+    private function deleteSetupRecord(string $type, $record): ?string
+    {
+        $name = $this->setupName($type, $record);
+        $inUse = $type === 'expense-categories' ? $record->expenses()->count() + $record->claims()->count() : $record->items()->count();
+        if ($inUse) {
+            return match ($type) {
+                'categories' => "{$name} is used by {$inUse} item(s); move them to another category first.",
+                'units' => "{$name} is used by {$inUse} item(s).",
+                default => "{$name} is used by {$inUse} expense(s)/claim(s); edit it and untick Active instead.",
+            };
+        }
+        [, , , $label, $action] = self::SETUP_TYPES[$type];
+        $record->delete();
+        ActivityLog::record($action, "{$label} {$name} deleted");
+
+        return null;
+    }
+
+    private function backTo(string $tab, ?string $status)
+    {
+        $r = redirect()->to(route('catalog.setup').'#'.$tab);
+
+        return $status ? $r->with('status', $status) : $r;
     }
 
     public function create()

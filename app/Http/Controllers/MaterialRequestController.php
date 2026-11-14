@@ -34,7 +34,9 @@ class MaterialRequestController extends Controller
         ];
 
         return ListPage::make($request, $query, 'Material requests')
-            ->period('created_at', 'Raised')->project()->search(['request_no', 'purpose'], 'Request number or purpose')
+            ->period('created_at', 'Raised')->project()
+            ->store(fn ($q, $id) => $q->whereHas('issues', fn ($i) => $i->where('store_id', $id)), 'Issued from')
+            ->search(['request_no', 'purpose'], 'Request number or purpose')
             ->columns([
                 'Request' => fn ($r) => $r->request_no, 'Version' => fn ($r) => $r->version, 'Project' => fn ($r) => $r->project->code,
                 'Requester' => fn ($r) => $r->requester->name, 'Purpose' => fn ($r) => $r->purpose,
@@ -171,6 +173,41 @@ class MaterialRequestController extends Controller
         $this->wf->overallDecide($request->user(), $materialRequest, $d['decision'], $d['reason'] ?? null, $d['qty'] ?? [], isset($d['version']) ? (int) $d['version'] : null);
 
         return redirect()->route('requests.show', $materialRequest)->with('status', 'Overall decision recorded.');
+    }
+
+    /**
+     * Approve / reject / cancel / delete the selected requests. Approve and reject act at whichever step the user may
+     * decide (PM or overall), with the full quantities of the version shown on the page (versions[id]); a request
+     * edited since is refused. Cancel: draft or with the PM, by requester or admin. Delete: undecided drafts only.
+     */
+    public function bulk(Request $request)
+    {
+        // Refuse read-only roles up front; each request is still checked on its own.
+        abort_unless(Gate::any(['approve-any', 'create-request']), 403);
+        $data = $request->validate([
+            'action' => 'required|in:approve,reject,cancel,delete',
+            'ids' => 'required|array|min:1|max:200',
+            'ids.*' => 'integer',
+            'versions' => 'array',
+            'versions.*' => 'integer',
+            'reason' => 'nullable|required_if:action,reject|string|max:1000',
+        ], ['ids.required' => 'Select at least one request first.']);
+        $user = $request->user();
+        $requests = MaterialRequest::visibleTo($user)->with('approvals')->whereIn('id', $data['ids'])->orderBy('id')->get();
+        $decision = $data['action'] === 'approve' ? 'approved' : 'rejected';
+
+        return $this->bulkApply($requests, fn ($r) => $r->request_no, function (MaterialRequest $r) use ($data, $user, $decision) {
+            $version = isset($data['versions'][$r->id]) ? (int) $data['versions'][$r->id] : null;
+            match ($data['action']) {
+                'approve', 'reject' => match (true) {
+                    Gate::allows('pm-decide', $r) => $this->wf->pmDecide($user, $r, $decision, $data['reason'] ?? null, [], $version),
+                    Gate::allows('overall-decide', $r) => $this->wf->overallDecide($user, $r, $decision, $data['reason'] ?? null, [], $version),
+                    default => throw new \App\Exceptions\WorkflowException('it is not waiting for your decision'),
+                },
+                'cancel' => $this->wf->cancel($user, $r),
+                'delete' => $this->wf->deleteDraft($user, $r),
+            };
+        }, 'request', ['approve' => 'approved', 'reject' => 'rejected', 'cancel' => 'cancelled', 'delete' => 'deleted'][$data['action']]);
     }
 
     private function decisionInput(Request $request): array

@@ -48,7 +48,6 @@ class ApprovalWorkflowTest extends TestCase
         $req = $this->submittedRequest();
         $this->actingAs($this->otherPm)->post(route('requests.pm-decision', $req), ['decision' => 'approved'])->assertForbidden();
         $this->actingAs($this->overall)->post(route('requests.pm-decision', $req), ['decision' => 'approved'])->assertForbidden();
-        $this->actingAs($this->admin)->post(route('requests.pm-decision', $req), ['decision' => 'approved'])->assertForbidden();
         $this->assertSame(RequestStatus::Submitted, $req->fresh()->status);
     }
 
@@ -123,15 +122,24 @@ class ApprovalWorkflowTest extends TestCase
         $this->wf()->pmDecide($this->admin, $req, 'approved', null);
         $this->assertTrue(MaterialApproval::where('material_request_id', $req->id)->value('was_substitute'));
 
-        $this->assertFalse($this->wf()->canActAsOverall($this->admin, $req->fresh()), 'Admin is not an overall approver');
+        $this->assertFalse($this->wf()->canActAsOverall($this->pm, $req->fresh()), 'The requester never decides');
         $this->wf()->overallDecide($this->overall, $req, 'approved', null);
         $this->assertSame(RequestStatus::OverallApproved, $req->fresh()->status);
     }
 
-    public function test_admin_cannot_substitute_when_project_pm_is_not_the_requester(): void
+    public function test_admin_can_approve_any_request_at_both_steps_but_not_their_own(): void
     {
         $req = $this->submittedRequest();
-        $this->assertFalse($this->wf()->canActAsPm($this->admin, $req));
+        $this->assertTrue($this->wf()->canActAsPm($this->admin, $req));
+        $this->actingAs($this->admin)->post(route('requests.pm-decision', $req), ['decision' => 'approved'])->assertRedirect();
+        $this->assertSame(RequestStatus::PmApproved, $req->fresh()->status);
+        $this->assertTrue($this->wf()->canActAsOverall($this->admin, $req->fresh()), 'Owner may also give the overall decision');
+        $this->actingAs($this->admin)->post(route('requests.overall-decision', $req), ['decision' => 'approved'])->assertRedirect();
+        $this->assertSame(RequestStatus::OverallApproved, $req->fresh()->status);
+
+        $own = $this->submittedRequest(5, null, $this->admin);
+        $this->assertFalse($this->wf()->canActAsPm($this->admin, $own));
+        $this->assertFalse($this->wf()->canActAsOverall($this->admin, $own));
     }
 
     public function test_approved_quantities_can_only_be_reduced(): void

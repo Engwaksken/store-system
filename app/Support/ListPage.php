@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Shared behaviour of every list page: period / project / branch (store) / search filters, pagination,
+ * Shared behaviour of every list page: period / project / store / search filters, pagination,
  * and CSV / PDF export of exactly the filtered rows.
  *
  *   return ListPage::make($request, $query, 'Material requests')
@@ -44,6 +44,7 @@ class ListPage
     private int $perPage = 25;
     private bool $applied = false;
     public ?string $periodLabel = null;
+    public string $storeLabel = 'Store';
     public ?string $searchPlaceholder = null;
 
     private function __construct(public Request $request, private Builder $query, public string $title)
@@ -75,9 +76,10 @@ class ListPage
         return $this;
     }
 
-    /** Branch = store. Column (or closure($query, $storeId)). */
-    public function store(string|Closure $column = 'store_id'): self
+    /** Store column (or closure($query, $storeId)). */
+    public function store(string|Closure $column = 'store_id', string $label = 'Store'): self
     {
+        $this->storeLabel = $label;
         $this->storeFilter = $column instanceof Closure ? $column : fn (Builder $q, int $id) => $q->where($column, $id);
 
         return $this;
@@ -242,7 +244,7 @@ class ListPage
             $parts[] = 'Project: '.(Project::whereKey($id)->value('code') ?? $id);
         }
         if ($id = $this->storeId()) {
-            $parts[] = 'Branch: '.(Store::whereKey($id)->value('code') ?? $id);
+            $parts[] = $this->storeLabel.': '.(Store::whereKey($id)->value('code') ?? $id);
         }
         if ($this->term() !== '') {
             $parts[] = 'Search: "'.$this->term().'"';

@@ -40,6 +40,9 @@ class RemindersCommand extends Command
 
         foreach (MaterialRequest::with('project', 'requester')->whereIn('status', [RequestStatus::Submitted->value, RequestStatus::PmApproved->value])->where('submitted_at', '<=', $remind)->get() as $r) {
             $who = $users->filter(fn ($u) => Gate::forUser($u)->allows('pm-decide', $r) || Gate::forUser($u)->allows('overall-decide', $r));
+            // The Owner/Admin may decide any request, but is chased only when no PM / Overall Manager can (escalation still reaches them).
+            $regular = $who->filter(fn ($u) => $u->role !== Role::Admin);
+            $who = $regular->isNotEmpty() ? $regular : $who;
             $this->chase($n, $who, $r->submitted_at, $escalate, "material request {$r->request_no} ({$r->project->code}) - {$r->status->label()}", route('requests.show', $r));
         }
         foreach (MaterialRequest::with('project')->whereIn('status', [RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value])->where('updated_at', '<=', $remind)->get() as $r) {

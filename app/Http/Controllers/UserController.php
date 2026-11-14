@@ -32,6 +32,7 @@ class UserController extends Controller
             ->orderBy('name');
 
         return ListPage::make($request, $query, 'Users')
+            ->store(fn ($q, $id) => $q->whereHas('stores', fn ($s) => $s->where('stores.id', $id)))
             ->search(['name', 'email', 'phone'], 'Name, e-mail or phone')
             ->columns([
                 'Name' => fn ($u) => $u->name, 'E-mail' => fn ($u) => $u->email, 'Role' => fn ($u) => $u->role->label(),

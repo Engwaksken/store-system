@@ -2,7 +2,7 @@
 <form method="GET" class="list-filters filters">
     <div class="filter-row">
         @if(in_array('store', $fields))
-            <div><label>Branch / store</label><select name="store_id"><option value="">All branches</option>
+            <div><label>Store</label><select name="store_id"><option value="">All stores</option>
                 @foreach($stores as $s)<option value="{{ $s->id }}" @selected(request('store_id') == $s->id)>{{ $s->code }} - {{ $s->name }}</option>@endforeach
             </select></div>
         @endif

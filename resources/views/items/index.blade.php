@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Stock & items')
 @section('content')
-<div class="page-head"><div><h1>Stock &amp; items</h1><p>@if($storeId)On hand is the quantity in the selected branch only.@else On hand is the total across all stores; open an item for the per-store split.@endif Highlighted rows are at or below minimum level.</p></div>
+<div class="page-head"><div><h1>Stock &amp; items</h1><p>@if($storeId)On hand is the quantity in the selected store only.@else On hand is the total across all stores; open an item for the per-store split.@endif Highlighted rows are at or below minimum level.</p></div>
     <div class="actions">
         @can('manage-catalog')<a class="btn" data-modal href="{{ route('items.create') }}"><i class="fas fa-plus"></i> New item</a>@endcan
         @can('manage-stock')<a class="btn secondary" data-modal href="{{ route('receipts.create', ['type' => 'opening']) }}"><i class="fas fa-door-open"></i> Opening balances</a><a class="btn secondary" data-modal href="{{ route('adjustments.create') }}">Adjustment</a>@endcan

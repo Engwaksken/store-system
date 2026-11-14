@@ -21,9 +21,9 @@ DRAFT ── cancel ──▶ CANCELLED      (also from SUBMITTED, by requester,
 | DRAFT | edit lines | requester | still assigned to project | DRAFT |
 | SUBMITTED / PM_APPROVED | edit lines (pending edit) | requester | still assigned; project has a PM; `version++`, approved qtys reset, PM notified | SUBMITTED |
 | DRAFT | submit | requester | ≥1 line, qty > 0, still assigned; snapshot `project_manager_id` | SUBMITTED |
-| SUBMITTED | pm approve | project's PM (snapshot), or admin when requester = PM | approver ≠ requester; 0 ≤ pm_qty ≤ requested; at least one qty > 0 | PM_APPROVED |
+| SUBMITTED | pm approve | project's PM (snapshot), or Owner/Admin (any request; recorded as substitute unless they are the PM) | approver ≠ requester; 0 ≤ pm_qty ≤ requested; at least one qty > 0 | PM_APPROVED |
 | SUBMITTED | pm reject | same as above | reason required | PM_REJECTED |
-| PM_APPROVED | overall approve | overall_manager | ≠ requester; ≠ PM-step approver; 0 ≤ final ≤ pm_qty; at least one > 0 | OVERALL_APPROVED |
+| PM_APPROVED | overall approve | overall_manager, or Owner/Admin | ≠ requester; ≠ PM-step approver (the Owner/Admin is exempt from this rule); 0 ≤ final ≤ pm_qty; at least one > 0 | OVERALL_APPROVED |
 | PM_APPROVED | overall reject | overall_manager | same independence; reason required | OVERALL_REJECTED |
 | OVERALL_APPROVED / PARTIALLY_ISSUED | issue | storekeeper | per line: qty ≤ final − issued; qty ≤ on_hand (locked rows) | PARTIALLY_ISSUED or FULLY_ISSUED |
 | PM_REJECTED / OVERALL_REJECTED | revise | requester | — ; `version++`, approved qtys reset | DRAFT |

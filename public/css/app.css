@@ -14,7 +14,7 @@
 html { font-size: var(--base-size); }
 body { margin: 0; font-family: var(--font); color: var(--text); background: var(--bg); line-height: 1.45; }
 a { color: var(--teal); text-decoration: none; }
-a:hover { text-decoration: underline; }
+a:hover, a:focus, a:active, a:visited { text-decoration: none; }
 h1 { font-size: 1.6rem; margin: 0 0 .25rem; color: var(--navy); }
 h2 { font-size: 1.15rem; margin: 0 0 .75rem; color: var(--navy); }
 h3 { font-size: 1rem; margin: 0 0 .5rem; }
@@ -252,7 +252,7 @@ template { display: none; }
 /* Print: vouchers & reports */
 .print-only { display: none; }
 @media print {
-  .sidebar, .topbar, .modal, .no-print, .actions, .pagination, form.filters { display: none !important; }
+  .sidebar, .topbar, .modal, .no-print, .actions, .pagination, .table-pager, form.filters { display: none !important; }
   .print-only { display: block; }
   body { background: #fff; font-size: 12px; }
   .content { padding: 0; max-width: none; }
@@ -333,3 +333,14 @@ template { display: none; }
 .picker-item:hover { background: #F8FAFC; }
 .picker-item input { width: auto; margin-top: .2rem; accent-color: var(--teal); }
 .picker-item[hidden] { display: none; }
+
+/* Client-side table pager (public/js/app.js initTablePager) */
+.table-pager { display: flex; justify-content: space-between; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .6rem .25rem 0; font-size: .9em; }
+.table-pager .pager-info { color: var(--muted, #64748B); }
+.table-pager .pager-buttons { display: flex; align-items: center; gap: .25rem; flex-wrap: wrap; }
+.table-pager .pager-page { min-width: 2rem; padding: .3rem .5rem; border: 1px solid var(--line, #E2E8F0); border-radius: var(--radius-sm); background: transparent; font: inherit; cursor: pointer; color: inherit; }
+.table-pager .pager-page:hover { background: #F1F5F9; }
+.table-pager .pager-page.active { background: var(--teal); border-color: var(--teal); color: var(--on-teal); font-weight: 600; }
+.table-pager .btn-icon[disabled] { opacity: .4; cursor: default; }
+.table-pager .pager-gap { padding: 0 .25rem; color: var(--muted, #64748B); }
+.data-table tbody tr[hidden] { display: none; }

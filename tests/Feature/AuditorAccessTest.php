@@ -23,8 +23,12 @@ class AuditorAccessTest extends TestCase
         'user' => User::class, 'expense' => \App\Models\Expense::class, 'pr' => \App\Models\PurchaseRequisition::class, 'quote' => \App\Models\SupplierQuote::class,
         'po' => \App\Models\PurchaseOrder::class, 'invoice' => \App\Models\PurchaseInvoice::class, 'supplier' => \App\Models\Supplier::class,
         'claim' => \App\Models\ExpenseClaim::class, 'boq' => \App\Models\BoqItem::class, 'milestone' => \App\Models\ProjectMilestone::class,
-        'costCode' => \App\Models\CostCode::class,
+        'costCode' => \App\Models\CostCode::class, 'category' => \App\Models\InventoryCategory::class, 'unit' => \App\Models\InventoryUnit::class,
+        'expenseCategory' => \App\Models\ExpenseCategory::class, 'id' => \App\Models\InventoryCategory::class,
     ];
+
+    /** Route parameters that are fixed words rather than records. */
+    private const LITERALS = ['type' => 'categories'];
 
     /** Mutating routes every signed-in user may use on their own account. */
     /** Routes that change only the signed-in user's own account (password, own notifications, own push devices). */
@@ -55,6 +59,11 @@ class AuditorAccessTest extends TestCase
             }
             $params = [];
             foreach ($route->parameterNames() as $name) {
+                if (isset(self::LITERALS[$name])) {
+                    $params[$name] = self::LITERALS[$name];
+
+                    continue;
+                }
                 $class = self::BINDINGS[$name] ?? null;
                 $this->assertNotNull($class, "No test binding for route parameter {{$name}} in {$route->uri()}");
                 $params[$name] = $class::query()->value('id');

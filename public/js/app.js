@@ -679,13 +679,46 @@
     }
 
     /* ---------- Multiple selection + bulk actions ([data-bulk-scope]) ---------- */
+    /* A page may hold several scopes (e.g. one per tab): name each with data-bulk-scope="name" and point a form opened
+       in a modal at its scope with data-bulk-form="name". A form inside a scope uses that scope. "Select all" ticks only
+       the rows on the current page of a client-paginated table. A row checkbox with data-version also sends versions[id]. */
+    var bulkScopes = {};
     function initBulk() {
-        var scope = document.querySelector('[data-bulk-scope]');
-        if (!scope) { return; }
+        document.querySelectorAll('[data-bulk-scope]').forEach(function (scope, n) {
+            var name = scope.getAttribute('data-bulk-scope') || ('scope' + n);
+            bulkScopes[name] = bindBulkScope(scope);
+            if (!bulkScopes._first) { bulkScopes._first = bulkScopes[name]; }
+        });
+        if (!bulkScopes._first) { return; }
+        // Any bulk form (the bar, or a reject / pay form opened in a modal) carries the ticked rows.
+        document.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (!form.matches('[data-bulk-form]')) { return; }
+            var named = form.getAttribute('data-bulk-form');
+            var inside = form.closest('[data-bulk-scope]');
+            var api = (named && bulkScopes[named]) || (inside && inside.__bulk) || bulkScopes._first;
+            var rows = api.selectedBoxes();
+            if (!rows.length) { e.preventDefault(); return; }
+            form.querySelectorAll('input[data-bulk-id]').forEach(function (i) { i.remove(); });
+            rows.forEach(function (b) {
+                var add = function (n, v) {
+                    var i = document.createElement('input');
+                    i.type = 'hidden'; i.name = n; i.value = v; i.setAttribute('data-bulk-id', '');
+                    form.appendChild(i);
+                };
+                add('ids[]', b.value);
+                if (b.dataset.version !== undefined) { add('versions[' + b.value + ']', b.dataset.version); }
+            });
+        }, true);
+    }
+
+    function bindBulkScope(scope) {
         var bar = scope.querySelector('[data-bulk-bar]');
         var all = scope.querySelector('[data-check-all]');
         var boxes = function () { return Array.prototype.slice.call(scope.querySelectorAll('[data-row-check]')); };
-        var selected = function () { return boxes().filter(function (b) { return b.checked; }).map(function (b) { return b.value; }); };
+        var visible = function () { return boxes().filter(function (b) { return !b.closest('tr').hidden; }); };
+        var selectedBoxes = function () { return boxes().filter(function (b) { return b.checked; }); };
+        var selected = function () { return selectedBoxes().map(function (b) { return b.value; }); };
 
         function refresh() {
             var ids = selected();
@@ -694,8 +727,10 @@
                 bar.querySelector('[data-bulk-count]').textContent = ids.length;
             }
             if (all) {
-                all.checked = ids.length > 0 && ids.length === boxes().length;
-                all.indeterminate = ids.length > 0 && ids.length < boxes().length;
+                var shown = visible();
+                var on = shown.filter(function (b) { return b.checked; }).length;
+                all.checked = on > 0 && on === shown.length;
+                all.indeterminate = ids.length > 0 && !all.checked;
             }
             boxes().forEach(function (b) { b.closest('tr').classList.toggle('row-selected', b.checked); });
             scope.querySelectorAll('[data-bulk-export]').forEach(function (a) {
@@ -707,26 +742,60 @@
         }
 
         scope.addEventListener('change', function (e) {
-            if (e.target === all) { boxes().forEach(function (b) { b.checked = all.checked; }); }
+            if (e.target === all) { visible().forEach(function (b) { b.checked = all.checked; }); }
             if (e.target === all || e.target.matches('[data-row-check]')) { refresh(); }
         });
         scope.addEventListener('click', function (e) {
             if (e.target.closest('[data-bulk-clear]')) { boxes().forEach(function (b) { b.checked = false; }); refresh(); }
         });
-        // Any bulk form (the bar, or a reject / pay form opened in a modal) carries the ticked rows.
-        document.addEventListener('submit', function (e) {
-            var form = e.target;
-            if (!form.matches('[data-bulk-form]')) { return; }
-            var ids = selected();
-            if (!ids.length) { e.preventDefault(); return; }
-            form.querySelectorAll('input[data-bulk-id]').forEach(function (i) { i.remove(); });
-            ids.forEach(function (id) {
-                var i = document.createElement('input');
-                i.type = 'hidden'; i.name = 'ids[]'; i.value = id; i.setAttribute('data-bulk-id', '');
-                form.appendChild(i);
-            });
-        }, true);
+        scope.addEventListener('pager:change', refresh);
         refresh();
+        var api = { selectedBoxes: selectedBoxes, refresh: refresh };
+        scope.__bulk = api;
+        return api;
+    }
+
+    /* ---------- Client-side pagination for tables the server does not paginate ----------
+       Any table with more than PAGE body rows gets a pager, except tables inside a form (line editors), tables already
+       followed by server pagination, and tables marked data-no-paginate. data-paginate="15" sets the page size. */
+    function initTablePager(root) {
+        root.querySelectorAll('table:not([data-pager-ready])').forEach(function (table) {
+            if (table.closest('form') || table.hasAttribute('data-no-paginate') || !table.tBodies.length) { return; }
+            var wrap = table.closest('.table-wrap, .card') || table;
+            var next = wrap.nextElementSibling;
+            if (next && next.classList.contains('pagination')) { return; }
+            var size = parseInt(table.getAttribute('data-paginate'), 10) || 10;
+            var rows = Array.prototype.filter.call(table.tBodies[0].rows, function (r) { return !r.querySelector('td.empty'); });
+            if (rows.length <= size) { return; }
+            table.setAttribute('data-pager-ready', '');
+            var pages = Math.ceil(rows.length / size);
+            var pager = el('nav', 'table-pager');
+            pager.setAttribute('aria-label', 'Table pages');
+            table.insertAdjacentElement('afterend', pager);
+            var current = 0;
+            function show(p) {
+                current = Math.max(0, Math.min(pages - 1, p));
+                rows.forEach(function (r, i) { r.hidden = Math.floor(i / size) !== current; });
+                var from = current * size + 1, to = Math.min(rows.length, (current + 1) * size);
+                var html = '<span class="pager-info">' + from + '-' + to + ' of ' + rows.length + '</span><span class="pager-buttons">'
+                    + '<button type="button" class="btn-icon" data-page="' + (current - 1) + '"' + (current === 0 ? ' disabled' : '') + ' aria-label="Previous page"><i class="fas fa-chevron-left"></i></button>';
+                for (var i = 0; i < pages; i++) {
+                    if (pages > 7 && i !== 0 && i !== pages - 1 && Math.abs(i - current) > 1) {
+                        if (i === 1 || i === pages - 2) { html += '<span class="pager-gap">...</span>'; }
+                        continue;
+                    }
+                    html += '<button type="button" class="pager-page' + (i === current ? ' active' : '') + '" data-page="' + i + '"' + (i === current ? ' aria-current="page"' : '') + '>' + (i + 1) + '</button>';
+                }
+                html += '<button type="button" class="btn-icon" data-page="' + (current + 1) + '"' + (current === pages - 1 ? ' disabled' : '') + ' aria-label="Next page"><i class="fas fa-chevron-right"></i></button></span>';
+                pager.innerHTML = html;
+                table.dispatchEvent(new CustomEvent('pager:change', { bubbles: true }));
+            }
+            pager.addEventListener('click', function (e) {
+                var b = e.target.closest('[data-page]');
+                if (b && !b.disabled) { show(parseInt(b.getAttribute('data-page'), 10)); }
+            });
+            show(0);
+        });
     }
 
     /* ---------- Checkbox picker with a find box (e.g. projects on the user form) ---------- */
@@ -766,6 +835,7 @@
         initLiveNotifications();
         initPush();
         initListFilters();
+        initTablePager(document);
         initBulk();
         initPickers();
         initTabs(document);

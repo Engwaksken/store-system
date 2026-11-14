@@ -40,7 +40,7 @@ class RequestWorkflow
         return $user->hasRole(Role::Staff, Role::ProjectManager) && $user->isAssignedTo($project);
     }
 
-    /** D2: the project's PM decides; if the PM is the requester, Admin substitutes. Never the requester. */
+    /** D2: the project's PM decides; the Owner/Admin may decide any request at this step. Never the requester. */
     public function canActAsPm(User $user, MaterialRequest $req): bool
     {
         if ($user->id === $req->requester_id || ! $user->is_active) {
@@ -50,7 +50,7 @@ class RequestWorkflow
             return true;
         }
 
-        return $user->isAdmin() && $this->needsSubstitutePm($req);
+        return $user->isAdmin();
     }
 
     public function needsSubstitutePm(MaterialRequest $req): bool
@@ -58,10 +58,19 @@ class RequestWorkflow
         return $req->project_manager_id === null || $req->project_manager_id === $req->requester_id;
     }
 
-    /** D1 + D3: overall manager, independent of requester and of the PM-step approver for this version. */
+    /**
+     * D1 + D3: overall manager, independent of requester and of the PM-step approver for this version.
+     * The Owner/Admin may give the overall decision on any request except their own (D3 does not bind the owner).
+     */
     public function canActAsOverall(User $user, MaterialRequest $req): bool
     {
-        if ($user->role !== Role::OverallManager || ! $user->is_active || $user->id === $req->requester_id) {
+        if (! $user->is_active || $user->id === $req->requester_id) {
+            return false;
+        }
+        if ($user->isAdmin()) {
+            return true;
+        }
+        if ($user->role !== Role::OverallManager) {
             return false;
         }
         // Uses eager-loaded approvals when present, so list pages do not run one query per request.
@@ -207,6 +216,27 @@ class RequestWorkflow
         });
     }
 
+    /**
+     * Delete a draft that was never decided on (no approval history, nothing issued). Anything that has entered the
+     * approval flow is cancelled instead, so its history stays. The deletion is kept in the activity log.
+     */
+    public function deleteDraft(User $user, MaterialRequest $req): void
+    {
+        DB::transaction(function () use ($user, $req) {
+            $req = $this->lock($req);
+            if ($user->id !== $req->requester_id && ! $user->isAdmin()) {
+                throw new AuthorizationException('Only the requester or admin can delete a draft.');
+            }
+            if ($req->status !== RequestStatus::Draft || $req->approvals()->exists() || $req->issues()->exists()) {
+                throw new WorkflowException('only drafts with no approval history can be deleted; cancel it instead');
+            }
+            $no = $req->request_no;
+            $req->lines()->delete();
+            $req->delete();
+            ActivityLog::record('request.deleted', "Draft request {$no} deleted", null, ['request_no' => $no]);
+        });
+    }
+
     /** D4: a rejected request returns to DRAFT as a new version; prior decisions stay in history. */
     public function revise(User $user, MaterialRequest $req): MaterialRequest
     {
@@ -241,7 +271,7 @@ class RequestWorkflow
             return $this->decide($user, $req, MaterialApproval::STEP_PM, $decision, $reason, $qtys,
                 ceiling: 'requested_qty', target: 'pm_approved_qty',
                 approved: RequestStatus::PmApproved, rejected: RequestStatus::PmRejected,
-                substitute: $user->isAdmin());
+                substitute: $user->isAdmin() && $req->project_manager_id !== $user->id);
         });
     }
 
@@ -258,7 +288,7 @@ class RequestWorkflow
             return $this->decide($user, $req, MaterialApproval::STEP_OVERALL, $decision, $reason, $qtys,
                 ceiling: 'pm_approved_qty', target: 'final_approved_qty',
                 approved: RequestStatus::OverallApproved, rejected: RequestStatus::OverallRejected,
-                substitute: false);
+                substitute: $user->isAdmin());
         });
     }
 
