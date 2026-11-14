@@ -30,7 +30,7 @@
         <div class="alert warn" style="margin-top:1rem">Returned to store: @foreach($issue->returns as $r)<a href="{{ route('returns.show', $r) }}">{{ $r->return_no }}</a> ({{ $r->returned_at->format('d M Y') }}, {{ ugx($r->total_value) }} UGX)@if(! $loop->last); @endif @endforeach</div>
     @endif
     @if($issue->acknowledgment)
-        <div class="alert ok" style="margin-top:1rem">Received and acknowledged by <strong>{{ $issue->acknowledgment->recipient_name }}</strong> on {{ $issue->acknowledgment->acknowledged_at->format('d M Y H:i') }} (recorded by {{ $issue->acknowledgment->user->name }}).@if($issue->acknowledgment->remarks) “{{ $issue->acknowledgment->remarks }}”@endif</div>
+        <div class="alert ok" style="margin-top:1rem">Received and acknowledged by <strong>{{ $issue->acknowledgment->recipient_name }}</strong> on {{ $issue->acknowledgment->acknowledged_at->format('d M Y H:i') }} (recorded by {{ $issue->acknowledgment->user->name }}).@if($issue->acknowledgment->remarks) "{{ $issue->acknowledgment->remarks }}"@endif</div>
     @endif
     <div class="signatures"><div>Issued by (storekeeper)</div><div>Received by (name &amp; signature)</div><div>Date</div></div>
     @if($footer = \App\Models\AppSetting::get('voucher_footer'))<p class="muted" style="margin-top:1.5rem;font-size:.8rem">{{ $footer }}</p>@endif

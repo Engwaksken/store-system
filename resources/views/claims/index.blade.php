@@ -2,7 +2,7 @@
 @section('title', 'Expense claims')
 @section('content')
 <div class="page-head"><div><h1>Expense claims</h1><p>Site costs paid by staff. The project manager approves; the accountant pays, which records the expense once.</p></div>
-    @can('submit-claim')<div class="actions"><a class="btn" href="{{ route('claims.create') }}">+ New claim</a></div>@endcan</div>
+    @can('submit-claim')<div class="actions"><a class="btn" data-modal href="{{ route('claims.create') }}"><i class="fas fa-plus"></i> New claim</a></div>@endcan</div>
 <form method="GET" class="card filters"><div class="grid grid-4">
     <div><label for="status">Status</label><select id="status" name="status"><option value="">All</option>@foreach(\App\Models\ExpenseClaim::STATUSES as $k => $v)<option value="{{ $k }}" @selected(request('status') === $k)>{{ $v }}</option>@endforeach</select></div>
     <div><label>&nbsp;</label><button class="btn small">Filter</button></div>

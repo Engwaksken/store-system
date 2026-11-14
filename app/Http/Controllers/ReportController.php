@@ -169,7 +169,7 @@ class ReportController extends Controller
 
         return $this->respond($request, 'Budget vs committed vs actual by cost code', ['Project', 'Cost code', 'Budget', 'Materials', 'Expenses', 'Actual', 'Committed', 'Variance', 'Used', 'Flag'],
             $rows, numeric: [2, 3, 4, 5, 6, 7], totals: [2, 3, 4, 5, 6, 7], filters: ['project'], money: [2, 3, 4, 5, 6, 7],
-            note: 'Variance = budget − (actual + committed). Materials are allocated through the BOQ line chosen on the material request; issues without a BOQ line appear as Unallocated.');
+            note: 'Variance = budget - (actual + committed). Materials are allocated through the BOQ line chosen on the material request; issues without a BOQ line appear as Unallocated.');
     }
 
     public function boqConsumption(Request $request, ProjectCostService $costs)

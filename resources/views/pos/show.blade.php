@@ -45,7 +45,7 @@
     <h2>Approve or reject</h2>
     @if(bccomp((string) $po->total, $threshold, 2) > 0)<p class="alert warn">Above the owner threshold of {{ ugx($threshold) }} UGX: Owner/Admin approval.</p>@endif
     <div class="field"><label for="reason">Comment (required to reject)</label><input id="reason" type="text" name="reason"></div>
-    <div class="actions"><button class="btn" name="decision" value="approved">Approve PO</button><button class="btn danger" name="decision" value="rejected">Reject</button></div>
+    <div class="actions"><button class="btn" name="decision" value="approved"><i class="fas fa-check"></i> Approve PO</button><button class="btn danger" name="decision" value="rejected" data-confirm="Reject this document? The person who raised it will be notified." data-confirm-ok="Yes, reject"><i class="fas fa-ban"></i> Reject</button></div>
 </form>
 @elseif($po->status === 'pending_approval')
     <p class="alert warn no-print">Waiting for approval{{ bccomp((string) $po->total, $threshold, 2) > 0 ? ' by the Owner/Admin (above threshold)' : ' by the Overall Manager or Owner/Admin' }}. The person who raised a PO cannot approve it.</p>
@@ -66,7 +66,7 @@
     @if(in_array($po->status, ['pending_approval', 'approved']) && $po->lines->every(fn ($l) => (float) $l->received_qty == 0))
     <form method="POST" action="{{ route('pos.cancel', $po) }}" class="card no-print" style="max-width:640px">@csrf
         <h2>Cancel purchase order</h2><div class="field"><label for="cancel_reason">Reason</label><input id="cancel_reason" type="text" name="reason" required minlength="5"></div>
-        <button class="btn danger">Cancel PO</button></form>
+        <button class="btn danger" data-confirm="Cancel this purchase order? This cannot be undone." data-confirm-ok="Yes, cancel PO"><i class="fas fa-ban"></i> Cancel PO</button></form>
     @elseif(in_array($po->status, ['partially_received', 'received']))
     <form method="POST" action="{{ route('pos.close', $po) }}" class="card no-print" style="max-width:640px">@csrf
         <h2>Close purchase order</h2><p class="muted">Use when no further deliveries will come. Remaining quantities stop counting as committed.</p>

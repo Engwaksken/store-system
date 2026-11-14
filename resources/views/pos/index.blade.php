@@ -2,7 +2,7 @@
 @section('title', 'Purchase orders')
 @section('content')
 <div class="page-head"><div><h1>Purchase orders</h1></div>
-    @can('buy')<div class="actions"><a class="btn" href="{{ route('pos.create') }}">+ New purchase order</a></div>@endcan</div>
+    @can('buy')<div class="actions"><a class="btn" href="{{ route('pos.create') }}"><i class="fas fa-plus"></i> New purchase order</a></div>@endcan</div>
 <form method="GET" class="card filters"><div class="grid grid-4">
     <div><label for="status">Status</label><select id="status" name="status"><option value="">All</option>@foreach(\App\Models\PurchaseOrder::STATUSES as $k => $v)<option value="{{ $k }}" @selected(request('status') === $k)>{{ $v }}</option>@endforeach</select></div>
     <div><label for="supplier_id">Supplier</label><select id="supplier_id" name="supplier_id"><option value="">All</option>@foreach($suppliers as $s)<option value="{{ $s->id }}" @selected(request('supplier_id') == $s->id)>{{ $s->name }}</option>@endforeach</select></div>

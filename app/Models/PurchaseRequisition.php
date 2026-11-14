@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class PurchaseRequisition extends Model
 {
     public const STATUSES = [
-        'draft' => 'Draft', 'submitted' => 'Awaiting approval', 'approved' => 'Approved – get quotes / raise PO',
+        'draft' => 'Draft', 'submitted' => 'Awaiting approval', 'approved' => 'Approved - get quotes / raise PO',
         'rejected' => 'Rejected', 'ordered' => 'Ordered', 'cancelled' => 'Cancelled',
     ];
 

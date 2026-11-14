@@ -3,17 +3,17 @@
 @section('content')
 <div class="page-head"><div><h1>{{ $project->code }} · {{ $project->name }}</h1><p>{{ $project->client }} @if($project->location) · {{ $project->location }} @endif</p></div>
     <div class="actions">
-        @can('create-request')<a class="btn" href="{{ route('requests.create', ['project_id' => $project->id]) }}">+ Request materials</a>@endcan
+        @can('create-request')<a class="btn" href="{{ route('requests.create', ['project_id' => $project->id]) }}"><i class="fas fa-plus"></i> Request materials</a>@endcan
         @can('view-project-finance', $project)<a class="btn secondary" href="{{ route('projects.controls', $project) }}">Budget, BOQ &amp; milestones</a>@endcan
-        @can('manage-projects')<a class="btn secondary" href="{{ route('projects.edit', $project) }}">Edit</a>@endcan
+        @can('manage-projects')<a class="btn secondary" data-modal href="{{ route('projects.edit', $project) }}"><i class="fas fa-pen"></i> Edit</a>@endcan
     </div></div>
 
 @if($cost)
 <div class="grid grid-4" style="margin-bottom:1.25rem">
-    <div class="stat navy"><div class="label">Budget</div><div class="value">{{ ugx($cost->budget) }}</div></div>
-    <div class="stat"><div class="label">Materials (net of returns)</div><div class="value">{{ ugx($cost->materials) }}</div></div>
-    <div class="stat gold"><div class="label">Cash expenses</div><div class="value">{{ ugx($cost->expenses) }}</div></div>
-    <div @class(['stat', 'bad' => bccomp($cost->remaining, '0', 2) < 0])><div class="label">Remaining</div><div class="value">{{ ugx($cost->remaining) }}</div></div>
+    <div class="stat navy"><span class="stat-icon"><i class="fas fa-wallet"></i></span><div class="stat-body"><div class="label">Budget</div><div class="value">{{ ugx($cost->budget) }}</div></div></div>
+    <div class="stat"><span class="stat-icon"><i class="fas fa-cubes"></i></span><div class="stat-body"><div class="label">Materials (net of returns)</div><div class="value">{{ ugx($cost->materials) }}</div></div></div>
+    <div class="stat gold"><span class="stat-icon"><i class="fas fa-money-bill-wave"></i></span><div class="stat-body"><div class="label">Cash expenses</div><div class="value">{{ ugx($cost->expenses) }}</div></div></div>
+    <div @class(['stat', 'bad' => bccomp($cost->remaining, '0', 2) < 0])><span class="stat-icon"><i class="fas fa-piggy-bank"></i></span><div class="stat-body"><div class="label">Remaining</div><div class="value">{{ ugx($cost->remaining) }}</div></div></div>
 </div>
 @if(bccomp($cost->committed, '0', 2) > 0 || $cost->flag !== 'ok')
 <div @class(['alert', 'warn' => $cost->flag !== 'over', 'bad' => $cost->flag === 'over'])>Committed (open POs + approved claims): <strong>{{ ugx($cost->committed) }}</strong> UGX ·
@@ -26,9 +26,9 @@
 <div class="grid grid-2">
     <div class="card"><h2>Details</h2><dl class="meta">
         <dt>Status</dt><dd><span class="badge muted">{{ $project->status }}</span></dd>
-        <dt>Manager</dt><dd>{{ $project->manager?->name ?? '— not assigned —' }}</dd>
-        <dt>Dates</dt><dd>{{ $project->start_date?->format('d M Y') ?? '?' }} → {{ $project->end_date?->format('d M Y') ?? '?' }}</dd>
-        <dt>Description</dt><dd>{{ $project->description ?: '—' }}</dd>
+        <dt>Manager</dt><dd>{{ $project->manager?->name ?? '- not assigned -' }}</dd>
+        <dt>Dates</dt><dd>{{ $project->start_date?->format('d M Y') ?? '?' }} <i class="fas fa-arrow-right"></i> {{ $project->end_date?->format('d M Y') ?? '?' }}</dd>
+        <dt>Description</dt><dd>{{ $project->description ?: '-' }}</dd>
     </dl></div>
     <div class="card"><h2>Team ({{ $project->members->count() }})</h2>
         @forelse($project->members as $m)<div>{{ $m->name }} <small class="muted">{{ $m->role->label() }}</small></div>@empty<p class="muted">No staff assigned.</p>@endforelse

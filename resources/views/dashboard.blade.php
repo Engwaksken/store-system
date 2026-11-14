@@ -3,23 +3,23 @@
 <div class="page-head">
     <div><h1>Dashboard</h1><p>{{ now()->format('l, j F Y') }}</p></div>
     <div class="actions">
-        @can('create-request')<a class="btn" href="{{ route('requests.create') }}">+ Material request</a>@endcan
-        @can('record-expense')<a class="btn secondary" href="{{ route('expenses.create') }}">+ Expense</a>@endcan
-        @can('manage-stock')<a class="btn secondary" href="{{ route('receipts.create') }}">+ Stock receipt</a>@endcan
+        @can('create-request')<a class="btn" href="{{ route('requests.create') }}"><i class="fas fa-plus"></i> Material request</a>@endcan
+        @can('record-expense')<a class="btn secondary" data-modal href="{{ route('expenses.create') }}"><i class="fas fa-plus"></i> Expense</a>@endcan
+        @can('manage-stock')<a class="btn secondary" href="{{ route('receipts.create') }}"><i class="fas fa-plus"></i> Stock receipt</a>@endcan
     </div>
 </div>
 
 <div class="grid grid-4" style="margin-bottom:1.25rem">
-    <div class="stat navy"><div class="label">Active projects</div><div class="value">{{ $projects->count() }}</div></div>
-    <div class="stat gold"><div class="label">Awaiting my decision</div><div class="value">{{ $awaitingMe->count() }}</div></div>
-    <div class="stat"><div class="label">Ready to issue</div><div class="value">{{ ($statusCounts['overall_approved'] ?? 0) + ($statusCounts['partially_issued'] ?? 0) }}</div></div>
-    <div class="stat bad"><div class="label">Low-stock items</div><div class="value">{{ $lowStock->count() }}</div></div>
+    <div class="stat navy"><span class="stat-icon"><i class="fas fa-diagram-project"></i></span><div class="stat-body"><div class="label">Active projects</div><div class="value">{{ $projects->count() }}</div></div></div>
+    <div class="stat gold"><span class="stat-icon"><i class="fas fa-hourglass-half"></i></span><div class="stat-body"><div class="label">Awaiting my decision</div><div class="value">{{ $awaitingMe->count() }}</div></div></div>
+    <div class="stat"><span class="stat-icon"><i class="fas fa-dolly"></i></span><div class="stat-body"><div class="label">Ready to issue</div><div class="value">{{ ($statusCounts['overall_approved'] ?? 0) + ($statusCounts['partially_issued'] ?? 0) }}</div></div></div>
+    <div class="stat bad"><span class="stat-icon"><i class="fas fa-triangle-exclamation"></i></span><div class="stat-body"><div class="label">Low-stock items</div><div class="value">{{ $lowStock->count() }}</div></div></div>
 </div>
 
 @if($queues->isNotEmpty())
 <div class="card"><h2>Also waiting for you</h2>
     <div class="grid grid-4">@foreach($queues as [$label, $url, $n])
-        <a href="{{ $url }}" class="stat gold" style="text-decoration:none"><div class="label">{{ $label }}</div><div class="value">{{ $n }}</div></a>
+        <a href="{{ $url }}" class="stat gold" style="text-decoration:none"><span class="stat-icon"><i class="fas fa-list-check"></i></span><div class="stat-body"><div class="label">{{ $label }}</div><div class="value">{{ $n }}</div></div></a>
     @endforeach</div>
 </div>
 @endif

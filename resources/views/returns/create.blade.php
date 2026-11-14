@@ -9,7 +9,7 @@
         <tbody>@foreach($issue->lines as $l)
             @php($out = bcsub((string) $l->qty, $l->returnedQty(), 3))
             <tr><td>{{ $l->item->name }} <small class="muted">{{ $l->item->unit->abbreviation }}</small></td><td class="num">{{ qty($l->qty) }}</td><td class="num">{{ qty($l->returnedQty()) }}</td><td class="num">{{ qty($out) }}</td>
-                <td class="num">@if((float) $out > 0)<input type="number" step="0.001" min="0" max="{{ $out }}" name="qty[{{ $l->id }}]" value="{{ old('qty.'.$l->id) }}" aria-label="Return {{ $l->item->sku }}">@else — @endif</td></tr>
+                <td class="num">@if((float) $out > 0)<input type="number" step="0.001" min="0" max="{{ $out }}" name="qty[{{ $l->id }}]" value="{{ old('qty.'.$l->id) }}" aria-label="Return {{ $l->item->sku }}">@else - @endif</td></tr>
         @endforeach</tbody>
     </table></div>
     <div class="form-grid">

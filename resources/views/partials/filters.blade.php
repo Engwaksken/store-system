@@ -3,12 +3,12 @@
     <div class="grid grid-4">
         @if(in_array('store', $fields))
             <div><label>Store</label><select name="store_id"><option value="">All stores</option>
-                @foreach($stores as $s)<option value="{{ $s->id }}" @selected(request('store_id') == $s->id)>{{ $s->code }} – {{ $s->name }}</option>@endforeach
+                @foreach($stores as $s)<option value="{{ $s->id }}" @selected(request('store_id') == $s->id)>{{ $s->code }} - {{ $s->name }}</option>@endforeach
             </select></div>
         @endif
         @if(in_array('project', $fields))
             <div><label>Project</label><select name="project_id"><option value="">All</option>
-                @foreach($projects as $p)<option value="{{ $p->id }}" @selected(request('project_id') == $p->id)>{{ $p->code }} – {{ $p->name }}</option>@endforeach
+                @foreach($projects as $p)<option value="{{ $p->id }}" @selected(request('project_id') == $p->id)>{{ $p->code }} - {{ $p->name }}</option>@endforeach
             </select></div>
         @endif
         @if(in_array('item', $fields))

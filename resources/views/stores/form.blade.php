@@ -10,8 +10,8 @@
         <div class="field"><label for="name">Name</label><input id="name" type="text" name="name" value="{{ old('name', $store->name) }}" required></div>
         <div class="field"><label for="type">Type</label><select id="type" name="type" @disabled($store->id === \App\Models\Store::DEFAULT_ID)>
             @foreach(\App\Models\Store::TYPES as $k => $label)<option value="{{ $k }}" @selected(old('type', $store->type) === $k)>{{ $label }}</option>@endforeach</select></div>
-        <div class="field"><label for="project_id">Project (site stores only)</label><select id="project_id" name="project_id"><option value="">—</option>
-            @foreach($projects as $p)<option value="{{ $p->id }}" @selected(old('project_id', $store->project_id) == $p->id)>{{ $p->code }} – {{ $p->name }}</option>@endforeach</select></div>
+        <div class="field"><label for="project_id">Project (site stores only)</label><select id="project_id" name="project_id"><option value="">None</option>
+            @foreach($projects as $p)<option value="{{ $p->id }}" @selected(old('project_id', $store->project_id) == $p->id)>{{ $p->code }} - {{ $p->name }}</option>@endforeach</select></div>
         <div class="field"><label for="location">Location</label><input id="location" type="text" name="location" value="{{ old('location', $store->location) }}"></div>
         <div class="field"><label>&nbsp;</label><input type="hidden" name="is_active" value="0">
             <label class="check"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $store->is_active)) @disabled($store->id === \App\Models\Store::DEFAULT_ID)> Active</label>

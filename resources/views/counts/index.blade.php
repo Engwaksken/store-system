@@ -2,7 +2,7 @@
 @section('title', 'Stock counts')
 @section('content')
 <div class="page-head"><div><h1>Stock counts</h1><p>Physical counts per store. Variances post to the ledger only after approval by someone other than the counter.</p></div>
-    @can('start-count')<div class="actions"><a class="btn" href="{{ route('counts.create') }}">+ New count</a></div>@endcan</div>
+    @can('start-count')<div class="actions"><a class="btn" href="{{ route('counts.create') }}"><i class="fas fa-plus"></i> New count</a></div>@endcan</div>
 <div class="card table-wrap"><table>
     <thead><tr><th>Count</th><th>Store</th><th>Counted by</th><th>Created</th><th class="num">Lines</th><th>Status</th><th>Decided by</th></tr></thead>
     <tbody>@forelse($counts as $c)

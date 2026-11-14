@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 /** Out-of-pocket / site cost claimed by a project member. Becomes exactly one Expense when paid. */
 class ExpenseClaim extends Model
 {
-    public const STATUSES = ['submitted' => 'Awaiting approval', 'approved' => 'Approved – awaiting payment', 'rejected' => 'Rejected', 'paid' => 'Paid'];
+    public const STATUSES = ['submitted' => 'Awaiting approval', 'approved' => 'Approved - awaiting payment', 'rejected' => 'Rejected', 'paid' => 'Paid'];
 
     protected $fillable = ['claim_no', 'project_id', 'category_id', 'cost_code_id', 'claimant_id', 'incurred_on', 'amount', 'description', 'receipt_path'];
 

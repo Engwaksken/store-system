@@ -24,7 +24,7 @@
 
 <div class="card table-wrap"><h2>Items</h2><table>
     <thead><tr><th>SKU</th><th>Item</th><th class="num">Qty</th><th>Unit</th><th class="num">Est. unit cost</th>
-        @foreach($pr->quotes as $q)<th class="num">{{ $q->supplier->code }}@if($q->is_selected) ✓@endif</th>@endforeach</tr></thead>
+        @foreach($pr->quotes as $q)<th class="num">{{ $q->supplier->code }}@if($q->is_selected) <i class="fas fa-check text-ok" title="Selected"></i>@endif</th>@endforeach</tr></thead>
     <tbody>@foreach($pr->lines as $l)
         <tr><td>{{ $l->item->sku }}</td><td>{{ $l->item->name }}</td><td class="num">{{ qty($l->qty) }}</td><td>{{ $l->item->unit->abbreviation }}</td><td class="num">{{ ugx($l->est_unit_cost) }}</td>
             @foreach($pr->quotes as $q)<td class="num">{{ ugx($q->lines->firstWhere('purchase_requisition_line_id', $l->id)?->unit_price) }}</td>@endforeach</tr>
@@ -37,7 +37,7 @@
     @csrf
     <h2>Approve or reject</h2>
     <div class="field"><label for="reason">Comment (required to reject)</label><input id="reason" type="text" name="reason"></div>
-    <div class="actions"><button class="btn" name="decision" value="approved">Approve</button><button class="btn danger" name="decision" value="rejected">Reject</button></div>
+    <div class="actions"><button class="btn" name="decision" value="approved"><i class="fas fa-check"></i> Approve</button><button class="btn danger" name="decision" value="rejected" data-confirm="Reject this document? The person who raised it will be notified." data-confirm-ok="Yes, reject"><i class="fas fa-ban"></i> Reject</button></div>
 </form>
 @endcan
 

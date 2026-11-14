@@ -23,7 +23,7 @@
                     <td class="num">{{ $v === null ? '' : ($v > 0 ? '+' : '').qty($v) }}</td>
                     <td><input type="text" name="lines[{{ $l->id }}][reason]" value="{{ old("lines.{$l->id}.reason", $l->reason) }}" aria-label="Reason {{ $l->item->sku }}"></td>
                 @else
-                    <td class="num">{{ $l->counted_qty === null ? '—' : qty($l->counted_qty) }}</td><td class="num">{{ $v === null ? '' : ($v > 0 ? '+' : '').qty($v) }}</td><td>{{ $l->reason }}</td>
+                    <td class="num">{{ $l->counted_qty === null ? '-' : qty($l->counted_qty) }}</td><td class="num">{{ $v === null ? '' : ($v > 0 ? '+' : '').qty($v) }}</td><td>{{ $l->reason }}</td>
                 @endif</tr>
         @endforeach</tbody>
     </table></div>
@@ -38,9 +38,9 @@
 <form method="POST" action="{{ route('counts.decide', $count) }}" class="card no-print" style="max-width:640px">
     @csrf
     <h2>Approve or reject</h2>
-    <p class="muted">Approving posts each variance as a stock adjustment (counted − book) on {{ $count->store->name }}.</p>
+    <p class="muted">Approving posts each variance as a stock adjustment (counted - book) on {{ $count->store->name }}.</p>
     <div class="field"><label for="reason">Comment (required to reject)</label><input id="reason" type="text" name="reason"></div>
-    <div class="actions"><button class="btn" name="decision" value="approved">Approve &amp; post</button><button class="btn danger" name="decision" value="rejected">Reject</button></div>
+    <div class="actions"><button class="btn" name="decision" value="approved"><i class="fas fa-check"></i> Approve &amp; post</button><button class="btn danger" name="decision" value="rejected" data-confirm="Reject this document? The person who raised it will be notified." data-confirm-ok="Yes, reject"><i class="fas fa-ban"></i> Reject</button></div>
 </form>
 @endcan
 @endsection

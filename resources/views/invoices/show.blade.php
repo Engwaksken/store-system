@@ -8,9 +8,9 @@
     @if($invoice->attachment_path)<a class="btn secondary" href="{{ route('invoices.attachment', $invoice) }}">View scan</a>@endif</div>
 
 <div class="grid grid-3" style="margin-bottom:1.25rem">
-    <div class="stat navy"><div class="label">Invoice total</div><div class="value">{{ ugx($invoice->total) }}</div></div>
-    <div class="stat"><div class="label">Paid</div><div class="value">{{ ugx($invoice->amount_paid) }}</div></div>
-    <div @class(['stat', 'gold' => (float) $invoice->balance() > 0])><div class="label">Balance</div><div class="value">{{ ugx($invoice->balance()) }}</div></div>
+    <div class="stat navy"><span class="stat-icon"><i class="fas fa-file-invoice-dollar"></i></span><div class="stat-body"><div class="label">Invoice total</div><div class="value">{{ ugx($invoice->total) }}</div></div></div>
+    <div class="stat"><span class="stat-icon"><i class="fas fa-circle-check"></i></span><div class="stat-body"><div class="label">Paid</div><div class="value">{{ ugx($invoice->amount_paid) }}</div></div></div>
+    <div @class(['stat', 'gold' => (float) $invoice->balance() > 0])><span class="stat-icon"><i class="fas fa-scale-unbalanced"></i></span><div class="stat-body"><div class="label">Balance</div><div class="value">{{ ugx($invoice->balance()) }}</div></div></div>
 </div>
 
 @if($invoice->match_status !== 'matched')
@@ -19,7 +19,7 @@
 @endif
 
 <div class="card"><dl class="meta">
-    <dt>Invoice date</dt><dd>{{ $invoice->invoice_date->format('d M Y') }}</dd><dt>Due</dt><dd>{{ $invoice->due_date?->format('d M Y') ?? '—' }}</dd>
+    <dt>Invoice date</dt><dd>{{ $invoice->invoice_date->format('d M Y') }}</dd><dt>Due</dt><dd>{{ $invoice->due_date?->format('d M Y') ?? '-' }}</dd>
     <dt>Recorded by</dt><dd>{{ $invoice->recorder->name }}, {{ $invoice->created_at->format('d M Y H:i') }}</dd>
 </dl></div>
 <div class="card table-wrap"><table>

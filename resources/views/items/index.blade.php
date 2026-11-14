@@ -3,7 +3,7 @@
 @section('content')
 <div class="page-head"><div><h1>Stock &amp; items</h1><p>On hand is the total across all stores; open an item for the per-store split. Highlighted rows are at or below minimum level.</p></div>
     <div class="actions">
-        @can('manage-catalog')<a class="btn" href="{{ route('items.create') }}">+ New item</a>@endcan
+        @can('manage-catalog')<a class="btn" data-modal href="{{ route('items.create') }}"><i class="fas fa-plus"></i> New item</a>@endcan
         @can('manage-stock')<a class="btn secondary" href="{{ route('receipts.create', ['type' => 'opening']) }}">Opening balances</a><a class="btn secondary" href="{{ route('adjustments.create') }}">Adjustment</a>@endcan
     </div></div>
 @can('manage-catalog')
@@ -26,7 +26,8 @@
         <tr @class(['low' => $i->isLowStock()])><td>{{ $i->sku }}</td><td><a href="{{ route('items.show', $i) }}">{{ $i->name }}</a> @unless($i->is_active)<span class="badge muted">inactive</span>@endunless</td><td>{{ $i->category->name }}</td>
             <td class="num"><strong>{{ qty($i->onHand()) }}</strong></td><td>{{ $i->unit->abbreviation }}</td><td class="num">{{ qty($i->min_level) }}</td>
             @can('view-stock-value')<td class="num">{{ ugx($i->avg_cost) }}</td>@endcan
-            <td>@if($i->isLowStock())<span class="badge pending">Low</span>@endif</td></tr>
+            <td><div class="row-actions">@if($i->isLowStock())<span class="badge pending">Low</span>@endif
+                @can('manage-catalog')<a class="btn-icon" data-modal href="{{ route('items.edit', $i) }}" title="Edit {{ $i->sku }}" aria-label="Edit {{ $i->sku }}"><i class="fas fa-pen"></i></a>@endcan</div></td></tr>
     @empty <tr><td colspan="8" class="empty">No items.</td></tr> @endforelse</tbody>
 </table></div>
 @endsection

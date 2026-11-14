@@ -2,11 +2,11 @@
 @section('title', $supplier->name)
 @section('content')
 <div class="page-head"><div><h1>{{ $supplier->name }} <small class="muted">{{ $supplier->code }}</small></h1></div>
-    @can('manage-suppliers')<a class="btn secondary" href="{{ route('suppliers.edit', $supplier) }}">Edit</a>@endcan</div>
+    @can('manage-suppliers')<a class="btn secondary" data-modal href="{{ route('suppliers.edit', $supplier) }}"><i class="fas fa-pen"></i> Edit</a>@endcan</div>
 <div class="card"><dl class="meta">
-    <dt>Contact</dt><dd>{{ $supplier->contact_person ?: '—' }} {{ $supplier->phone }} {{ $supplier->email }}</dd>
-    <dt>Address</dt><dd>{{ $supplier->address ?: '—' }}</dd><dt>TIN</dt><dd>{{ $supplier->tin ?: '—' }}</dd>
-    <dt>Payment terms</dt><dd>{{ $supplier->payment_terms ?: '—' }}</dd>
+    <dt>Contact</dt><dd>{{ $supplier->contact_person ?: '-' }} {{ $supplier->phone }} {{ $supplier->email }}</dd>
+    <dt>Address</dt><dd>{{ $supplier->address ?: '-' }}</dd><dt>TIN</dt><dd>{{ $supplier->tin ?: '-' }}</dd>
+    <dt>Payment terms</dt><dd>{{ $supplier->payment_terms ?: '-' }}</dd>
 </dl></div>
 <div class="grid grid-2">
 <div class="card table-wrap"><h2>Recent purchase orders</h2><table>

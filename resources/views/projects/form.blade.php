@@ -13,7 +13,7 @@
         <div class="field"><label>End date</label><input type="date" name="end_date" value="{{ old('end_date', $project->end_date?->format('Y-m-d')) }}"></div>
         <div class="field"><label>Status</label><select name="status">@foreach(\App\Models\Project::STATUSES as $s)<option @selected(old('status', $project->status) === $s)>{{ $s }}</option>@endforeach</select></div>
         <div class="field"><label>Budget (UGX)</label><input type="number" name="budget" step="1" min="0" value="{{ old('budget', $project->budget ?? 0) }}" required></div>
-        <div class="field"><label>Project Manager</label><select name="manager_id"><option value="">— none —</option>
+        <div class="field"><label>Project Manager</label><select name="manager_id"><option value="">None</option>
             @foreach($managers as $m)<option value="{{ $m->id }}" @selected(old('manager_id', $project->manager_id) == $m->id)>{{ $m->name }}</option>@endforeach</select>
             <div class="hint">Material requests route to this person for the first approval.</div></div>
         <div class="field"><label>Assigned staff</label>

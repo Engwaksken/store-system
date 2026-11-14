@@ -2,7 +2,7 @@
 @section('title', 'Stock receipts')
 @section('content')
 <div class="page-head"><h1>Stock receipts</h1>
-    @can('manage-stock')<div class="actions"><a class="btn" href="{{ route('receipts.create') }}">+ Purchase receipt</a><a class="btn secondary" href="{{ route('receipts.create', ['type' => 'opening']) }}">Opening balances</a></div>@endcan</div>
+    @can('manage-stock')<div class="actions"><a class="btn" href="{{ route('receipts.create') }}"><i class="fas fa-plus"></i> Purchase receipt</a><a class="btn secondary" href="{{ route('receipts.create', ['type' => 'opening']) }}">Opening balances</a></div>@endcan</div>
 <div class="card table-wrap"><table>
     <thead><tr><th>Receipt</th><th>Type</th><th>Store</th><th>Date</th><th>Supplier</th><th>Reference</th><th class="num">Lines</th><th class="num">Value (UGX)</th><th>By</th></tr></thead>
     <tbody>@forelse($receipts as $r)

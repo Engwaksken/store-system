@@ -40,7 +40,7 @@ class RemindersCommand extends Command
 
         foreach (MaterialRequest::with('project', 'requester')->whereIn('status', [RequestStatus::Submitted->value, RequestStatus::PmApproved->value])->where('submitted_at', '<=', $remind)->get() as $r) {
             $who = $users->filter(fn ($u) => Gate::forUser($u)->allows('pm-decide', $r) || Gate::forUser($u)->allows('overall-decide', $r));
-            $this->chase($n, $who, $r->submitted_at, $escalate, "material request {$r->request_no} ({$r->project->code}) – {$r->status->label()}", route('requests.show', $r));
+            $this->chase($n, $who, $r->submitted_at, $escalate, "material request {$r->request_no} ({$r->project->code}) - {$r->status->label()}", route('requests.show', $r));
         }
         foreach (MaterialRequest::with('project')->whereIn('status', [RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value])->where('updated_at', '<=', $remind)->get() as $r) {
             $this->chase($n, $users->where('role', Role::Storekeeper), $r->updated_at, $escalate, "approved request {$r->request_no} ({$r->project->code}) not fully issued", route('requests.show', $r));

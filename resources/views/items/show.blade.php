@@ -2,11 +2,11 @@
 @section('title', $item->name)
 @section('content')
 <div class="page-head"><div><h1>{{ $item->name }}</h1><p>{{ $item->sku }} · {{ $item->category->name }}</p></div>
-    @can('manage-catalog')<a class="btn secondary" href="{{ route('items.edit', $item) }}">Edit item</a>@endcan</div>
+    @can('manage-catalog')<a class="btn secondary" data-modal href="{{ route('items.edit', $item) }}"><i class="fas fa-pen"></i> Edit item</a>@endcan</div>
 <div class="grid grid-3" style="margin-bottom:1.25rem">
-    <div @class(['stat', 'bad' => $item->isLowStock()])><div class="label">On hand</div><div class="value">{{ qty($item->onHand()) }} {{ $item->unit->abbreviation }}</div></div>
-    <div class="stat gold"><div class="label">Minimum level</div><div class="value">{{ qty($item->min_level) }}</div></div>
-    @can('view-stock-value')<div class="stat navy"><div class="label">Average cost (UGX)</div><div class="value">{{ ugx($item->avg_cost) }}</div></div>@endcan
+    <div @class(['stat', 'bad' => $item->isLowStock()])><span class="stat-icon"><i class="fas fa-box"></i></span><div class="stat-body"><div class="label">On hand</div><div class="value">{{ qty($item->onHand()) }} {{ $item->unit->abbreviation }}</div></div></div>
+    <div class="stat gold"><span class="stat-icon"><i class="fas fa-arrow-down-short-wide"></i></span><div class="stat-body"><div class="label">Minimum level</div><div class="value">{{ qty($item->min_level) }}</div></div></div>
+    @can('view-stock-value')<div class="stat navy"><span class="stat-icon"><i class="fas fa-scale-balanced"></i></span><div class="stat-body"><div class="label">Average cost (UGX)</div><div class="value">{{ ugx($item->avg_cost) }}</div></div></div>@endcan
 </div>
 @if($item->balances->where('on_hand', '!=', 0)->isNotEmpty())
 <div class="card table-wrap"><h2>By store</h2><table>

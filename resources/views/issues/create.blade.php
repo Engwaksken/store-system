@@ -13,7 +13,7 @@
             @php($max = min($out, (float) $l->item->onHand($storeId)))
             <tr @class(['low' => $out > 0 && $max < $out])><td>{{ $l->item->name }} <small class="muted">{{ $l->item->unit->abbreviation }}</small></td>
                 <td class="num">{{ qty($l->final_approved_qty) }}</td><td class="num">{{ qty($l->issued_qty) }}</td><td class="num">{{ qty($out) }}</td><td class="num">{{ qty($l->item->onHand($storeId)) }}</td>
-                <td class="num">@if($out > 0)<input type="number" step="0.001" min="0" max="{{ $max }}" name="qty[{{ $l->id }}]" value="{{ old('qty.'.$l->id, $max) }}">@else — @endif</td></tr>
+                <td class="num">@if($out > 0)<input type="number" step="0.001" min="0" max="{{ $max }}" name="qty[{{ $l->id }}]" value="{{ old('qty.'.$l->id, $max) }}">@else - @endif</td></tr>
         @endforeach</tbody>
     </table></div>
     <p class="hint">Highlighted rows have less stock than approved; the remainder stays outstanding for a later issue.</p>

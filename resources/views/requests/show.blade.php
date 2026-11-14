@@ -5,7 +5,7 @@
 @php($canOverall = Gate::allows('overall-decide', $req))
 <div class="page-head">
     <div><h1>{{ $req->request_no }} <small class="muted" style="font-size:1rem">version {{ $req->version }}</small></h1>
-        <p>{{ $req->project->code }} · {{ $req->project->name }} — requested by {{ $req->requester->name }}</p></div>
+        <p>{{ $req->project->code }} · {{ $req->project->name }} - requested by {{ $req->requester->name }}</p></div>
     <div class="actions">
         @include('partials.status', ['status' => $req->status])
         @can('edit-request', $req)
@@ -25,16 +25,16 @@
 <div class="grid grid-2">
     <div class="card"><h2>Request</h2><dl class="meta">
         <dt>Purpose</dt><dd>{{ $req->purpose }}</dd>
-        <dt>Needed on</dt><dd>{{ $req->needed_on?->format('d M Y') ?? '—' }}</dd>
+        <dt>Needed on</dt><dd>{{ $req->needed_on?->format('d M Y') ?? '-' }}</dd>
         <dt>Submitted</dt><dd>{{ $req->submitted_at?->format('d M Y H:i') ?? 'not yet' }}</dd>
-        <dt>PM step</dt><dd>{{ $req->projectManager?->name ?? ($req->project->manager?->name ?? '—') }}@if($req->submitted_at && $wf->needsSubstitutePm($req)) <small class="muted">(requester is the PM, so Owner/Admin reviews)</small>@endif</dd>
+        <dt>PM step</dt><dd>{{ $req->projectManager?->name ?? ($req->project->manager?->name ?? '-') }}@if($req->submitted_at && $wf->needsSubstitutePm($req)) <small class="muted">(requester is the PM, so Owner/Admin reviews)</small>@endif</dd>
     </dl></div>
     <div class="card"><h2>Decision history</h2>
         <ul class="timeline">
         @forelse($req->approvals as $a)
             <li class="{{ $a->decision }}"><strong>{{ $a->step === 'pm' ? 'PM' : 'Overall' }} {{ $a->decision }}</strong> by {{ $a->approver->name }}@if($a->was_substitute) <small>(substitute)</small>@endif
                 <span class="muted">· v{{ $a->version }}</span><div class="when">{{ $a->decided_at->format('d M Y H:i') }}</div>
-                @if($a->reason)<div>“{{ $a->reason }}”</div>@endif</li>
+                @if($a->reason)<div>"{{ $a->reason }}"</div>@endif</li>
         @empty <li>No decisions yet.</li> @endforelse
         </ul>
     </div>
@@ -50,8 +50,8 @@
     <tbody>@foreach($req->lines as $l)
         <tr><td>{{ $l->item->name }} <small class="muted">{{ $l->item->unit->abbreviation }}</small>@if($l->notes)<br><small class="muted">{{ $l->notes }}</small>@endif</td>
             <td class="num">{{ qty($l->requested_qty) }}</td>
-            <td class="num">{{ $l->pm_approved_qty !== null ? qty($l->pm_approved_qty) : '—' }}</td>
-            <td class="num">{{ $l->final_approved_qty !== null ? qty($l->final_approved_qty) : '—' }}</td>
+            <td class="num">{{ $l->pm_approved_qty !== null ? qty($l->pm_approved_qty) : '-' }}</td>
+            <td class="num">{{ $l->final_approved_qty !== null ? qty($l->final_approved_qty) : '-' }}</td>
             <td class="num">{{ qty($l->issued_qty) }}</td>
             <td class="num">{{ qty($l->outstanding()) }}</td>
             <td class="num">{{ qty($l->item->onHand()) }}</td>
@@ -67,7 +67,7 @@
     <h2>{{ $canPm ? 'Project Manager decision' : 'Overall Manager decision' }}</h2>
     <p class="hint">You may reduce quantities but not increase them. Approving does not move stock. Rejecting needs a reason and ends this version; the requester can revise and resubmit.</p>
     <div class="field"><label>Comment / reason</label><textarea name="reason" maxlength="1000">{{ old('reason') }}</textarea></div>
-    <div class="actions"><button class="btn" name="decision" value="approved">Approve</button><button class="btn danger" name="decision" value="rejected">Reject</button></div>
+    <div class="actions"><button class="btn" name="decision" value="approved"><i class="fas fa-check"></i> Approve</button><button class="btn danger" name="decision" value="rejected" data-confirm="Reject this document? The person who raised it will be notified." data-confirm-ok="Yes, reject"><i class="fas fa-ban"></i> Reject</button></div>
 </div>
 </form>
 @endif

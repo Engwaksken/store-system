@@ -31,9 +31,9 @@ class ReconcileCommand extends Command
             $ledger = bcadd((string) ($sums[$key]->s ?? 0), '0', 3);
             $onHand = bcadd((string) $b->on_hand, '0', 3);
             if (bccomp($ledger, $onHand, 3) !== 0) {
-                $bad[] = "store {$b->store_id} item {$b->item_id}: ledger {$ledger} ≠ on hand {$onHand}";
+                $bad[] = "store {$b->store_id} item {$b->item_id}: ledger {$ledger} != on hand {$onHand}";
             } elseif (isset($sums[$key]) && bccomp(bcadd((string) $lastAfter[$sums[$key]->last_id], '0', 3), $onHand, 3) !== 0) {
-                $bad[] = "store {$b->store_id} item {$b->item_id}: last balance_after ≠ on hand {$onHand}";
+                $bad[] = "store {$b->store_id} item {$b->item_id}: last balance_after != on hand {$onHand}";
             }
             if (bccomp($onHand, '0', 3) < 0) {
                 $bad[] = "store {$b->store_id} item {$b->item_id}: negative stock {$onHand}";
