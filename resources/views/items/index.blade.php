@@ -4,8 +4,14 @@
 <div class="page-head"><div><h1>Stock &amp; items</h1><p>On hand is the total across all stores; open an item for the per-store split. Highlighted rows are at or below minimum level.</p></div>
     <div class="actions">
         @can('manage-catalog')<a class="btn" data-modal href="{{ route('items.create') }}"><i class="fas fa-plus"></i> New item</a>@endcan
-        @can('manage-stock')<a class="btn secondary" href="{{ route('receipts.create', ['type' => 'opening']) }}">Opening balances</a><a class="btn secondary" href="{{ route('adjustments.create') }}">Adjustment</a>@endcan
+        @can('manage-stock')<a class="btn secondary" data-modal href="{{ route('receipts.create', ['type' => 'opening']) }}">Opening balances</a><a class="btn secondary" data-modal href="{{ route('adjustments.create') }}">Adjustment</a>@endcan
     </div></div>
+<x-stats :cards="[
+    ['Items', number_format($stats['items']), 'fa-boxes-stacked', 'navy'],
+    ['Active', number_format($stats['active']), 'fa-circle-check'],
+    ['Low stock', number_format($stats['low']), 'fa-triangle-exclamation', 'bad', route('items.index', ['low' => 1])],
+    ['Categories', $stats['categories'], 'fa-tags', 'gold'],
+]" />
 @can('manage-catalog')
 <details class="card"><summary><strong>Import items from a spreadsheet (CSV)</strong></summary>
     <form method="POST" action="{{ route('items.import') }}" enctype="multipart/form-data" style="margin-top:.75rem">@csrf

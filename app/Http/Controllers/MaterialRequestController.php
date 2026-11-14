@@ -24,7 +24,16 @@ class MaterialRequestController extends Controller
             ->when($request->filled('project_id'), fn ($q) => $q->where('project_id', $request->integer('project_id')))
             ->latest('id')->paginate(25)->withQueryString();
 
+        $counts = MaterialRequest::visibleTo($request->user())->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
+        $n = fn (RequestStatus ...$s) => collect($s)->sum(fn ($x) => (int) ($counts[$x->value] ?? 0));
+
         return view('requests.index', [
+            'stats' => [
+                'total' => (int) $counts->sum(),
+                'pending' => $n(RequestStatus::Submitted, RequestStatus::PmApproved),
+                'ready' => $n(RequestStatus::OverallApproved, RequestStatus::PartiallyIssued),
+                'done' => $n(RequestStatus::FullyIssued),
+            ],
             'requests' => $requests,
             'projects' => Project::visibleTo($request->user())->orderBy('code')->get(),
         ]);
@@ -39,7 +48,14 @@ class MaterialRequestController extends Controller
             ->oldest('submitted_at')->get()
             ->filter(fn ($r) => Gate::allows('pm-decide', $r) || Gate::allows('overall-decide', $r))->values();
 
-        return view('requests.approvals', compact('pending'));
+        $stats = [
+            'pending' => $pending->count(),
+            'pm' => $pending->where('status', RequestStatus::Submitted)->count(),
+            'overall' => $pending->where('status', RequestStatus::PmApproved)->count(),
+            'oldest' => $pending->first()?->submitted_at?->diffForHumans(null, true) ?? '-',
+        ];
+
+        return view('requests.approvals', compact('pending', 'stats'));
     }
 
     public function create(Request $request)

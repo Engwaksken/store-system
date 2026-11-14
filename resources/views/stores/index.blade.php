@@ -4,8 +4,14 @@
 <div class="page-head"><div><h1>Stores</h1><p>Central store and project site stores. Storekeepers can only move stock in stores they are assigned to.</p></div>
     <div class="actions">
         @can('create', App\Models\Store::class)<a class="btn" data-modal href="{{ route('stores.create') }}"><i class="fas fa-plus"></i> New store</a>@endcan
-        @can('create', App\Models\StockTransfer::class)<a class="btn secondary" href="{{ route('transfers.create') }}">New transfer</a>@endcan
+        @can('create', App\Models\StockTransfer::class)<a class="btn secondary" data-modal href="{{ route('transfers.create') }}">New transfer</a>@endcan
     </div></div>
+<x-stats :cards="[
+    ['Stores', $stats['total'], 'fa-warehouse', 'navy'],
+    ['Active', $stats['active'], 'fa-circle-check'],
+    ['Site stores', $stats['site'], 'fa-person-digging', 'gold'],
+    ['Assigned to you', $stats['mine'], 'fa-user-gear'],
+]" />
 <div class="card table-wrap"><table>
     <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Project</th><th>Location</th><th>Storekeepers</th><th class="num">Items in stock</th><th>Status</th><th></th></tr></thead>
     <tbody>@forelse($stores as $s)

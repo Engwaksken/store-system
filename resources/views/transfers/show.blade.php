@@ -3,7 +3,7 @@
 @section('content')
 <div class="page-head"><div><h1>Transfer {{ $transfer->transfer_no }} <span class="badge {{ $transfer->tone() }}">{{ $transfer->statusLabel() }}</span></h1>
     <p>{{ $transfer->fromStore->label() }} <i class="fas fa-arrow-right"></i> {{ $transfer->toStore->label() }}</p></div>
-    <button class="btn secondary no-print" onclick="window.print()">Print delivery note</button></div>
+    <button type="button" class="btn secondary no-print" data-print><i class="fas fa-print"></i> Print delivery note</button></div>
 <div class="card"><dl class="meta">
     <dt>Dispatched</dt><dd>{{ $transfer->dispatched_at->format('d M Y H:i') }} by {{ $transfer->dispatcher->name }}</dd>
     @if($transfer->notes)<dt>Notes</dt><dd>{{ $transfer->notes }}</dd>@endif

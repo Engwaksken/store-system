@@ -17,7 +17,14 @@ class UserController extends Controller
     {
         Gate::authorize('manage-users');
 
-        return view('users.index', ['users' => User::orderBy('name')->get()]);
+        $users = User::orderBy('name')->get();
+
+        return view('users.index', ['users' => $users, 'stats' => [
+            'total' => $users->count(),
+            'active' => $users->where('is_active', true)->count(),
+            'inactive' => $users->where('is_active', false)->count(),
+            'admins' => $users->filter(fn ($u) => $u->role === \App\Enums\Role::Admin && $u->is_active)->count(),
+        ]]);
     }
 
     public function create()

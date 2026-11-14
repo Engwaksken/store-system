@@ -2,6 +2,12 @@
 @section('title', 'Approvals')
 @section('content')
 <div class="page-head"><div><h1>Approvals</h1><p>Requests waiting for <strong>your</strong> decision. Stock is not reserved or deducted when you approve.</p></div></div>
+<x-stats :cards="[
+    ['Waiting for you', $stats['pending'], 'fa-stamp', 'gold'],
+    ['At PM stage', $stats['pm'], 'fa-user-tie', 'navy'],
+    ['At final stage', $stats['overall'], 'fa-user-shield'],
+    ['Oldest waiting', $stats['oldest'], 'fa-clock', $stats['pending'] ? 'bad' : ''],
+]" />
 <div class="card table-wrap"><table>
     <thead><tr><th>Request</th><th>Project</th><th>Requester</th><th>Stage</th><th class="num">Lines</th><th>Submitted</th><th></th></tr></thead>
     <tbody>@forelse($pending as $r)

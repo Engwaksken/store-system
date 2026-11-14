@@ -16,7 +16,14 @@ class StockReturnController extends Controller
     {
         Gate::authorize('view-returns');
 
-        return view('returns.index', ['returns' => StockReturn::with('issue', 'project', 'store', 'receiver')->latest('id')->paginate(25)]);
+        return view('returns.index', [
+            'returns' => StockReturn::with('issue', 'project', 'store', 'receiver')->latest('id')->paginate(25),
+            'stats' => [
+                'total' => StockReturn::count(),
+                'month' => StockReturn::where('returned_at', '>=', now()->startOfMonth())->count(),
+                'value' => StockReturn::sum('total_value'),
+            ],
+        ]);
     }
 
     public function create(Request $request, MaterialIssue $issue)

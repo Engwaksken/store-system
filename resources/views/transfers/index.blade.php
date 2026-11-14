@@ -2,7 +2,13 @@
 @section('title', 'Transfers')
 @section('content')
 <div class="page-head"><div><h1>Stock transfers</h1><p>Stock leaves the source on dispatch and enters the destination only when a storekeeper there confirms receipt.</p></div>
-    @can('create', App\Models\StockTransfer::class)<div class="actions"><a class="btn" href="{{ route('transfers.create') }}"><i class="fas fa-plus"></i> New transfer</a></div>@endcan</div>
+    @can('create', App\Models\StockTransfer::class)<div class="actions"><a class="btn" data-modal href="{{ route('transfers.create') }}"><i class="fas fa-plus"></i> New transfer</a></div>@endcan</div>
+<x-stats :cards="[
+    ['Transfers', $stats['total'], 'fa-right-left', 'navy'],
+    ['In transit', $stats['in_transit'], 'fa-truck-fast', 'gold', route('transfers.index', ['status' => 'in_transit'])],
+    ['Received', $stats['received'], 'fa-circle-check', '', route('transfers.index', ['status' => 'received'])],
+    ['Cancelled', $stats['cancelled'], 'fa-ban', '', route('transfers.index', ['status' => 'cancelled'])],
+]" />
 <form method="GET" class="card filters"><div class="grid grid-4">
     <div><label>Status</label><select name="status"><option value="">All</option>@foreach(\App\Models\StockTransfer::STATUSES as $k => $v)<option value="{{ $k }}" @selected(request('status') === $k)>{{ $v }}</option>@endforeach</select></div>
     <div><label>&nbsp;</label><button class="btn small">Filter</button></div>

@@ -10,7 +10,7 @@
     @csrf @if($req->exists) @method('PUT') @endif
     <div class="form-grid">
         <div class="field"><label>Project</label><select name="project_id" required @disabled($req->exists)>
-            <option value="">- select -</option>
+            <option value="">Select</option>
             @foreach($projects as $p)<option value="{{ $p->id }}" @selected(old('project_id', $req->project_id ?? request('project_id')) == $p->id)>{{ $p->code }} - {{ $p->name }}</option>@endforeach
         </select>@if($req->exists)<input type="hidden" name="project_id" value="{{ $req->project_id }}">@endif</div>
         <div class="field"><label>Needed on</label><input type="date" name="needed_on" value="{{ old('needed_on', $req->needed_on?->format('Y-m-d')) }}"></div>
@@ -29,5 +29,4 @@
     <p class="hint">Leave unused rows empty. Store balance is shown for information only. Approval does not reserve stock. Linking a BOQ line (of the same project) lets consumption be reported per BOQ line and cost code.</p>
     <div class="actions"><button class="btn" name="action" value="submit">Submit for approval</button><button class="btn secondary" name="action" value="draft">Save draft</button></div>
 </form>
-@include('partials.add-line')
 @endsection

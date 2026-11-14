@@ -23,7 +23,15 @@ class CatalogController extends Controller
             $items = $items->filter->isLowStock()->values();
         }
 
-        return view('items.index', ['items' => $items, 'categories' => InventoryCategory::orderBy('name')->get()]);
+        $all = InventoryItem::with('balances')->get();
+        $stats = [
+            'items' => $all->count(),
+            'active' => $all->where('is_active', true)->count(),
+            'low' => $all->filter->isLowStock()->count(),
+            'categories' => InventoryCategory::count(),
+        ];
+
+        return view('items.index', ['items' => $items, 'categories' => InventoryCategory::orderBy('name')->get(), 'stats' => $stats]);
     }
 
     public function show(InventoryItem $item)

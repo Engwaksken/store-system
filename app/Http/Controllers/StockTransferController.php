@@ -19,7 +19,10 @@ class StockTransferController extends Controller
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->latest('id')->paginate(25)->withQueryString();
 
-        return view('transfers.index', compact('transfers'));
+        $counts = StockTransfer::visibleTo($request->user())->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
+        $stats = ['total' => (int) $counts->sum(), 'in_transit' => (int) ($counts['in_transit'] ?? 0), 'received' => (int) ($counts['received'] ?? 0), 'cancelled' => (int) ($counts['cancelled'] ?? 0)];
+
+        return view('transfers.index', compact('transfers', 'stats'));
     }
 
     public function create(Request $request)

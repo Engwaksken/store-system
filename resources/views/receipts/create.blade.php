@@ -39,5 +39,4 @@
     <button class="btn secondary">Import opening balances</button>
 </form>
 @endif
-@include('partials.add-line')
 @endsection

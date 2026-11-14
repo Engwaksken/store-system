@@ -3,6 +3,11 @@
 @section('content')
 <div class="page-head"><div><h1>Notifications</h1><p>Approvals, deliveries, reminders and budget alerts for you.</p></div>
     <form method="POST" action="{{ route('notifications.read-all') }}">@csrf<button class="btn secondary">Mark all as read</button></form></div>
+<x-stats :cards="[
+    ['Notifications', $stats['total'], 'fa-bell', 'navy'],
+    ['Unread', $stats['unread'], 'fa-envelope', $stats['unread'] ? 'gold' : ''],
+    ['Last 7 days', $stats['week'], 'fa-calendar-week'],
+]" />
 <div class="card table-wrap"><table>
     <thead><tr><th>When</th><th>Subject</th><th>Details</th><th></th></tr></thead>
     <tbody>@forelse($notifications as $n)

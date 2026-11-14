@@ -3,6 +3,11 @@
 @section('content')
 <div class="page-head"><div><h1>Suppliers</h1></div>
     @can('manage-suppliers')<div class="actions"><a class="btn" data-modal href="{{ route('suppliers.create') }}"><i class="fas fa-plus"></i> New supplier</a></div>@endcan</div>
+<x-stats :cards="[
+    ['Suppliers', $stats['total'], 'fa-truck-field', 'navy'],
+    ['Active', $stats['active'], 'fa-circle-check'],
+    ['With purchase orders', $stats['with_pos'], 'fa-file-invoice', 'gold'],
+]" />
 <form method="GET" class="card filters"><div class="grid grid-4">
     <div><label for="q">Search</label><input id="q" type="text" name="q" value="{{ request('q') }}" placeholder="Code or name"></div>
     <div><label>&nbsp;</label><button class="btn small">Search</button></div>

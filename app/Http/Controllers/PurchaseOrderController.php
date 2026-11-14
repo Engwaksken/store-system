@@ -23,7 +23,15 @@ class PurchaseOrderController extends Controller
             ->when($request->filled('supplier_id'), fn ($q) => $q->where('supplier_id', $request->integer('supplier_id')))
             ->latest('id')->paginate(25)->withQueryString();
 
-        return view('pos.index', ['orders' => $orders, 'suppliers' => Supplier::orderBy('name')->get()]);
+        $counts = PurchaseOrder::visibleTo($request->user())->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
+        $stats = [
+            'total' => (int) $counts->sum(),
+            'pending' => (int) ($counts['pending_approval'] ?? 0),
+            'open' => (int) ($counts['approved'] ?? 0) + (int) ($counts['partially_received'] ?? 0),
+            'open_value' => PurchaseOrder::visibleTo($request->user())->whereIn('status', ['approved', 'partially_received'])->sum('total'),
+        ];
+
+        return view('pos.index', ['orders' => $orders, 'suppliers' => Supplier::orderBy('name')->get(), 'stats' => $stats]);
     }
 
     public function create(Request $request)

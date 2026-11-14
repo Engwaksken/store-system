@@ -3,9 +3,9 @@
 <div class="page-head">
     <div><h1>Dashboard</h1><p>{{ now()->format('l, j F Y') }}</p></div>
     <div class="actions">
-        @can('create-request')<a class="btn" href="{{ route('requests.create') }}"><i class="fas fa-plus"></i> Material request</a>@endcan
+        @can('create-request')<a class="btn" data-modal href="{{ route('requests.create') }}"><i class="fas fa-plus"></i> Material request</a>@endcan
         @can('record-expense')<a class="btn secondary" data-modal href="{{ route('expenses.create') }}"><i class="fas fa-plus"></i> Expense</a>@endcan
-        @can('manage-stock')<a class="btn secondary" href="{{ route('receipts.create') }}"><i class="fas fa-plus"></i> Stock receipt</a>@endcan
+        @can('manage-stock')<a class="btn secondary" data-modal href="{{ route('receipts.create') }}"><i class="fas fa-plus"></i> Stock receipt</a>@endcan
     </div>
 </div>
 
@@ -61,7 +61,7 @@
         <thead><tr><th>Request</th><th>Project</th><th>Status</th><th></th></tr></thead>
         <tbody>@foreach($readyToIssue as $r)
             <tr><td>{{ $r->request_no }}</td><td>{{ $r->project->code }}</td><td>@include('partials.status', ['status' => $r->status])</td>
-                <td class="right"><a class="btn small" href="{{ route('issues.create', $r) }}">Issue</a></td></tr>
+                <td class="right"><a class="btn small" data-modal href="{{ route('issues.create', $r) }}">Issue</a></td></tr>
         @endforeach</tbody>
     </table></div>
 </div>

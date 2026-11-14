@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') · {{ $companyName }}</title>
-    <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}?v=6.7.2">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=2">
-    <script src="{{ asset('js/app.js') }}?v=2" defer></script>
+    @include('partials.head-assets')
 </head>
 <body>
 @php
@@ -16,7 +14,7 @@
 @endphp
 <div class="shell">
     <nav class="sidebar" aria-label="Main">
-        <div class="brand"><i class="fas fa-helmet-safety brand-icon" aria-hidden="true"></i><span>{{ $companyName }}<small>STORE &amp; PROJECTS</small></span></div>
+        <a href="{{ route('dashboard') }}" class="brand">@if($logoPath)<img src="{{ asset('storage/'.$logoPath) }}" alt="" class="brand-logo">@else<i class="fas fa-helmet-safety brand-icon" aria-hidden="true"></i>@endif<span>{{ $companyName }}<small>{{ $appSubtitle }}</small></span></a>
         <a href="{{ route('dashboard') }}" @class(['nav-link', 'active' => $is('dashboard')])><span><i class="fas fa-gauge-high fa-fw"></i> Dashboard</span></a>
 
         <x-nav-group id="projects" icon="fa-diagram-project" label="Projects" :open="$is('projects.*')">
@@ -25,7 +23,7 @@
 
         <x-nav-group id="materials" icon="fa-truck-ramp-box" label="Materials" :open="$is('requests.*', 'approvals.*', 'issues.*')" :count="$approvalCount + $issueQueueCount">
             @can('create-request')
-                <a href="{{ route('requests.create') }}" @class(['nav-link', 'active' => $is('requests.create')])><span><i class="fas fa-file-circle-plus fa-fw"></i> New request</span></a>
+                <a data-modal href="{{ route('requests.create') }}" @class(['nav-link', 'active' => $is('requests.create')])><span><i class="fas fa-file-circle-plus fa-fw"></i> New request</span></a>
             @endcan
             <a href="{{ route('requests.index') }}" @class(['nav-link', 'active' => $is('requests.index', 'requests.show', 'requests.edit')])><span><i class="fas fa-list-check fa-fw"></i> Requests</span></a>
             @can('approve-any')
@@ -92,13 +90,13 @@
     <div class="nav-backdrop" data-nav-close></div>
     <div class="main">
         <header class="topbar">
-            <button class="btn secondary small menu-toggle" type="button" data-nav-toggle aria-label="Open menu"><i class="fas fa-bars"></i> Menu</button>
-            <span class="who"><i class="fas fa-circle-user"></i> {{ $u->name }} · {{ $u->role->label() }}</span>
-            <span class="actions">
+            <button class="btn secondary small menu-toggle" type="button" data-nav-toggle aria-label="Open menu"><i class="fas fa-bars"></i></button>
+            <span class="who" title="{{ $u->name }} · {{ $u->role->label() }}"><i class="fas fa-circle-user"></i> <span class="who-name">{{ $u->name }}</span><span class="who-role"> · {{ $u->role->label() }}</span></span>
+            <span class="topbar-actions">
                 @php($unread = $u->unreadNotifications()->count())
-                <a href="{{ route('notifications.index') }}" class="btn secondary small" aria-label="Notifications, {{ $unread }} unread"><i class="fas fa-bell"></i>@if($unread) <span class="count">{{ $unread }}</span>@endif</a>
-                <a href="{{ route('password.change') }}" class="btn secondary small"><i class="fas fa-key"></i> Password</a>
-                <form method="POST" action="{{ route('logout') }}" class="inline-form">@csrf<button class="btn secondary small"><i class="fas fa-right-from-bracket"></i> Sign out</button></form>
+                <a href="{{ route('notifications.index') }}" class="btn secondary small" title="Notifications" aria-label="Notifications, {{ $unread }} unread"><i class="fas fa-bell"></i>@if($unread) <span class="count">{{ $unread }}</span>@endif</a>
+                <a href="{{ route('password.change') }}" class="btn secondary small" title="Change password" aria-label="Change password"><i class="fas fa-key"></i><span class="btn-text"> Password</span></a>
+                <form method="POST" action="{{ route('logout') }}" class="inline-form">@csrf<button class="btn secondary small" title="Sign out" aria-label="Sign out"><i class="fas fa-right-from-bracket"></i><span class="btn-text"> Sign out</span></button></form>
             </span>
         </header>
         <main class="content">

@@ -2,6 +2,11 @@
 @section('title', 'Returns to store')
 @section('content')
 <div class="page-head"><div><h1>Returns to store</h1><p>Unused material brought back from site. Recorded against the original voucher; the project is credited at the issue cost.</p></div></div>
+<x-stats :cards="[
+    ['Returns', $stats['total'], 'fa-rotate-left', 'navy'],
+    ['This month', $stats['month'], 'fa-calendar-day'],
+    ['Value returned (UGX)', ugx($stats['value']), 'fa-sack-dollar', 'gold'],
+]" />
 <div class="card table-wrap"><table>
     <thead><tr><th>Return</th><th>Date</th><th>Voucher</th><th>Project</th><th>Store</th><th>Returned by</th><th class="num">Value (UGX)</th><th>Received by</th></tr></thead>
     <tbody>@forelse($returns as $r)

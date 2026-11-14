@@ -3,7 +3,7 @@
 @section('content')
 <div class="page-head"><div><h1>{{ $project->code }} · {{ $project->name }}</h1><p>{{ $project->client }} @if($project->location) · {{ $project->location }} @endif</p></div>
     <div class="actions">
-        @can('create-request')<a class="btn" href="{{ route('requests.create', ['project_id' => $project->id]) }}"><i class="fas fa-plus"></i> Request materials</a>@endcan
+        @can('create-request')<a class="btn" data-modal href="{{ route('requests.create', ['project_id' => $project->id]) }}"><i class="fas fa-plus"></i> Request materials</a>@endcan
         @can('view-project-finance', $project)<a class="btn secondary" href="{{ route('projects.controls', $project) }}">Budget, BOQ &amp; milestones</a>@endcan
         @can('manage-projects')<a class="btn secondary" data-modal href="{{ route('projects.edit', $project) }}"><i class="fas fa-pen"></i> Edit</a>@endcan
     </div></div>

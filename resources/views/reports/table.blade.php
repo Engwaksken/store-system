@@ -2,7 +2,7 @@
 @section('title', $title)
 @section('content')
 <div class="page-head"><div><h1>{{ $title }}</h1><p class="print-only">{{ $companyName }} · printed {{ now()->format('d M Y H:i') }} by {{ auth()->user()->name }}</p></div>
-    <div class="actions"><button class="btn secondary" onclick="window.print()">Print</button><a class="btn secondary" href="{{ request()->fullUrlWithQuery(['format' => 'xlsx']) }}">Excel</a><a class="btn secondary" href="{{ request()->fullUrlWithQuery(['format' => 'pdf']) }}">PDF</a><a class="btn secondary" href="{{ request()->fullUrlWithQuery(['format' => 'csv']) }}">CSV</a><a class="btn secondary" href="{{ route('reports.index') }}">All reports</a></div></div>
+    <div class="actions"><button type="button" class="btn secondary" data-print><i class="fas fa-print"></i> Print</button><a class="btn secondary" href="{{ request()->fullUrlWithQuery(['format' => 'xlsx']) }}">Excel</a><a class="btn secondary" href="{{ request()->fullUrlWithQuery(['format' => 'pdf']) }}">PDF</a><a class="btn secondary" href="{{ request()->fullUrlWithQuery(['format' => 'csv']) }}">CSV</a><a class="btn secondary" href="{{ route('reports.index') }}">All reports</a></div></div>
 @if($filters)@include('partials.filters', ['fields' => $filters])@endif
 @if($note)<div class="alert warn">{{ $note }}</div>@endif
 <div class="card table-wrap"><table>

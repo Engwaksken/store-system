@@ -7,9 +7,9 @@
     <div class="actions">
         @can('update', $store)<a class="btn secondary" data-modal href="{{ route('stores.edit', $store) }}"><i class="fas fa-pen"></i> Edit</a>@endcan
         @if($canOperate)
-            <a class="btn secondary" href="{{ route('receipts.create', ['store_id' => $store->id]) }}">Receive stock</a>
-            <a class="btn secondary" href="{{ route('transfers.create', ['from_store_id' => $store->id]) }}">Transfer out</a>
-            <a class="btn secondary" href="{{ route('adjustments.create', ['store_id' => $store->id]) }}">Adjustment</a>
+            <a class="btn secondary" data-modal href="{{ route('receipts.create', ['store_id' => $store->id]) }}">Receive stock</a>
+            <a class="btn secondary" data-modal href="{{ route('transfers.create', ['from_store_id' => $store->id]) }}">Transfer out</a>
+            <a class="btn secondary" data-modal href="{{ route('adjustments.create', ['store_id' => $store->id]) }}">Adjustment</a>
         @endif
     </div></div>
 <div class="grid grid-3" style="margin-bottom:1.25rem">

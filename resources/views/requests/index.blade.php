@@ -1,7 +1,13 @@
 @extends('layouts.app')
 @section('title', 'Material requests')
 @section('content')
-<div class="page-head"><h1>Material requests</h1>@can('create-request')<a class="btn" href="{{ route('requests.create') }}"><i class="fas fa-plus"></i> New request</a>@endcan</div>
+<div class="page-head"><h1>Material requests</h1>@can('create-request')<a class="btn" data-modal href="{{ route('requests.create') }}"><i class="fas fa-plus"></i> New request</a>@endcan</div>
+<x-stats :cards="[
+    ['Requests', number_format($stats['total']), 'fa-list-check', 'navy'],
+    ['Awaiting approval', $stats['pending'], 'fa-hourglass-half', 'gold'],
+    ['Ready to issue', $stats['ready'], 'fa-dolly'],
+    ['Fully issued', $stats['done'], 'fa-circle-check'],
+]" />
 <form method="GET" class="card filters"><div class="grid grid-3">
     <div><label>Project</label><select name="project_id"><option value="">All</option>@foreach($projects as $p)<option value="{{ $p->id }}" @selected(request('project_id') == $p->id)>{{ $p->code }} - {{ $p->name }}</option>@endforeach</select></div>
     <div><label>Status</label><select name="status"><option value="">All</option>@foreach(\App\Enums\RequestStatus::cases() as $s)<option value="{{ $s->value }}" @selected(request('status') === $s->value)>{{ $s->label() }}</option>@endforeach</select></div>

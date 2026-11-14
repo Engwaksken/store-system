@@ -19,7 +19,14 @@ class StoreController extends Controller
         $stores = Store::with('project', 'users')->withCount(['balances as stocked_items' => fn ($q) => $q->where('on_hand', '>', 0)])
             ->orderBy('id')->paginate(25);
 
-        return view('stores.index', ['stores' => $stores, 'mine' => Store::operableBy($request->user())->pluck('id')]);
+        $mine = Store::operableBy($request->user())->pluck('id');
+
+        return view('stores.index', ['stores' => $stores, 'mine' => $mine, 'stats' => [
+            'total' => Store::count(),
+            'active' => Store::where('is_active', true)->count(),
+            'site' => Store::where('type', 'site')->count(),
+            'mine' => $mine->count(),
+        ]]);
     }
 
     public function create()

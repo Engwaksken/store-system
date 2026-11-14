@@ -11,7 +11,7 @@
             <form method="POST" action="{{ route('prs.cancel', $pr) }}" class="inline-form">@csrf<button class="btn secondary">Cancel</button></form>
         @endif
         @if($pr->status === 'approved')
-            @can('buy')<a class="btn gold" href="{{ route('pos.create', ['pr' => $pr->id]) }}">Raise purchase order</a>@endcan
+            @can('buy')<a class="btn gold" data-modal href="{{ route('pos.create', ['pr' => $pr->id]) }}">Raise purchase order</a>@endcan
         @endif
     </div></div>
 <div class="card"><dl class="meta">

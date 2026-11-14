@@ -2,6 +2,11 @@
 @section('title', 'Categories & units')
 @section('content')
 <div class="page-head"><h1>Categories &amp; units</h1></div>
+<x-stats :cards="[
+    ['Categories', $categories->count(), 'fa-tags', 'navy'],
+    ['Units of measure', $units->count(), 'fa-ruler-combined'],
+    ['Items catalogued', $categories->sum('items_count'), 'fa-boxes-stacked', 'gold'],
+]" />
 <div class="grid grid-2">
     <div class="card">
         <div class="page-head" style="margin-bottom:.75rem"><h2 style="margin:0"><i class="fas fa-tags"></i> Item categories</h2>

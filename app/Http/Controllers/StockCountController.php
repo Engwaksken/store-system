@@ -14,7 +14,12 @@ class StockCountController extends Controller
     {
         Gate::authorize('view-counts');
 
-        return view('counts.index', ['counts' => StockCount::with('store', 'counter', 'decider')->withCount('lines')->latest('id')->paginate(25)]);
+        $byStatus = StockCount::query()->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
+
+        return view('counts.index', [
+            'counts' => StockCount::with('store', 'counter', 'decider')->withCount('lines')->latest('id')->paginate(25),
+            'stats' => ['total' => (int) $byStatus->sum(), 'draft' => (int) ($byStatus['draft'] ?? 0), 'submitted' => (int) ($byStatus['submitted'] ?? 0), 'approved' => (int) ($byStatus['approved'] ?? 0)],
+        ]);
     }
 
     public function create(Request $request)

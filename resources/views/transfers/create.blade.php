@@ -3,7 +3,7 @@
 @section('content')
 <div class="page-head"><div><h1>Dispatch stock transfer</h1><p>Quantities leave the source store now and show as in transit until the destination confirms receipt.</p></div></div>
 <form method="GET" class="card filters"><div class="grid grid-4">
-    <div><label for="from_pick">Source store (shows its balances)</label><select id="from_pick" name="from_store_id" onchange="this.form.submit()">
+    <div><label for="from_pick">Source store (shows its balances)</label><select id="from_pick" name="from_store_id" data-autosubmit>
         @foreach($fromStores as $s)<option value="{{ $s->id }}" @selected($fromId === $s->id)>{{ $s->label() }}</option>@endforeach</select></div>
 </div></form>
 <form method="POST" action="{{ route('transfers.store') }}" class="card">
@@ -24,5 +24,4 @@
     <p><button type="button" class="btn secondary small" data-add-line="#lines"><i class="fas fa-plus"></i> Add line</button></p>
     <button class="btn">Dispatch transfer</button>
 </form>
-@include('partials.add-line')
 @endsection

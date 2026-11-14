@@ -3,7 +3,7 @@
 @section('content')
 <div class="page-head"><div><h1>Issue materials · {{ $req->request_no }}</h1><p>{{ $req->project->code }} · requested by {{ $req->requester->name }}. You can issue up to the outstanding approved quantity, limited by stock on hand.</p></div></div>
 <form method="GET" class="card filters"><div class="grid grid-4"><div><label for="store_pick">Issue from store</label>
-    <select id="store_pick" name="store_id" onchange="this.form.submit()">@foreach($stores as $s)<option value="{{ $s->id }}" @selected($storeId === $s->id)>{{ $s->label() }}</option>@endforeach</select></div></div></form>
+    <select id="store_pick" name="store_id" data-autosubmit>@foreach($stores as $s)<option value="{{ $s->id }}" @selected($storeId === $s->id)>{{ $s->label() }}</option>@endforeach</select></div></div></form>
 <form method="POST" action="{{ route('issues.store', $req) }}" class="card">
     @csrf @include('partials.idem') <input type="hidden" name="store_id" value="{{ $storeId }}">
     <div class="table-wrap"><table>

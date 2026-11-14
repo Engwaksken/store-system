@@ -17,7 +17,13 @@ class SupplierController extends Controller
             ->when($request->filled('q'), fn ($q) => $q->where(fn ($w) => $w->where('name', 'like', "%{$request->q}%")->orWhere('code', 'like', "%{$request->q}%")))
             ->orderBy('name')->paginate(25)->withQueryString();
 
-        return view('suppliers.index', compact('suppliers'));
+        $stats = [
+            'total' => Supplier::count(),
+            'active' => Supplier::where('is_active', true)->count(),
+            'with_pos' => Supplier::has('purchaseOrders')->count(),
+        ];
+
+        return view('suppliers.index', compact('suppliers', 'stats'));
     }
 
     public function create()

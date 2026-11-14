@@ -3,6 +3,12 @@
 @section('content')
 <div class="page-head"><div><h1>Cost codes</h1><p>Company-wide codes for project budgets, BOQ lines, purchase orders and expenses.</p></div>
     @can('manage-cost-codes')<div class="actions"><button type="button" class="btn" data-modal-target="#cc-create"><i class="fas fa-plus"></i> Add cost code</button></div>@endcan</div>
+<x-stats :cards="[
+    ['Cost codes', $codes->count(), 'fa-hashtag', 'navy'],
+    ['Active', $codes->where('is_active', true)->count(), 'fa-circle-check'],
+    ['Inactive', $codes->where('is_active', false)->count(), 'fa-circle-pause', 'gold'],
+    ['Categories used', $codes->pluck('category')->unique()->count(), 'fa-layer-group'],
+]" />
 <div class="card table-wrap"><table>
     <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Status</th>@can('manage-cost-codes')<th></th>@endcan</tr></thead>
     <tbody>@forelse($codes as $c)

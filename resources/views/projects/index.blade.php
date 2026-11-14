@@ -3,6 +3,12 @@
 @section('content')
 <div class="page-head"><div><h1>Projects</h1><p>Only projects you are allowed to see are listed.</p></div>
     @can('manage-projects')<a class="btn" data-modal href="{{ route('projects.create') }}"><i class="fas fa-plus"></i> New project</a>@endcan</div>
+<x-stats :cards="[
+    ['Projects', $stats['total'], 'fa-diagram-project', 'navy'],
+    ['Active', $stats['active'], 'fa-person-digging', '', route('projects.index', ['status' => 'active'])],
+    ['On hold', $stats['on_hold'], 'fa-circle-pause', 'gold', route('projects.index', ['status' => 'on_hold'])],
+    ['Completed', $stats['completed'], 'fa-flag-checkered', '', route('projects.index', ['status' => 'completed'])],
+]" />
 <form method="GET" class="card filters"><div class="grid grid-3">
     <div><label>Search</label><input type="text" name="q" value="{{ request('q') }}" placeholder="Code or name"></div>
     <div><label>Status</label><select name="status"><option value="">All</option>@foreach(\App\Models\Project::STATUSES as $s)<option @selected(request('status') === $s)>{{ $s }}</option>@endforeach</select></div>

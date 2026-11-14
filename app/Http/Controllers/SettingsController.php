@@ -7,10 +7,11 @@ use App\Models\AppSetting;
 use App\Models\ExpenseCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends Controller
 {
-    public const KEYS = ['company_name', 'company_address', 'company_phone', 'company_email', 'voucher_footer', 'po_owner_threshold'];
+    public const KEYS = ['company_name', 'app_subtitle', 'company_address', 'company_phone', 'company_email', 'voucher_footer', 'po_owner_threshold'];
 
     public function edit()
     {
@@ -27,23 +28,42 @@ class SettingsController extends Controller
         Gate::authorize('manage-settings');
         $data = $request->validate([
             'company_name' => 'required|string|max:150',
+            'app_subtitle' => 'nullable|string|max:60',
             'company_address' => 'nullable|string|max:300',
             'company_phone' => 'nullable|string|max:50',
             'company_email' => 'nullable|email|max:150',
             'voucher_footer' => 'nullable|string|max:300',
             'po_owner_threshold' => 'nullable|numeric|min:0',
             'logo' => 'nullable|image|mimes:png,jpg,jpeg|max:1024',
+            'favicon' => 'nullable|file|mimes:png,ico|max:256',
+            'remove_logo' => 'nullable|boolean',
+            'remove_favicon' => 'nullable|boolean',
         ]);
         foreach (self::KEYS as $k) {
             AppSetting::put($k, $data[$k] ?? null);
         }
-        if ($request->hasFile('logo')) {
-            $path = $request->file('logo')->storeAs('branding', 'logo.'.$request->file('logo')->extension(), 'public');
-            AppSetting::put('logo_path', $path);
+        foreach (['logo', 'favicon'] as $asset) {
+            if ($request->hasFile($asset)) {
+                // A new file name on every upload, so browsers do not keep showing the old cached image.
+                $path = $request->file($asset)->storeAs('branding', $asset.'-'.now()->format('YmdHis').'.'.$request->file($asset)->extension(), 'public');
+                $this->removeAsset($asset.'_path');
+                AppSetting::put($asset.'_path', $path);
+            } elseif ($request->boolean('remove_'.$asset)) {
+                $this->removeAsset($asset.'_path');
+                AppSetting::put($asset.'_path', null);
+            }
         }
         ActivityLog::record('settings.updated', 'Company settings updated');
 
         return back()->with('status', 'Settings saved.');
+    }
+
+    private function removeAsset(string $key): void
+    {
+        $old = AppSetting::get($key);
+        if ($old && str_starts_with($old, 'branding/')) {
+            Storage::disk('public')->delete($old);
+        }
     }
 
     public function storeExpenseCategory(Request $request)

@@ -23,7 +23,10 @@ class ProjectController extends Controller
             ->when($request->filled('q'), fn ($q) => $q->where(fn ($w) => $w->where('name', 'like', "%{$request->q}%")->orWhere('code', 'like', "%{$request->q}%")))
             ->orderBy('code')->paginate(25)->withQueryString();
 
-        return view('projects.index', compact('projects'));
+        $counts = Project::visibleTo($request->user())->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
+        $stats = ['total' => (int) $counts->sum(), 'active' => (int) ($counts['active'] ?? 0), 'on_hold' => (int) ($counts['on_hold'] ?? 0), 'completed' => (int) ($counts['completed'] ?? 0)];
+
+        return view('projects.index', compact('projects', 'stats'));
     }
 
     public function create()

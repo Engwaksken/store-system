@@ -3,6 +3,12 @@
 @section('content')
 <div class="page-head"><div><h1>Project expenses</h1><p>Cash paid directly for projects. Store stock purchases are recorded as stock receipts instead.</p></div>
     @can('record-expense')<a class="btn" data-modal href="{{ route('expenses.create') }}"><i class="fas fa-plus"></i> Record expense</a>@endcan</div>
+<x-stats :cards="[
+    ['Expenses (filtered)', number_format($stats['count']), 'fa-receipt', 'navy'],
+    ['Total (filtered, UGX)', ugx($total), 'fa-money-bill-wave'],
+    ['This month (UGX)', ugx($stats['month']), 'fa-calendar-day', 'gold'],
+    ['Without proof', $stats['no_proof'], 'fa-paperclip', $stats['no_proof'] ? 'bad' : ''],
+]" />
 <form method="GET" class="card filters"><div class="grid grid-4">
     <div><label>Project</label><select name="project_id"><option value="">All</option>@foreach($projects as $p)<option value="{{ $p->id }}" @selected(request('project_id') == $p->id)>{{ $p->code }}</option>@endforeach</select></div>
     <div><label>Category</label><select name="category_id"><option value="">All</option>@foreach($categories as $c)<option value="{{ $c->id }}" @selected(request('category_id') == $c->id)>{{ $c->name }}</option>@endforeach</select></div>

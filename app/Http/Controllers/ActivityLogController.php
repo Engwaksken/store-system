@@ -34,7 +34,8 @@ class ActivityLogController extends Controller
                 fwrite($out, "ï»¿");
                 fputcsv($out, $headers);
                 foreach ($rows as $r) {
-                    fputcsv($out, array_map(fn ($v) => is_string($v) && preg_match('/^[=+\-@	]/', $v) ? "'".$v : $v, $r));
+                    fputcsv($out, array_map(fn ($v) => is_string($v) && preg_match('/^[=+\-@	
+]/', $v) ? "'".$v : $v, $r));
                 }
                 fclose($out);
             }, $name.'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
@@ -42,6 +43,13 @@ class ActivityLogController extends Controller
 
         $logs = $query->latest('id')->paginate(50)->withQueryString();
 
-        return view('activity', compact('logs'));
+        $stats = [
+            'total' => ActivityLog::count(),
+            'today' => ActivityLog::where('created_at', '>=', now()->startOfDay())->count(),
+            'week' => ActivityLog::where('created_at', '>=', now()->subDays(7))->count(),
+            'users' => ActivityLog::where('created_at', '>=', now()->subDays(7))->distinct()->count('user_id'),
+        ];
+
+        return view('activity', compact('logs', 'stats'));
     }
 }

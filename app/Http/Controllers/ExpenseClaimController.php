@@ -18,11 +18,18 @@ class ExpenseClaimController extends Controller
 {
     public function index(Request $request)
     {
+        $counts = ExpenseClaim::visibleTo($request->user())->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
+        $stats = [
+            'submitted' => (int) ($counts['submitted'] ?? 0),
+            'approved' => (int) ($counts['approved'] ?? 0),
+            'paid' => (int) ($counts['paid'] ?? 0),
+            'unpaid_value' => ExpenseClaim::visibleTo($request->user())->where('status', 'approved')->sum('amount'),
+        ];
         $claims = ExpenseClaim::visibleTo($request->user())->with('project', 'claimant', 'category')
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->latest('id')->paginate(25)->withQueryString();
 
-        return view('claims.index', compact('claims'));
+        return view('claims.index', compact('claims', 'stats'));
     }
 
     public function create(Request $request)

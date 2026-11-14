@@ -21,7 +21,15 @@ class PurchaseInvoiceController extends Controller
             ->when($request->filled('match_status'), fn ($q) => $q->where('match_status', $request->match_status))
             ->latest('id')->paginate(25)->withQueryString();
 
-        return view('invoices.index', compact('invoices'));
+        $open = PurchaseInvoice::where('payment_status', '!=', 'paid');
+        $stats = [
+            'total' => PurchaseInvoice::count(),
+            'unpaid' => (clone $open)->count(),
+            'overdue' => (clone $open)->whereDate('due_date', '<', now())->count(),
+            'balance' => (clone $open)->sum(\Illuminate\Support\Facades\DB::raw('total - amount_paid')),
+        ];
+
+        return view('invoices.index', compact('invoices', 'stats'));
     }
 
     public function create(PurchaseOrder $po)

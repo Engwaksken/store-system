@@ -9,7 +9,16 @@ class NotificationController extends Controller
 {
     public function index(Request $request)
     {
-        return view('notifications.index', ['notifications' => $request->user()->notifications()->paginate(30)]);
+        $user = $request->user();
+
+        return view('notifications.index', [
+            'notifications' => $user->notifications()->paginate(30),
+            'stats' => [
+                'total' => $user->notifications()->count(),
+                'unread' => $user->unreadNotifications()->count(),
+                'week' => $user->notifications()->where('created_at', '>=', now()->subDays(7))->count(),
+            ],
+        ]);
     }
 
     /** Mark as read and go to the document the alert is about (only same-site URLs are followed). */

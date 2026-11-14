@@ -34,5 +34,4 @@
     <div class="field"><label for="notes">Notes</label><input id="notes" type="text" name="notes" value="{{ old('notes') }}"></div>
     <button class="btn">Raise PO &amp; send for approval</button>
 </form>
-@include('partials.add-line')
 @endsection

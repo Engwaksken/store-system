@@ -9,7 +9,7 @@
     <div class="actions">
         @include('partials.status', ['status' => $req->status])
         @can('edit-request', $req)
-            <a class="btn secondary" href="{{ route('requests.edit', $req) }}">Edit</a>
+            <a class="btn secondary" data-modal href="{{ route('requests.edit', $req) }}">Edit</a>
             <form method="POST" action="{{ route('requests.submit', $req) }}" class="inline-form">@csrf<button class="btn">Submit</button></form>
         @endcan
         @if(auth()->id() === $req->requester_id && $req->status->isRejected())
@@ -18,7 +18,7 @@
         @if((auth()->id() === $req->requester_id || auth()->user()->isAdmin()) && in_array($req->status, [\App\Enums\RequestStatus::Draft, \App\Enums\RequestStatus::Submitted]))
             <form method="POST" action="{{ route('requests.cancel', $req) }}" class="inline-form">@csrf<button class="btn secondary">Cancel request</button></form>
         @endif
-        @can('issue-request', $req)<a class="btn" href="{{ route('issues.create', $req) }}">Issue materials</a>@endcan
+        @can('issue-request', $req)<a class="btn" data-modal href="{{ route('issues.create', $req) }}">Issue materials</a>@endcan
     </div>
 </div>
 

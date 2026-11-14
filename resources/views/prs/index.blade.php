@@ -2,7 +2,13 @@
 @section('title', 'Purchase requisitions')
 @section('content')
 <div class="page-head"><div><h1>Purchase requisitions</h1><p>Requests to buy. Approved by the Owner/Admin or Overall Manager, then quoted and ordered by Procurement.</p></div>
-    @can('create-pr')<div class="actions"><a class="btn" href="{{ route('prs.create') }}"><i class="fas fa-plus"></i> New requisition</a></div>@endcan</div>
+    @can('create-pr')<div class="actions"><a class="btn" data-modal href="{{ route('prs.create') }}"><i class="fas fa-plus"></i> New requisition</a></div>@endcan</div>
+<x-stats :cards="[
+    ['Requisitions', $stats['total'], 'fa-file-signature', 'navy'],
+    ['Awaiting approval', $stats['submitted'], 'fa-hourglass-half', 'gold', route('prs.index', ['status' => 'submitted'])],
+    ['Approved', $stats['approved'], 'fa-file-circle-check', '', route('prs.index', ['status' => 'approved'])],
+    ['Ordered', $stats['ordered'], 'fa-cart-shopping', '', route('prs.index', ['status' => 'ordered'])],
+]" />
 <form method="GET" class="card filters"><div class="grid grid-4">
     <div><label for="status">Status</label><select id="status" name="status"><option value="">All</option>@foreach(\App\Models\PurchaseRequisition::STATUSES as $k => $v)<option value="{{ $k }}" @selected(request('status') === $k)>{{ $v }}</option>@endforeach</select></div>
     <div><label>&nbsp;</label><button class="btn small">Filter</button></div>

@@ -2,7 +2,7 @@
 @section('title', $issue->issue_no)
 @section('content')
 <div class="page-head no-print"><div><h1>Issue voucher {{ $issue->issue_no }}</h1></div>
-    <div class="actions"><button class="btn secondary" onclick="window.print()">Print voucher</button><a class="btn secondary" href="{{ route('issues.pdf', $issue) }}">PDF</a>@can('record-return', $issue)<a class="btn secondary" href="{{ route('returns.create', $issue) }}">Return to store</a>@endcan<a class="btn secondary" href="{{ route('requests.show', $issue->request) }}">Open request</a></div></div>
+    <div class="actions"><button type="button" class="btn secondary" data-print><i class="fas fa-print"></i> Print voucher</button><a class="btn secondary" href="{{ route('issues.pdf', $issue) }}">PDF</a>@can('record-return', $issue)<a class="btn secondary" data-modal href="{{ route('returns.create', $issue) }}">Return to store</a>@endcan<a class="btn secondary" href="{{ route('requests.show', $issue->request) }}">Open request</a></div></div>
 
 <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">

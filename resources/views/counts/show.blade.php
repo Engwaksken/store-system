@@ -4,7 +4,7 @@
 @php($editable = Gate::allows('edit-count', $count))
 <div class="page-head"><div><h1>Stock count {{ $count->count_no }} <span class="badge {{ $count->tone() }}">{{ $count->statusLabel() }}</span></h1>
     <p>{{ $count->store->label() }} · opened {{ $count->created_at->format('d M Y H:i') }} by {{ $count->counter->name }}@if($count->notes) · {{ $count->notes }}@endif</p></div>
-    <button class="btn secondary no-print" onclick="window.print()">Print count sheet</button></div>
+    <button type="button" class="btn secondary no-print" data-print><i class="fas fa-print"></i> Print count sheet</button></div>
 
 @if($count->decided_at)
     <div class="alert {{ $count->status === 'approved' ? 'ok' : 'bad' }}">{{ $count->statusLabel() }} by {{ $count->decider->name }} on {{ $count->decided_at->format('d M Y H:i') }}@if($count->decision_reason): {{ $count->decision_reason }}@endif

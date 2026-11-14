@@ -23,5 +23,4 @@
     <p><button type="button" class="btn secondary small" data-add-line="#lines"><i class="fas fa-plus"></i> Add line</button></p>
     <div class="actions"><button class="btn secondary" name="action" value="draft">Save draft</button><button class="btn" name="action" value="submit">Submit for approval</button></div>
 </form>
-@include('partials.add-line')
 @endsection

@@ -26,7 +26,16 @@ class IssueController extends Controller
             ? MaterialRequest::with('project', 'requester')->whereIn('status', [RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value])->oldest('submitted_at')->get()
             : collect();
 
-        return view('issues.index', compact('issues', 'queue'));
+        $visible = MaterialIssue::query()->when(! $user->hasRole(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant, Role::Auditor),
+            fn ($q) => $q->whereHas('request', fn ($r) => $r->visibleTo($user)));
+        $stats = [
+            'total' => (clone $visible)->count(),
+            'month' => (clone $visible)->where('issued_at', '>=', now()->startOfMonth())->count(),
+            'month_value' => (clone $visible)->where('issued_at', '>=', now()->startOfMonth())->sum('total_value'),
+            'unacknowledged' => (clone $visible)->whereDoesntHave('acknowledgment')->count(),
+        ];
+
+        return view('issues.index', compact('issues', 'queue', 'stats'));
     }
 
     public function create(Request $request, MaterialRequest $materialRequest)

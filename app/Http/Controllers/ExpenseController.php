@@ -26,6 +26,11 @@ class ExpenseController extends Controller
         return view('expenses.index', [
             'expenses' => (clone $base)->with('project', 'category', 'recorder')->latest('incurred_on')->latest('id')->paginate(25)->withQueryString(),
             'total' => (clone $base)->sum('amount'),
+            'stats' => [
+                'count' => (clone $base)->count(),
+                'month' => Expense::visibleTo($request->user())->where('incurred_on', '>=', now()->startOfMonth()->toDateString())->sum('amount'),
+                'no_proof' => (clone $base)->whereNull('receipt_path')->count(),
+            ],
             'projects' => Project::visibleTo($request->user())->orderBy('code')->get(),
             'categories' => ExpenseCategory::orderBy('name')->get(),
         ]);

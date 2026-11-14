@@ -21,7 +21,10 @@ class PurchaseRequisitionController extends Controller
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->latest('id')->paginate(25)->withQueryString();
 
-        return view('prs.index', compact('prs'));
+        $counts = PurchaseRequisition::visibleTo($request->user())->toBase()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
+        $stats = ['total' => (int) $counts->sum(), 'submitted' => (int) ($counts['submitted'] ?? 0), 'approved' => (int) ($counts['approved'] ?? 0), 'ordered' => (int) ($counts['ordered'] ?? 0)];
+
+        return view('prs.index', compact('prs', 'stats'));
     }
 
     public function create(Request $request)

@@ -45,8 +45,11 @@ class AppServiceProvider extends ServiceProvider
         Route::model('claim', ExpenseClaim::class);
         Route::model('boq', \App\Models\BoqItem::class);
 
-        View::composer(['layouts.app', 'layouts.guest', 'issues.show', 'reports.table', 'pos.show'], function ($view) {
+        View::composer(['layouts.app', 'layouts.guest', 'settings', 'issues.show', 'reports.table', 'pos.show'], function ($view) {
             $view->with('companyName', rescue(fn () => AppSetting::get('company_name'), null, false) ?: config('app.name'));
+            $view->with('appSubtitle', rescue(fn () => AppSetting::get('app_subtitle'), null, false) ?: 'Store & Projects');
+            $view->with('logoPath', rescue(fn () => AppSetting::get('logo_path'), null, false));
+            $view->with('faviconPath', rescue(fn () => AppSetting::get('favicon_path'), null, false));
         });
         View::composer('layouts.app', function ($view) {
             $user = auth()->user();

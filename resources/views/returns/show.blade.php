@@ -2,7 +2,7 @@
 @section('title', $return->return_no)
 @section('content')
 <div class="page-head"><div><h1>Return {{ $return->return_no }}</h1><p>{{ $return->returned_at->format('d M Y H:i') }} · into {{ $return->store->label() }}</p></div>
-    <button class="btn secondary no-print" onclick="window.print()">Print</button></div>
+    <button type="button" class="btn secondary no-print" data-print><i class="fas fa-print"></i> Print</button></div>
 <div class="card"><dl class="meta">
     <dt>Voucher</dt><dd><a href="{{ route('issues.show', $return->issue) }}">{{ $return->issue->issue_no }}</a></dd>
     <dt>Project</dt><dd>{{ $return->project->code }} · {{ $return->project->name }}</dd>

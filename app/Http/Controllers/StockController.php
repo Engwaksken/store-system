@@ -16,7 +16,17 @@ class StockController extends Controller
     {
         Gate::authorize('view-stock-ledger');
 
-        return view('receipts.index', ['receipts' => StockReceipt::with('receiver', 'store')->withCount('lines')->latest('id')->paginate(25)]);
+        $types = StockReceipt::toBase()->selectRaw('type, count(*) as n')->groupBy('type')->pluck('n', 'type');
+
+        return view('receipts.index', [
+            'receipts' => StockReceipt::with('receiver', 'store')->withCount('lines')->latest('id')->paginate(25),
+            'stats' => [
+                'total' => (int) $types->sum(),
+                'purchase' => (int) ($types['purchase'] ?? 0),
+                'opening' => (int) ($types['opening'] ?? 0),
+                'month_value' => StockReceipt::where('received_on', '>=', now()->startOfMonth()->toDateString())->sum('total_value'),
+            ],
+        ]);
     }
 
     public function create(Request $request)

@@ -2,6 +2,12 @@
 @section('title', 'Supplier invoices')
 @section('content')
 <div class="page-head"><div><h1>Supplier invoices</h1><p>Recorded against purchase orders and matched to goods received. Record invoices from a PO page.</p></div></div>
+<x-stats :cards="[
+    ['Invoices', $stats['total'], 'fa-file-invoice-dollar', 'navy'],
+    ['Unpaid', $stats['unpaid'], 'fa-hourglass-half', 'gold'],
+    ['Overdue', $stats['overdue'], 'fa-triangle-exclamation', $stats['overdue'] ? 'bad' : ''],
+    ['Outstanding (UGX)', ugx($stats['balance']), 'fa-scale-unbalanced'],
+]" />
 <form method="GET" class="card filters"><div class="grid grid-4">
     <div><label for="match_status">Match</label><select id="match_status" name="match_status"><option value="">All</option>@foreach(\App\Models\PurchaseInvoice::MATCH as $k => $v)<option value="{{ $k }}" @selected(request('match_status') === $k)>{{ $v }}</option>@endforeach</select></div>
     <div><label for="payment_status">Payment</label><select id="payment_status" name="payment_status"><option value="">All</option>@foreach(\App\Models\PurchaseInvoice::PAYMENT as $k => $v)<option value="{{ $k }}" @selected(request('payment_status') === $k)>{{ $v }}</option>@endforeach</select></div>

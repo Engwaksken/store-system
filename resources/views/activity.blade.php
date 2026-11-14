@@ -3,6 +3,12 @@
 @section('content')
 <div class="page-head"><div><h1>Activity log</h1><p>Append-only and hash-chained: any edit or deletion is detected by the daily integrity check.</p></div>
     <div class="actions"><a class="btn secondary" href="{{ request()->fullUrlWithQuery(['format' => 'xlsx']) }}">Excel</a><a class="btn secondary" href="{{ request()->fullUrlWithQuery(['format' => 'csv']) }}">CSV</a></div></div>
+<x-stats :cards="[
+    ['Log entries', number_format($stats['total']), 'fa-clock-rotate-left', 'navy'],
+    ['Today', number_format($stats['today']), 'fa-calendar-day'],
+    ['Last 7 days', number_format($stats['week']), 'fa-calendar-week', 'gold'],
+    ['Active users (7 days)', $stats['users'], 'fa-users'],
+]" />
 <form method="GET" class="card filters"><div class="grid grid-4">
     <div><label for="action">Action starts with</label><input id="action" type="text" name="action" value="{{ request('action') }}" placeholder="e.g. po. or stock."></div>
     <div><label for="from">From</label><input id="from" type="date" name="from" value="{{ request('from') }}"></div>
