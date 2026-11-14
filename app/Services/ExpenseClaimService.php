@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Support\Decimal;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Expense claims: submitted → approved / rejected → paid.
@@ -22,6 +23,9 @@ use Illuminate\Support\Facades\DB;
  *            Overall Manager / Admin may also approve any claim. Never the claimant. Rejection needs a reason.
  *  pay     – Accountant / Admin records the payment: this creates exactly one Expense row
  *            (expenses.expense_claim_id is unique), so a claim can never be counted twice in project cost.
+ *  edit    – the claimant, while the claim is still awaiting approval. Approvers holding an older copy are refused.
+ *  delete  – the claimant or Owner/Admin, only while awaiting approval or after rejection. Approved and paid
+ *            claims are financial records and are never deleted. Every deletion is kept in the activity log.
  */
 class ExpenseClaimService
 {
@@ -46,6 +50,67 @@ class ExpenseClaimService
         return $claim;
     }
 
+    public function canEdit(User $user, ExpenseClaim $claim): bool
+    {
+        return $user->is_active && $claim->status === 'submitted' && $user->id === $claim->claimant_id;
+    }
+
+    public function canDelete(User $user, ExpenseClaim $claim): bool
+    {
+        return $user->is_active && in_array($claim->status, ['submitted', 'rejected'], true)
+            && ($user->id === $claim->claimant_id || $user->isAdmin());
+    }
+
+    /** The claimant changes a claim that is still awaiting approval. $data as for submit(); receipt_path only when replaced. */
+    public function update(User $user, ExpenseClaim $claim, array $data): ExpenseClaim
+    {
+        $project = Project::findOrFail($data['project_id']);
+        if (! ($user->hasRole(Role::Admin, Role::Accountant, Role::OverallManager) || $user->isAssignedTo($project))) {
+            throw new AuthorizationException('You can only claim against projects you are assigned to.');
+        }
+        $amount = Decimal::of($data['amount'], 2);
+        if (bccomp($amount, '0', 2) <= 0) {
+            throw new WorkflowException('Amount must be greater than zero.');
+        }
+
+        return DB::transaction(function () use ($user, $claim, $data, $project, $amount) {
+            $claim = ExpenseClaim::whereKey($claim->id)->lockForUpdate()->firstOrFail();
+            if (! $this->canEdit($user, $claim)) {
+                throw new WorkflowException("Claim {$claim->claim_no} can no longer be edited: it is {$claim->statusLabel()}.");
+            }
+            $before = $claim->only('project_id', 'category_id', 'cost_code_id', 'incurred_on', 'amount', 'description');
+            $oldReceipt = $claim->receipt_path;
+            $claim->fill([
+                'project_id' => $project->id, 'category_id' => $data['category_id'], 'cost_code_id' => $data['cost_code_id'] ?? null,
+                'incurred_on' => $data['incurred_on'], 'amount' => $amount, 'description' => $data['description'],
+            ] + (isset($data['receipt_path']) ? ['receipt_path' => $data['receipt_path']] : []))->save();
+            if (isset($data['receipt_path']) && $oldReceipt) {
+                DB::afterCommit(fn () => Storage::disk('local')->delete($oldReceipt));
+            }
+            ActivityLog::record('claim.updated', "Expense claim {$claim->claim_no} edited by the claimant", $claim, ['before' => $before]);
+            app(WorkflowNotifier::class)->claimSubmitted($claim);   // the approver sees the new figures
+
+            return $claim;
+        });
+    }
+
+    public function delete(User $user, ExpenseClaim $claim): void
+    {
+        DB::transaction(function () use ($user, $claim) {
+            $claim = ExpenseClaim::whereKey($claim->id)->lockForUpdate()->firstOrFail();
+            if (! $this->canDelete($user, $claim)) {
+                throw new WorkflowException("Claim {$claim->claim_no} cannot be deleted: it is {$claim->statusLabel()}.");
+            }
+            $snapshot = $claim->only('claim_no', 'project_id', 'claimant_id', 'incurred_on', 'amount', 'description', 'status');
+            $receipt = $claim->receipt_path;
+            ActivityLog::record('claim.deleted', "Expense claim {$claim->claim_no} ({$claim->statusLabel()}, ".ugx($claim->amount).' '.currency().") deleted by {$user->name}", null, $snapshot);
+            $claim->delete();
+            if ($receipt) {
+                DB::afterCommit(fn () => Storage::disk('local')->delete($receipt));
+            }
+        });
+    }
+
     public function canDecide(User $user, ExpenseClaim $claim): bool
     {
         if (! $user->is_active || $claim->status !== 'submitted' || $user->id === $claim->claimant_id) {
@@ -58,7 +123,8 @@ class ExpenseClaimService
         return $user->role === Role::ProjectManager && $claim->project->manager_id === $user->id;
     }
 
-    public function decide(User $user, ExpenseClaim $claim, string $decision, ?string $reason): ExpenseClaim
+    /** $seenAt: updated_at of the copy the approver looked at; a claim edited since then is refused. */
+    public function decide(User $user, ExpenseClaim $claim, string $decision, ?string $reason, ?string $seenAt = null): ExpenseClaim
     {
         if ($user->id === $claim->claimant_id) {
             throw new AuthorizationException('You cannot approve your own claim.');
@@ -73,10 +139,13 @@ class ExpenseClaimService
             throw new WorkflowException('A reason is required when rejecting.');
         }
 
-        return DB::transaction(function () use ($user, $claim, $decision, $reason) {
+        return DB::transaction(function () use ($user, $claim, $decision, $reason, $seenAt) {
             $claim = ExpenseClaim::whereKey($claim->id)->lockForUpdate()->firstOrFail();
             if ($claim->status !== 'submitted') {
                 throw new WorkflowException("Claim {$claim->claim_no} was already decided.");
+            }
+            if ($seenAt !== null && $claim->updated_at?->toIso8601String() !== $seenAt) {
+                throw new WorkflowException("The claimant changed claim {$claim->claim_no} after you opened it. Reload and review it again.");
             }
             $claim->forceFill(['status' => $decision, 'approver_id' => $user->id, 'decided_at' => now(), 'decision_reason' => $reason])->save();
             ActivityLog::record('claim.'.$decision, "Expense claim {$claim->claim_no} {$decision}", $claim, ['reason' => $reason]);

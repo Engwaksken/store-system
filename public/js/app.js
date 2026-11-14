@@ -678,6 +678,57 @@
         });
     }
 
+    /* ---------- Multiple selection + bulk actions ([data-bulk-scope]) ---------- */
+    function initBulk() {
+        var scope = document.querySelector('[data-bulk-scope]');
+        if (!scope) { return; }
+        var bar = scope.querySelector('[data-bulk-bar]');
+        var all = scope.querySelector('[data-check-all]');
+        var boxes = function () { return Array.prototype.slice.call(scope.querySelectorAll('[data-row-check]')); };
+        var selected = function () { return boxes().filter(function (b) { return b.checked; }).map(function (b) { return b.value; }); };
+
+        function refresh() {
+            var ids = selected();
+            if (bar) {
+                bar.hidden = ids.length === 0;
+                bar.querySelector('[data-bulk-count]').textContent = ids.length;
+            }
+            if (all) {
+                all.checked = ids.length > 0 && ids.length === boxes().length;
+                all.indeterminate = ids.length > 0 && ids.length < boxes().length;
+            }
+            boxes().forEach(function (b) { b.closest('tr').classList.toggle('row-selected', b.checked); });
+            scope.querySelectorAll('[data-bulk-export]').forEach(function (a) {
+                var url = new URL(a.href, window.location.href);
+                url.searchParams.delete('ids[]');
+                ids.forEach(function (id) { url.searchParams.append('ids[]', id); });
+                a.href = url.toString();
+            });
+        }
+
+        scope.addEventListener('change', function (e) {
+            if (e.target === all) { boxes().forEach(function (b) { b.checked = all.checked; }); }
+            if (e.target === all || e.target.matches('[data-row-check]')) { refresh(); }
+        });
+        scope.addEventListener('click', function (e) {
+            if (e.target.closest('[data-bulk-clear]')) { boxes().forEach(function (b) { b.checked = false; }); refresh(); }
+        });
+        // Any bulk form (the bar, or a reject / pay form opened in a modal) carries the ticked rows.
+        document.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (!form.matches('[data-bulk-form]')) { return; }
+            var ids = selected();
+            if (!ids.length) { e.preventDefault(); return; }
+            form.querySelectorAll('input[data-bulk-id]').forEach(function (i) { i.remove(); });
+            ids.forEach(function (id) {
+                var i = document.createElement('input');
+                i.type = 'hidden'; i.name = 'ids[]'; i.value = id; i.setAttribute('data-bulk-id', '');
+                form.appendChild(i);
+            });
+        }, true);
+        refresh();
+    }
+
     /* ---------- Print buttons ---------- */
     function initPrint() {
         document.addEventListener('click', function (e) {
@@ -695,6 +746,7 @@
         initLiveNotifications();
         initPush();
         initListFilters();
+        initBulk();
         initTabs(document);
         enhance(document);
         initModals();

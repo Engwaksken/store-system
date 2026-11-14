@@ -159,6 +159,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('submit-claim', fn (User $u) => $u->hasRole(Role::Admin, Role::Accountant, Role::OverallManager)
             || ($u->hasRole(Role::Staff, Role::ProjectManager) && Project::requestableBy($u)->exists()));
         Gate::define('view-claim', fn (User $u, ExpenseClaim $c) => ExpenseClaim::visibleTo($u)->whereKey($c->id)->exists());
+        Gate::define('edit-claim', fn (User $u, ExpenseClaim $c) => app(ExpenseClaimService::class)->canEdit($u, $c));
+        Gate::define('delete-claim', fn (User $u, ExpenseClaim $c) => app(ExpenseClaimService::class)->canDelete($u, $c));
         Gate::define('decide-claim', fn (User $u, ExpenseClaim $c) => app(ExpenseClaimService::class)->canDecide($u, $c));
         Gate::define('pay-claim', fn (User $u, ExpenseClaim $c) => $c->status === 'approved' && $u->hasRole(Role::Admin, Role::Accountant));
 

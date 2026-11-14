@@ -179,7 +179,11 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::get('claims', [ExpenseClaimController::class, 'index'])->name('claims.index');
     Route::get('claims/create', [ExpenseClaimController::class, 'create'])->name('claims.create');
     Route::post('claims', [ExpenseClaimController::class, 'store'])->name('claims.store');
+    Route::post('claims/bulk', [ExpenseClaimController::class, 'bulk'])->middleware('throttle:30,1')->name('claims.bulk');
     Route::get('claims/{claim}', [ExpenseClaimController::class, 'show'])->name('claims.show');
+    Route::get('claims/{claim}/edit', [ExpenseClaimController::class, 'edit'])->name('claims.edit');
+    Route::put('claims/{claim}', [ExpenseClaimController::class, 'update'])->name('claims.update');
+    Route::delete('claims/{claim}', [ExpenseClaimController::class, 'destroy'])->name('claims.destroy');
     Route::get('claims/{claim}/receipt', [ExpenseClaimController::class, 'receipt'])->name('claims.receipt');
     Route::post('claims/{claim}/decide', [ExpenseClaimController::class, 'decide'])->name('claims.decide');
     Route::post('claims/{claim}/pay', [ExpenseClaimController::class, 'pay'])->name('claims.pay');

@@ -3,7 +3,12 @@
 @section('content')
 <div class="page-head"><div><h1>Claim {{ $claim->claim_no }} <span class="badge {{ $claim->tone() }}">{{ $claim->statusLabel() }}</span></h1>
     <p>{{ $claim->project->code }} · {{ $claim->project->name }}</p></div>
-    @if($claim->receipt_path)<a class="btn secondary" href="{{ route('claims.receipt', $claim) }}">Download receipt</a>@endif</div>
+    <div class="actions">
+        @if($claim->receipt_path)<a class="btn secondary" href="{{ route('claims.receipt', $claim) }}"><i class="fas fa-paperclip"></i> Download receipt</a>@endif
+        @can('edit-claim', $claim)<a class="btn secondary" data-modal href="{{ route('claims.edit', $claim) }}"><i class="fas fa-pen"></i> Edit</a>@endcan
+        @can('delete-claim', $claim)<form method="POST" action="{{ route('claims.destroy', $claim) }}" class="inline-form">@csrf @method('DELETE')
+            <button class="btn danger" data-confirm="Delete claim {{ $claim->claim_no }}? This cannot be undone; it stays in the activity log." data-confirm-ok="Yes, delete"><i class="fas fa-trash-can"></i> Delete</button></form>@endcan
+    </div></div>
 <x-stats :cards="[
     ['Amount ('.currency().')', ugx($claim->amount), 'fa-money-bill-wave', 'navy'],
     ['Status', $claim->statusLabel(), 'fa-signal', $claim->status === 'rejected' ? 'bad' : ''],
@@ -12,6 +17,7 @@
 ]" />
 @can('decide-claim', $claim)
 <form method="POST" action="{{ route('claims.decide', $claim) }}" class="card" style="max-width:640px">@csrf
+    <input type="hidden" name="seen_at" value="{{ $claim->updated_at?->toIso8601String() }}">
     <h2>Approve or reject</h2>
     <div class="field"><label for="reason">Comment (required to reject)</label><input id="reason" type="text" name="reason"></div>
     <div class="actions"><button class="btn" name="decision" value="approved"><i class="fas fa-check"></i> Approve</button><button class="btn danger" name="decision" value="rejected" data-confirm="Reject this document? The person who raised it will be notified." data-confirm-ok="Yes, reject"><i class="fas fa-ban"></i> Reject</button></div>

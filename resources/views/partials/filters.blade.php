@@ -1,6 +1,6 @@
 {{-- expects: $fields (array of 'store','project','item','type','dates'), $stores, $projects, $items --}}
-<form method="GET" class="card filters list-filters">
-    <div class="filter-grid">
+<form method="GET" class="list-filters filters">
+    <div class="filter-row">
         @if(in_array('store', $fields))
             <div><label>Branch / store</label><select name="store_id"><option value="">All branches</option>
                 @foreach($stores as $s)<option value="{{ $s->id }}" @selected(request('store_id') == $s->id)>{{ $s->code }} - {{ $s->name }}</option>@endforeach
@@ -30,6 +30,9 @@
                 <div><label for="r_to">To</label><input id="r_to" type="date" name="to" value="{{ request('to') }}"></div>
             </div>
         @endif
+        <div class="filter-buttons">
+            <button class="btn small"><i class="fas fa-filter"></i> Apply</button>
+            <a class="btn secondary small" href="{{ url()->current() }}"><i class="fas fa-rotate-left"></i> Reset</a>
+        </div>
     </div>
-    <div class="actions" style="margin-top:.75rem"><button class="btn small">Apply</button><a class="btn secondary small" href="{{ url()->current() }}">Reset</a></div>
 </form>
