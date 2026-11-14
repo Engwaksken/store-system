@@ -70,9 +70,10 @@ class ExpenseClaimController extends Controller
     public function update(Request $request, ExpenseClaim $claim, ExpenseClaimService $service)
     {
         Gate::authorize('edit-claim', $claim);
+        $wasRejected = $claim->status === 'rejected';
         $claim = $service->update($request->user(), $claim, $this->validated($request));
 
-        return redirect()->route('claims.index')->with('status', "Claim {$claim->claim_no} updated. The approver has been told.");
+        return redirect()->route('claims.index')->with('status', "Claim {$claim->claim_no} ".($wasRejected ? 'corrected and resubmitted for approval.' : 'updated. The approver has been told.'));
     }
 
     public function destroy(Request $request, ExpenseClaim $claim, ExpenseClaimService $service)

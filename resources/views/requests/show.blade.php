@@ -9,13 +9,17 @@
     <div class="actions">
         @include('partials.status', ['status' => $req->status])
         @can('edit-request', $req)
-            <a class="btn secondary" data-modal href="{{ route('requests.edit', $req) }}"><i class="fas fa-pen"></i> Edit</a>
+            @if($req->status->isRejected())
+                <a class="btn gold" data-modal href="{{ route('requests.edit', $req) }}"><i class="fas fa-rotate"></i> Edit &amp; resubmit</a>
+            @else
+                <a class="btn secondary" data-modal href="{{ route('requests.edit', $req) }}"><i class="fas fa-pen"></i> Edit</a>
+            @endif
             @if($req->status === \App\Enums\RequestStatus::Draft)
                 <form method="POST" action="{{ route('requests.submit', $req) }}" class="inline-form">@csrf<button class="btn"><i class="fas fa-paper-plane"></i> Submit</button></form>
             @endif
         @endcan
         @if(auth()->id() === $req->requester_id && $req->status->isRejected())
-            <form method="POST" action="{{ route('requests.revise', $req) }}" class="inline-form">@csrf<button class="btn gold">Revise &amp; resubmit</button></form>
+            <form method="POST" action="{{ route('requests.revise', $req) }}" class="inline-form">@csrf<button class="btn secondary" title="Reopen as a draft to finish later"><i class="fas fa-folder-open"></i> Reopen as draft</button></form>
         @endif
         @if((auth()->id() === $req->requester_id || auth()->user()->isAdmin()) && in_array($req->status, [\App\Enums\RequestStatus::Draft, \App\Enums\RequestStatus::Submitted]))
             <form method="POST" action="{{ route('requests.cancel', $req) }}" class="inline-form">@csrf<button class="btn secondary">Cancel request</button></form>

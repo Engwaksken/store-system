@@ -3,7 +3,11 @@
 @section('content')
 <div class="page-head"><div><h1>{{ $req->exists ? 'Edit '.$req->request_no.' (v'.$req->version.')' : 'New material request' }}</h1>
     <p>Route: you <i class="fas fa-arrow-right"></i> Project Manager <i class="fas fa-arrow-right"></i> Overall Manager <i class="fas fa-arrow-right"></i> Storekeeper issues.</p></div></div>
-@if($req->exists && $req->status !== \App\Enums\RequestStatus::Draft)
+@if($req->exists && $req->status->isRejected())
+    @php($rejection = $req->approvals()->where('version', $req->version)->where('decision', 'rejected')->latest('id')->first())
+    <div class="alert bad"><i class="fas fa-ban"></i> This request was rejected{{ $rejection ? ' by '.$rejection->approver->name : '' }}@if($rejection?->reason): <strong>{{ $rejection->reason }}</strong>@endif.
+        Correct it below; saving sends it back to the Project Manager as version {{ $req->version + 1 }}.</div>
+@elseif($req->exists && $req->status !== \App\Enums\RequestStatus::Draft)
     <div class="alert warn"><i class="fas fa-triangle-exclamation"></i> This request is waiting for approval{{ $req->status === \App\Enums\RequestStatus::PmApproved ? ' and the Project Manager has already approved it' : '' }}.
         Saving your changes makes it version {{ $req->version + 1 }} and sends it back to the Project Manager to approve again.</div>
 @endif

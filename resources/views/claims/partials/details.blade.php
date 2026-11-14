@@ -12,7 +12,7 @@
     <dt>Submitted</dt><dd>{{ $claim->created_at->format('d M Y H:i') }}@if($claim->updated_at->gt($claim->created_at->addMinute())) <span class="muted">(edited {{ $claim->updated_at->diffForHumans() }})</span>@endif</dd>
 </dl>
 <p class="modal-links"><a href="{{ route('claims.show', $claim) }}"><i class="fas fa-up-right-from-square"></i> Open full page</a>
-    @can('edit-claim', $claim) · <a data-modal href="{{ route('claims.edit', $claim) }}"><i class="fas fa-pen"></i> Edit</a>@endcan</p>
+    @can('edit-claim', $claim) · <a data-modal href="{{ route('claims.edit', $claim) }}">@if($claim->status === 'rejected')<i class="fas fa-rotate"></i> Edit &amp; resubmit @else<i class="fas fa-pen"></i> Edit @endif</a>@endcan</p>
 @can('decide-claim', $claim)
 <form method="POST" action="{{ route('claims.decide', $claim) }}">@csrf
     <input type="hidden" name="seen_at" value="{{ $claim->updated_at?->toIso8601String() }}">

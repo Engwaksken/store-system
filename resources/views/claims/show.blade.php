@@ -5,7 +5,10 @@
     <p>{{ $claim->project->code }} · {{ $claim->project->name }}</p></div>
     <div class="actions">
         @if($claim->receipt_path)<a class="btn secondary" href="{{ route('claims.receipt', $claim) }}"><i class="fas fa-paperclip"></i> Download receipt</a>@endif
-        @can('edit-claim', $claim)<a class="btn secondary" data-modal href="{{ route('claims.edit', $claim) }}"><i class="fas fa-pen"></i> Edit</a>@endcan
+        @can('edit-claim', $claim)
+            @if($claim->status === 'rejected')<a class="btn gold" data-modal href="{{ route('claims.edit', $claim) }}"><i class="fas fa-rotate"></i> Edit &amp; resubmit</a>
+            @else<a class="btn secondary" data-modal href="{{ route('claims.edit', $claim) }}"><i class="fas fa-pen"></i> Edit</a>@endif
+        @endcan
         @can('delete-claim', $claim)<form method="POST" action="{{ route('claims.destroy', $claim) }}" class="inline-form">@csrf @method('DELETE')
             <button class="btn danger" data-confirm="Delete claim {{ $claim->claim_no }}? This cannot be undone; it stays in the activity log." data-confirm-ok="Yes, delete"><i class="fas fa-trash-can"></i> Delete</button></form>@endcan
     </div></div>

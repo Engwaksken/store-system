@@ -52,7 +52,13 @@
                 <td><span class="badge {{ $c->tone() }}">{{ $c->statusLabel() }}</span></td>
                 <td><div class="row-actions">
                     <button type="button" class="btn-icon" data-modal-target="#claim-{{ $c->id }}" title="View {{ $c->claim_no }}" aria-label="View {{ $c->claim_no }}"><i class="fas fa-eye"></i></button>
-                    @can('edit-claim', $c)<a class="btn-icon" data-modal href="{{ route('claims.edit', $c) }}" title="Edit {{ $c->claim_no }}" aria-label="Edit {{ $c->claim_no }}"><i class="fas fa-pen"></i></a>@endcan
+                    @can('edit-claim', $c)
+                        @if($c->status === 'rejected')
+                            <a class="btn-icon" data-modal href="{{ route('claims.edit', $c) }}" title="Edit &amp; resubmit {{ $c->claim_no }}" aria-label="Edit and resubmit {{ $c->claim_no }}"><i class="fas fa-rotate"></i></a>
+                        @else
+                            <a class="btn-icon" data-modal href="{{ route('claims.edit', $c) }}" title="Edit {{ $c->claim_no }}" aria-label="Edit {{ $c->claim_no }}"><i class="fas fa-pen"></i></a>
+                        @endif
+                    @endcan
                     @can('delete-claim', $c)
                         <form method="POST" action="{{ route('claims.destroy', $c) }}" class="inline-form">@csrf @method('DELETE')
                             <button class="btn-icon danger" title="Delete {{ $c->claim_no }}" aria-label="Delete {{ $c->claim_no }}" data-confirm="Delete claim {{ $c->claim_no }} ({{ ugx($c->amount) }} {{ currency() }})? This cannot be undone; it stays in the activity log." data-confirm-ok="Yes, delete"><i class="fas fa-trash-can"></i></button></form>

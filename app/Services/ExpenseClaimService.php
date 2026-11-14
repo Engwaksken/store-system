@@ -23,7 +23,8 @@ use Illuminate\Support\Facades\Storage;
  *            Overall Manager / Admin may also approve any claim. Never the claimant. Rejection needs a reason.
  *  pay     – Accountant / Admin records the payment: this creates exactly one Expense row
  *            (expenses.expense_claim_id is unique), so a claim can never be counted twice in project cost.
- *  edit    – the claimant, while the claim is still awaiting approval. Approvers holding an older copy are refused.
+ *  edit    – the claimant, while the claim is awaiting approval or after it was rejected (saving a rejected claim
+ *            resubmits it; the rejection stays in the activity log). Approvers holding an older copy are refused.
  *  delete  – the claimant or Owner/Admin, only while awaiting approval or after rejection. Approved and paid
  *            claims are financial records and are never deleted. Every deletion is kept in the activity log.
  */
@@ -52,7 +53,7 @@ class ExpenseClaimService
 
     public function canEdit(User $user, ExpenseClaim $claim): bool
     {
-        return $user->is_active && $claim->status === 'submitted' && $user->id === $claim->claimant_id;
+        return $user->is_active && in_array($claim->status, ['submitted', 'rejected'], true) && $user->id === $claim->claimant_id;
     }
 
     public function canDelete(User $user, ExpenseClaim $claim): bool
@@ -78,16 +79,23 @@ class ExpenseClaimService
             if (! $this->canEdit($user, $claim)) {
                 throw new WorkflowException("Claim {$claim->claim_no} can no longer be edited: it is {$claim->statusLabel()}.");
             }
-            $before = $claim->only('project_id', 'category_id', 'cost_code_id', 'incurred_on', 'amount', 'description');
+            $before = $claim->only('project_id', 'category_id', 'cost_code_id', 'incurred_on', 'amount', 'description', 'status', 'approver_id', 'decided_at', 'decision_reason');
+            $wasRejected = $claim->status === 'rejected';
             $oldReceipt = $claim->receipt_path;
             $claim->fill([
                 'project_id' => $project->id, 'category_id' => $data['category_id'], 'cost_code_id' => $data['cost_code_id'] ?? null,
                 'incurred_on' => $data['incurred_on'], 'amount' => $amount, 'description' => $data['description'],
-            ] + (isset($data['receipt_path']) ? ['receipt_path' => $data['receipt_path']] : []))->save();
+            ] + (isset($data['receipt_path']) ? ['receipt_path' => $data['receipt_path']] : []));
+            if ($wasRejected) {
+                // Back to the approver as a fresh submission; the old decision is kept in the activity log ($before).
+                $claim->forceFill(['status' => 'submitted', 'approver_id' => null, 'decided_at' => null, 'decision_reason' => null]);
+            }
+            $claim->save();
             if (isset($data['receipt_path']) && $oldReceipt) {
                 DB::afterCommit(fn () => Storage::disk('local')->delete($oldReceipt));
             }
-            ActivityLog::record('claim.updated', "Expense claim {$claim->claim_no} edited by the claimant", $claim, ['before' => $before]);
+            ActivityLog::record($wasRejected ? 'claim.resubmitted' : 'claim.updated', "Expense claim {$claim->claim_no} "
+                .($wasRejected ? 'corrected after rejection and resubmitted' : 'edited by the claimant'), $claim, ['before' => $before]);
             app(WorkflowNotifier::class)->claimSubmitted($claim);   // the approver sees the new figures
 
             return $claim;

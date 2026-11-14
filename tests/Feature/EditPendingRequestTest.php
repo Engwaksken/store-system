@@ -87,4 +87,26 @@ class EditPendingRequestTest extends TestCase
         $this->actingAs($this->staff)->get(route('requests.edit', $approved))->assertForbidden();
         $this->edit($approved, 99)->assertForbidden();
     }
+
+    public function test_rejected_request_is_corrected_and_resubmitted_in_one_step(): void
+    {
+        Notification::fake();
+        $req = $this->submittedRequest(10);
+        $this->wf()->pmDecide($this->pm, $req, 'rejected', 'Too much cement for this pour');
+
+        $this->actingAs($this->staff)->get(route('requests.show', $req))->assertOk()->assertSee('Edit &amp; resubmit', false);
+        $this->actingAs($this->staff)->get(route('requests.edit', $req))->assertOk()->assertSee('Too much cement for this pour');
+
+        $this->edit($req, 6)->assertSessionHasNoErrors();
+        $req->refresh();
+        $this->assertSame(RequestStatus::Submitted, $req->status);
+        $this->assertSame(2, $req->version);
+        $this->assertSame(1, MaterialApproval::where('material_request_id', $req->id)->where('version', 1)->where('decision', 'rejected')->count());
+        Notification::assertSentTo($this->pm, WorkflowAlert::class, fn ($n) => str_contains($n->subject, $req->request_no));
+
+        // The PM decides the corrected version.
+        $this->wf()->pmDecide($this->pm, $req, 'approved', null, [], 2);
+        $this->assertSame(RequestStatus::PmApproved, $req->fresh()->status);
+        $this->edit($req->fresh(), 6, $this->pm)->assertForbidden();
+    }
 }

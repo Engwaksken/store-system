@@ -116,9 +116,11 @@ class MaterialRequestController extends Controller
             return back()->withInput()->withErrors(['project_id' => 'Project cannot be changed on an existing request; cancel it and create a new one.']);
         }
         if ($materialRequest->status !== RequestStatus::Draft) {
+            $wasRejected = $materialRequest->status->isRejected();
             $req = $this->wf->editPending($request->user(), $materialRequest, $data['purpose'], $data['needed_on'] ?? null, $data['lines']);
 
-            return redirect()->route('requests.show', $req)->with('status', "Changes saved. The request is back with the Project Manager as version {$req->version}.");
+            return redirect()->route('requests.show', $req)->with('status', ($wasRejected ? 'Request corrected and resubmitted' : 'Changes saved')
+                .". It is with the Project Manager as version {$req->version}.");
         }
         $this->wf->updateDraft($request->user(), $materialRequest, $data['purpose'], $data['needed_on'] ?? null, $data['lines']);
         if ($request->input('action') === 'submit') {

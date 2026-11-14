@@ -119,12 +119,12 @@ class RequestWorkflow
     }
 
     /** Statuses in which the requester may still change the request. */
-    public const EDITABLE = [RequestStatus::Draft, RequestStatus::Submitted, RequestStatus::PmApproved];
+    public const EDITABLE = [RequestStatus::Draft, RequestStatus::Submitted, RequestStatus::PmApproved, RequestStatus::PmRejected, RequestStatus::OverallRejected];
 
     /**
-     * The requester edits a request that is waiting for approval. Any approval already given no longer matches the
-     * lines, so the request becomes a new version back at the PM step; deciders holding the old page are refused
-     * (see assertVersion). Prior decisions stay in the history under their own version.
+     * The requester edits a request that is waiting for approval, or was rejected, and sends it (back) for approval.
+     * Any approval already given no longer matches the lines, so the request becomes a new version at the PM step;
+     * deciders holding the old page are refused (see assertVersion). Prior decisions stay in the history under their version.
      */
     public function editPending(User $user, MaterialRequest $req, string $purpose, ?string $neededOn, array $lines): MaterialRequest
     {
@@ -133,7 +133,7 @@ class RequestWorkflow
         return DB::transaction(function () use ($user, $req, $purpose, $neededOn, $lines) {
             $req = $this->lock($req);
             $this->assertRequester($user, $req);
-            $this->assertStatus($req, RequestStatus::Submitted, RequestStatus::PmApproved);
+            $this->assertStatus($req, RequestStatus::Submitted, RequestStatus::PmApproved, RequestStatus::PmRejected, RequestStatus::OverallRejected);
             $project = Project::findOrFail($req->project_id);
             if (! $this->canRequestFor($user, $project)) {
                 throw new AuthorizationException('You are no longer assigned to this project.');
@@ -142,6 +142,7 @@ class RequestWorkflow
                 throw new WorkflowException('This project has no assigned Project Manager. Ask the admin to assign one.');
             }
             $wasPmApproved = $req->status === RequestStatus::PmApproved;
+            $wasRejected = $req->status->isRejected();
             $req->update(['purpose' => $purpose, 'needed_on' => $neededOn]);
             $req->lines()->delete();
             foreach ($lines as $l) {
@@ -151,7 +152,8 @@ class RequestWorkflow
                 'status' => RequestStatus::Submitted, 'version' => $req->version + 1,
                 'project_manager_id' => $project->manager_id, 'submitted_at' => now(),
             ])->save();
-            ActivityLog::record('request.edited', "Request {$req->request_no} edited while pending and resubmitted as v{$req->version}"
+            ActivityLog::record($wasRejected ? 'request.resubmitted' : 'request.edited', "Request {$req->request_no} "
+                .($wasRejected ? 'corrected after rejection' : 'edited while pending')." and resubmitted as v{$req->version}"
                 .($wasPmApproved ? ' (PM approval of the previous version no longer applies)' : ''), $req);
             $this->notifier->submitted($req);
 

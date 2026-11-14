@@ -3,7 +3,13 @@
 @section('title', $editing ? 'Edit claim '.$claim->claim_no : 'New expense claim')
 @section('content')
 <div class="page-head"><div><h1>{{ $editing ? 'Edit claim '.$claim->claim_no : 'New expense claim' }}</h1>
-    <p>{{ $editing ? 'You can change the claim until it is approved. The approver is told about the change.' : 'For money you spent on a project (transport, small purchases, casual labour). Attach the receipt.' }}</p></div></div>
+    <p>{{ $editing ? 'You can change the claim until it is approved, or correct it after a rejection. The approver is told.' : 'For money you spent on a project (transport, small purchases, casual labour). Attach the receipt.' }}</p></div></div>
+@if($editing && $claim->status === 'rejected')
+    @php($rejectedBy = $claim->approver ? ' by '.$claim->approver->name : '')
+    <div class="alert bad"><i class="fas fa-ban"></i> This claim was rejected{{ $rejectedBy }}{{ $claim->decision_reason ? ':' : '' }}
+        @if($claim->decision_reason) <strong>{{ $claim->decision_reason }}</strong>. @endif
+        Correct it below; saving sends it back for approval.</div>
+@endif
 @if($projects->isEmpty())<div class="alert warn">You are not assigned to an active project.</div>@endif
 <form method="POST" action="{{ $editing ? route('claims.update', $claim) : route('claims.store') }}" enctype="multipart/form-data" class="card" style="max-width:760px">
     @csrf @if($editing) @method('PUT') @endif
@@ -17,6 +23,6 @@
             @if($editing && $claim->receipt_path)<p class="hint"><a href="{{ route('claims.receipt', $claim) }}"><i class="fas fa-paperclip"></i> Current receipt</a> stays unless you upload a new one.</p>@endif</div>
     </div>
     <div class="field"><label for="description">What was it for?</label><textarea id="description" name="description" required maxlength="1000">{{ old('description', $claim->description ?? null) }}</textarea></div>
-    <button class="btn">{{ $editing ? 'Save changes' : 'Submit claim' }}</button>
+    <button class="btn">{{ $editing ? ($claim->status === 'rejected' ? 'Save & resubmit' : 'Save changes') : 'Submit claim' }}</button>
 </form>
 @endsection

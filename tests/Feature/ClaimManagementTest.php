@@ -110,4 +110,25 @@ class ClaimManagementTest extends TestCase
         $this->assertCount(3, $lines);   // header, the selected claim, total
         $this->assertStringContainsString($a->claim_no, $lines[1]);
     }
+
+    public function test_rejected_claim_is_corrected_and_resubmitted(): void
+    {
+        $c = $this->claim(50000);
+        app(ExpenseClaimService::class)->decide($this->pm, $c, 'rejected', 'Receipt missing');
+
+        $this->actingAs($this->staff)->get(route('claims.edit', $c))->assertOk()->assertSee('Receipt missing')->assertSee('Save &amp; resubmit', false);
+        $this->actingAs($this->pm)->get(route('claims.edit', $c))->assertForbidden();
+
+        $this->actingAs($this->staff)->put(route('claims.update', $c), $this->form($c, ['amount' => 45000]))->assertSessionHasNoErrors();
+        $c->refresh();
+        $this->assertSame('submitted', $c->status);
+        $this->assertNull($c->decision_reason);
+        $this->assertNull($c->approver_id);
+        $log = ActivityLog::where('action', 'claim.resubmitted')->sole();
+        $this->assertSame('Receipt missing', $log->properties['before']['decision_reason'] ?? null);
+
+        app(ExpenseClaimService::class)->decide($this->pm, $c, 'approved', null);
+        $this->assertSame('approved', $c->fresh()->status);
+        $this->actingAs($this->staff)->get(route('claims.edit', $c))->assertForbidden();
+    }
 }
