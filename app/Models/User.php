@@ -66,6 +66,12 @@ class User extends Authenticatable
             || $project->members()->whereKey($this->id)->exists();
     }
 
+    /** Projects this user is a team member of (project_user). Managing a project is projects.manager_id. */
+    public function projects(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Project::class)->withTimestamps();
+    }
+
     public function pushSubscriptions(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(PushSubscription::class);

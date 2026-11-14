@@ -729,6 +729,26 @@
         refresh();
     }
 
+    /* ---------- Checkbox picker with a find box (e.g. projects on the user form) ---------- */
+    function initPickers() {
+        document.addEventListener('input', function (e) {
+            var box = e.target;
+            if (!box.matches || !box.matches('[data-picker-filter]')) { return; }
+            var term = box.value.trim().toLowerCase();
+            var scope = box.closest('fieldset, form');
+            scope.querySelectorAll('[data-picker-text]').forEach(function (item) {
+                item.hidden = term !== '' && item.dataset.pickerText.indexOf(term) === -1;
+            });
+        });
+        document.addEventListener('change', function (e) {
+            var cb = e.target;
+            if (!cb.closest || !cb.closest('[data-picker]')) { return; }
+            var scope = cb.closest('fieldset, form');
+            var count = scope.querySelector('[data-picker-count]');
+            if (count) { count.textContent = scope.querySelectorAll('[data-picker] input:checked').length; }
+        });
+    }
+
     /* ---------- Print buttons ---------- */
     function initPrint() {
         document.addEventListener('click', function (e) {
@@ -747,6 +767,7 @@
         initPush();
         initListFilters();
         initBulk();
+        initPickers();
         initTabs(document);
         enhance(document);
         initModals();

@@ -321,3 +321,15 @@ template { display: none; }
 .detail-list { grid-template-columns: 9rem 1fr; }
 .detail-list dt { font-weight: 600; font-size: .85rem; }
 .modal-links { font-size: .9rem; margin: 1rem 0 0; }
+
+/* Checkbox picker (projects on the user form) */
+.project-picker { border: 1px solid var(--line); border-radius: var(--radius); padding: .75rem 1rem 1rem; }
+.project-picker legend { font-weight: 700; color: var(--navy); padding: 0 .35rem; }
+.picker-tools { display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-bottom: .5rem; }
+.picker-tools .input-icon { flex: 1; max-width: 320px; }
+.picker-list { max-height: 260px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.picker-item { display: flex; gap: .6rem; align-items: flex-start; padding: .5rem .7rem; border-bottom: 1px solid var(--line); font-weight: 400; cursor: pointer; margin: 0; }
+.picker-item:last-child { border-bottom: 0; }
+.picker-item:hover { background: #F8FAFC; }
+.picker-item input { width: auto; margin-top: .2rem; accent-color: var(--teal); }
+.picker-item[hidden] { display: none; }

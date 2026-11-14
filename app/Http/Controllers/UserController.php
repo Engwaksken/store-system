@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\Role;
 use App\Models\ActivityLog;
+use App\Models\Project;
 use App\Models\User;
 use App\Support\ListPage;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ class UserController extends Controller
             'inactive' => User::where('is_active', false)->count(),
             'admins' => User::where('role', Role::Admin->value)->where('is_active', true)->count(),
         ];
-        $query = User::query()
+        $query = User::query()->withCount('projects')
             ->when($request->filled('role'), fn ($q) => $q->where('role', $request->query('role')))
             ->when($request->query('status') === 'active', fn ($q) => $q->where('is_active', true))
             ->when($request->query('status') === 'inactive', fn ($q) => $q->where('is_active', false))
@@ -34,7 +35,8 @@ class UserController extends Controller
             ->search(['name', 'email', 'phone'], 'Name, e-mail or phone')
             ->columns([
                 'Name' => fn ($u) => $u->name, 'E-mail' => fn ($u) => $u->email, 'Role' => fn ($u) => $u->role->label(),
-                'Phone' => fn ($u) => $u->phone, 'Status' => fn ($u) => $u->is_active ? 'Active' : 'Inactive',
+                'Phone' => fn ($u) => $u->phone, 'Projects' => [fn ($u) => $u->projects_count, 'number'],
+                'Status' => fn ($u) => $u->is_active ? 'Active' : 'Inactive',
             ])
             ->respond(fn ($users, $list) => view('users.index', ['users' => $users, 'list' => $list, 'stats' => $stats]));
     }
@@ -43,15 +45,19 @@ class UserController extends Controller
     {
         Gate::authorize('manage-users');
 
-        return view('users.form', ['user' => new User(['is_active' => true, 'role' => Role::Staff])]);
+        return view('users.form', ['user' => new User(['is_active' => true, 'role' => Role::Staff]), 'projects' => $this->projectOptions(), 'assigned' => []]);
     }
 
     public function store(Request $request)
     {
         Gate::authorize('manage-users');
         $data = $this->validated($request);
+        $projectIds = $data['project_ids'];
+        unset($data['project_ids']);
         $user = User::create($data + ['must_change_password' => true]);
-        ActivityLog::record('user.created', "User {$user->email} created as {$user->role->label()}", $user);
+        $user->projects()->sync($projectIds);
+        $codes = Project::whereIn('id', $projectIds)->orderBy('code')->pluck('code')->implode(', ');
+        ActivityLog::record('user.created', "User {$user->email} created as {$user->role->label()}".($codes ? ", assigned to {$codes}" : ''), $user);
 
         return redirect()->route('users.index')->with('status', 'User created. They must change the temporary password at first login.');
     }
@@ -60,7 +66,7 @@ class UserController extends Controller
     {
         Gate::authorize('manage-users');
 
-        return view('users.form', compact('user'));
+        return view('users.form', ['user' => $user, 'projects' => $this->projectOptions($user), 'assigned' => $user->projects()->pluck('projects.id')->all()]);
     }
 
     public function update(Request $request, User $user)
@@ -75,11 +81,28 @@ class UserController extends Controller
         } else {
             $data['must_change_password'] = true;
         }
-        $before = $user->only('role', 'is_active');
+        $projectIds = $data['project_ids'];
+        unset($data['project_ids']);
+        $before = $user->only('role', 'is_active') + ['projects' => $user->projects()->pluck('projects.id')->sort()->values()->all()];
         $user->update($data);
-        ActivityLog::record('user.updated', "User {$user->email} updated", $user, ['before' => $before, 'after' => $user->only('role', 'is_active')]);
+        // Only projects offered on the form can change (open projects + closed ones the user is already on);
+        // a project not offered can neither be added nor silently removed.
+        $offered = $this->projectOptions($user)->pluck('id')->all();
+        $kept = array_diff($before['projects'], $offered);
+        $user->projects()->sync(array_values(array_unique(array_merge($kept, array_intersect($projectIds, $offered)))));
+        $after = $user->only('role', 'is_active') + ['projects' => $user->projects()->pluck('projects.id')->sort()->values()->all()];
+        ActivityLog::record('user.updated', "User {$user->email} updated", $user, ['before' => $before, 'after' => $after]);
 
         return redirect()->route('users.index')->with('status', 'User updated.');
+    }
+
+    /** Projects that can be assigned: open ones, plus any closed project the user already belongs to. */
+    private function projectOptions(?User $user = null)
+    {
+        return Project::with('manager:id,name')
+            ->where(fn ($q) => $q->whereIn('status', ['planned', 'active', 'on_hold'])
+                ->when($user?->exists, fn ($w) => $w->orWhereHas('members', fn ($m) => $m->whereKey($user->id))))
+            ->orderBy('code')->get(['id', 'code', 'name', 'status', 'manager_id']);
     }
 
     private function validated(Request $request, ?User $user = null): array
@@ -91,8 +114,15 @@ class UserController extends Controller
             'role' => ['required', Rule::enum(Role::class)],
             'is_active' => 'sometimes|boolean',
             'password' => [$user ? 'nullable' : 'required', Password::min(8)->letters()->numbers()],
+            'project_ids' => 'nullable|array',
+            'project_ids.*' => ['integer', Rule::exists('projects', 'id')],
         ]);
         $data['is_active'] = $request->boolean('is_active');
+        $data['project_ids'] = array_values(array_unique(array_map('intval', $data['project_ids'] ?? [])));
+        // Staff can only see and request for projects they are assigned to: a new staff account needs at least one.
+        if (! $user && $data['role'] === Role::Staff->value && ! $data['project_ids'] && $this->projectOptions()->isNotEmpty()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['project_ids' => 'Assign the new staff member to at least one project, otherwise they cannot see or request anything.']);
+        }
 
         return $data;
     }
