@@ -2,7 +2,7 @@
 @section('title', $user->exists ? 'Edit user' : 'Add user')
 @section('content')
 <div class="page-head"><div><h1>{{ $user->exists ? 'Edit user' : 'Add user' }}</h1>
-    <p>{{ $user->exists ? 'Change the role, projects or status. Users are deactivated, never deleted.' : 'The person signs in with the temporary password and must change it straight away.' }}</p></div></div>
+    <p>{{ $user->exists ? 'Change the role, projects or status. Users are deactivated, never deleted.' : 'The person receives an e-mail with their sign-in details and a temporary password, and must change it at first sign-in.' }}</p></div></div>
 <div class="card" style="max-width:760px">
 <form method="POST" action="{{ $user->exists ? route('users.update', $user) : route('users.store') }}">
     @csrf @if($user->exists) @method('PUT') @endif
@@ -13,8 +13,9 @@
         <div class="field"><label for="u_role">Role</label><select id="u_role" name="role" required data-user-role>
             @foreach(\App\Enums\Role::cases() as $r)<option value="{{ $r->value }}" @selected(old('role', $user->role?->value) === $r->value)>{{ $r->label() }}</option>@endforeach
         </select></div>
-        <div class="field"><label for="u_password">{{ $user->exists ? 'Reset password (optional)' : 'Temporary password' }}</label><input id="u_password" type="password" name="password" autocomplete="new-password" @required(! $user->exists)>
-            <div class="hint">At least 8 characters with letters and numbers. The user must change it at next sign-in.</div></div>
+        <div class="field"><label for="u_password">{{ $user->exists ? 'New temporary password (optional)' : 'Temporary password (optional)' }}</label><input id="u_password" type="password" name="password" autocomplete="new-password" placeholder="Leave blank to generate one">
+            <div class="hint">Leave blank and a strong one is generated. At least 8 characters with letters and numbers if you type one. It is e-mailed to the user, who must change it at next sign-in.</div>
+            @if($user->exists)<label class="check" style="margin-top:.4rem"><input type="checkbox" name="reset_password" value="1" @checked(old('reset_password'))> Reset password: generate a new temporary one and e-mail it</label>@endif</div>
         <div class="field"><label>&nbsp;</label><label class="check"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $user->is_active))> Account active</label></div>
     </div>
 
