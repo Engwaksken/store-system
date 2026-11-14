@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\AppSetting;
 use App\Models\ExpenseCategory;
 use App\Support\Currency;
+use App\Support\CustomFont;
 use App\Support\Theme;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -25,6 +26,7 @@ class SettingsController extends Controller
             'expenseCategories' => ExpenseCategory::orderBy('name')->get(),
             'currentCurrency' => Currency::code(),
             'theme' => Theme::values(),
+            'customFont' => CustomFont::current(),
         ]);
     }
 
@@ -47,7 +49,7 @@ class SettingsController extends Controller
             'theme_primary' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'theme_accent' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'theme_action' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'theme_font' => ['nullable', Rule::in(array_keys(Theme::FONTS))],
+            'theme_font' => ['nullable', Rule::in(array_keys(Theme::fonts()))],
             'theme_size' => ['nullable', Rule::in(array_keys(Theme::SIZES))],
             'theme_corners' => ['nullable', Rule::in(array_keys(Theme::CORNERS))],
             'theme_sidebar' => ['nullable', Rule::in(array_keys(Theme::SIDEBARS))],
@@ -83,6 +85,47 @@ class SettingsController extends Controller
             .($themeChanged ? ($request->boolean('reset_theme') ? ' (appearance reset to default)' : ' (appearance changed)') : ''));
 
         return back()->with('status', 'Settings saved.');
+    }
+
+    /** Add a custom font family: fetched from Google Fonts by name, or uploaded files. Replaces any previous custom font. */
+    public function storeFont(Request $request)
+    {
+        Gate::authorize('manage-settings');
+        $data = $request->validate([
+            'source' => 'required|in:google,upload',
+            'family' => ['required', 'string', 'regex:'.CustomFont::NAME_PATTERN],
+            'regular' => 'required_if:source,upload|nullable|file|extensions:woff2,woff,ttf|max:2048',
+            'bold' => 'nullable|file|extensions:woff2,woff,ttf|max:2048',
+            'use_now' => 'nullable|boolean',
+        ], ['family.regex' => 'Use letters, digits and spaces only for the font name (e.g. Lato, Open Sans).']);
+
+        try {
+            $data['source'] === 'google'
+                ? CustomFont::installFromGoogle($data['family'])
+                : CustomFont::installFromUpload($data['family'], $request->file('regular'), $request->file('bold'));
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->withErrors(['family' => $e->getMessage()]);
+        } catch (\Illuminate\Http\Client\ConnectionException) {
+            return back()->withInput()->withErrors(['family' => 'The server could not reach Google Fonts. Upload the font files instead.']);
+        }
+        if ($request->boolean('use_now', true)) {
+            AppSetting::put('theme_font', 'custom');
+        }
+        ActivityLog::record('settings.font', "Custom font {$data['family']} added (".($data['source'] === 'google' ? 'Google Fonts' : 'uploaded').')');
+
+        return redirect()->to(route('settings.edit').'#appearance')->with('status', "Font {$data['family']} added".($request->boolean('use_now', true) ? ' and applied.' : '.'));
+    }
+
+    public function destroyFont()
+    {
+        Gate::authorize('manage-settings');
+        $font = CustomFont::current();
+        CustomFont::remove();
+        if ($font) {
+            ActivityLog::record('settings.font', "Custom font {$font['family']} removed");
+        }
+
+        return redirect()->to(route('settings.edit').'#appearance')->with('status', 'Custom font removed. The system font is used instead.');
     }
 
     private function removeAsset(string $key): void

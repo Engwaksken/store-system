@@ -31,6 +31,20 @@ class Theme
         'georgia' => ['Georgia (serif)', 'Georgia, "Times New Roman", Times, serif'],
     ];
 
+    /** Built-in font stacks plus the admin's custom font, when one is installed. */
+    public static function fonts(): array
+    {
+        $custom = CustomFont::current();
+
+        return $custom ? self::FONTS + ['custom' => [$custom['family'].' (custom)', CustomFont::stack($custom['family'])]] : self::FONTS;
+    }
+
+    /** Stylesheet URL of the custom font when it is the active font, else null. */
+    public static function fontCssUrl(): ?string
+    {
+        return self::values()['theme_font'] === 'custom' ? CustomFont::cssUrl() : null;
+    }
+
     public const SIZES = ['small' => ['Small', '14px'], 'normal' => ['Normal', '15px'], 'large' => ['Large', '16px']];
 
     public const CORNERS = ['square' => ['Square', '2px', '2px'], 'rounded' => ['Rounded', '8px', '6px'], 'soft' => ['Soft', '14px', '10px']];
@@ -53,7 +67,7 @@ class Theme
     {
         return match ($key) {
             'theme_primary', 'theme_accent', 'theme_action' => is_string($v) && preg_match('/^#[0-9a-fA-F]{6}$/', $v) === 1,
-            'theme_font' => isset(self::FONTS[$v]),
+            'theme_font' => isset(self::fonts()[$v]),
             'theme_size' => isset(self::SIZES[$v]),
             'theme_corners' => isset(self::CORNERS[$v]),
             'theme_sidebar' => isset(self::SIDEBARS[$v]),
@@ -80,7 +94,7 @@ class Theme
             '--on-gold' => self::readableOn($t['theme_accent'], $t['theme_primary']),
             '--teal' => $t['theme_action'],
             '--on-teal' => self::readableOn($t['theme_action'], '#1F2937'),
-            '--font' => self::FONTS[$t['theme_font']][1],
+            '--font' => self::fonts()[$t['theme_font']][1],
             '--base-size' => self::SIZES[$t['theme_size']][1],
             '--radius' => self::CORNERS[$t['theme_corners']][1],
             '--radius-sm' => self::CORNERS[$t['theme_corners']][2],

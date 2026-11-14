@@ -272,3 +272,5 @@ template { display: none; }
 .color-pick code { font-size: .85rem; color: var(--muted); }
 .theme-preview { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; padding: .9rem; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--bg); }
 @media (max-width: 900px) { .theme-colors { grid-template-columns: 1fr; } }
+.custom-font { border-top: 1px solid var(--line); padding-top: .9rem; }
+.custom-font-row { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; padding: .6rem .75rem; border: 1px solid var(--line); border-radius: var(--radius-sm); margin-bottom: .4rem; }

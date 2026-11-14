@@ -55,7 +55,7 @@
             </div>
             <div class="form-grid">
                 <div class="field"><label for="theme_font">Font</label><select id="theme_font" name="theme_font" data-theme-var="--font">
-                    @foreach(\App\Support\Theme::FONTS as $k => [$label, $stack])<option value="{{ $k }}" data-css="{{ $stack }}" style="font-family: {{ $stack }}" @selected(old('theme_font', $theme['theme_font']) === $k)>{{ $label }}</option>@endforeach</select></div>
+                    @foreach(\App\Support\Theme::fonts() as $k => [$label, $stack])<option value="{{ $k }}" data-css="{{ $stack }}" style="font-family: {{ $stack }}" @selected(old('theme_font', $theme['theme_font']) === $k)>{{ $label }}</option>@endforeach</select></div>
                 <div class="field"><label for="theme_size">Text size</label><select id="theme_size" name="theme_size" data-theme-var="--base-size">
                     @foreach(\App\Support\Theme::SIZES as $k => [$label, $px])<option value="{{ $k }}" data-css="{{ $px }}" @selected(old('theme_size', $theme['theme_size']) === $k)>{{ $label }} ({{ $px }})</option>@endforeach</select></div>
                 <div class="field"><label for="theme_corners">Corners</label><select id="theme_corners" name="theme_corners" data-theme-var="--radius">
@@ -63,6 +63,20 @@
                 <div class="field"><label for="theme_sidebar">Sidebar style</label><select id="theme_sidebar" name="theme_sidebar">
                     @foreach(\App\Support\Theme::SIDEBARS as $k => $label)<option value="{{ $k }}" @selected(old('theme_sidebar', $theme['theme_sidebar']) === $k)>{{ $label }}</option>@endforeach</select>
                     <p class="hint">The sidebar style shows after saving.</p></div>
+            </div>
+            <div class="field custom-font">
+                <label>Custom font</label>
+                @if($customFont)
+                    <div class="custom-font-row"><span style="font-family: {{ \App\Support\CustomFont::stack($customFont['family']) }}; font-size: 1.15rem">{{ $customFont['family'] }} <span class="muted">- The quick brown fox jumps over the lazy dog</span></span>
+                        <button type="submit" form="font-remove" class="btn small secondary" data-confirm="Remove the custom font {{ $customFont['family'] }}? Everyone goes back to the system font." data-confirm-ok="Yes, remove"><i class="fas fa-trash-can"></i> Remove</button></div>
+                    <p class="hint">Pick <strong>{{ $customFont['family'] }} (custom)</strong> in the Font list above to use it. Adding another font replaces this one.</p>
+                @else
+                    <p class="hint" style="margin-top:0">Add a font family such as Lato, Open Sans or Poppins. It is stored on this server, so pages stay fast and private.</p>
+                @endif
+                <div class="actions">
+                    <button type="button" class="btn small secondary" data-modal-target="#font-google"><i class="fab fa-google"></i> Add from Google Fonts</button>
+                    <button type="button" class="btn small secondary" data-modal-target="#font-upload"><i class="fas fa-upload"></i> Upload font files</button>
+                </div>
             </div>
             <div class="theme-preview" aria-hidden="true">
                 <span class="btn small"><i class="fas fa-floppy-disk"></i> Button</span>
@@ -96,6 +110,32 @@
 </x-tabs>
     <div class="form-save"><button class="btn"><i class="fas fa-floppy-disk"></i> Save settings</button></div>
 </form>
+
+@if($customFont)<link rel="stylesheet" href="{{ \App\Support\CustomFont::cssUrl() }}">@endif
+<form id="font-remove" method="POST" action="{{ route('settings.font.destroy') }}" hidden>@csrf @method('DELETE')</form>
+
+<template id="font-google" data-title="Add a font from Google Fonts">
+    <form method="POST" action="{{ route('settings.font.store') }}">@csrf
+        <input type="hidden" name="source" value="google">
+        <p class="muted" style="margin-top:0">Type the family name exactly as on <strong>fonts.google.com</strong>. The server downloads the regular and bold styles once and serves them itself; users' browsers never contact Google.</p>
+        <div class="field"><label for="font_family_google">Font family</label><input id="font_family_google" type="text" name="family" required maxlength="40" placeholder="e.g. Lato"></div>
+        <input type="hidden" name="use_now" value="0"><label class="check field"><input type="checkbox" name="use_now" value="1" checked> Use it straight away</label>
+        <button class="btn"><i class="fas fa-download"></i> Download &amp; add font</button>
+    </form>
+</template>
+<template id="font-upload" data-title="Upload font files">
+    <form method="POST" action="{{ route('settings.font.store') }}" enctype="multipart/form-data">@csrf
+        <input type="hidden" name="source" value="upload">
+        <p class="muted" style="margin-top:0">Use this for fonts that are not on Google Fonts, or if the server cannot reach the internet. Accepted: .woff2 (best), .woff or .ttf, max 2 MB each. Make sure your licence allows web use.</p>
+        <div class="field"><label for="font_family_upload">Font family name</label><input id="font_family_upload" type="text" name="family" required maxlength="40" placeholder="e.g. Lato"></div>
+        <div class="form-grid">
+            <div class="field"><label for="font_regular">Regular style</label><input id="font_regular" type="file" name="regular" accept=".woff2,.woff,.ttf" required></div>
+            <div class="field"><label for="font_bold">Bold style (optional)</label><input id="font_bold" type="file" name="bold" accept=".woff2,.woff,.ttf"></div>
+        </div>
+        <input type="hidden" name="use_now" value="0"><label class="check field"><input type="checkbox" name="use_now" value="1" checked> Use it straight away</label>
+        <button class="btn"><i class="fas fa-upload"></i> Upload &amp; add font</button>
+    </form>
+</template>
 
 <template id="expense-category-create" data-title="Add expense category">
     <form method="POST" action="{{ route('settings.expense-categories.store') }}">@csrf

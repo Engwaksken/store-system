@@ -50,6 +50,8 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::resource('users', UserController::class)->except(['show', 'destroy']);
     Route::get('settings', [SettingsController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::post('settings/font', [SettingsController::class, 'storeFont'])->middleware('throttle:10,1')->name('settings.font.store');
+    Route::delete('settings/font', [SettingsController::class, 'destroyFont'])->name('settings.font.destroy');
     Route::post('settings/expense-categories', [SettingsController::class, 'storeExpenseCategory'])->name('settings.expense-categories.store');
     Route::get('activity', [ActivityLogController::class, 'index'])->name('activity.index');
 

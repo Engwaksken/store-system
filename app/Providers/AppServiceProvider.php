@@ -51,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
             $view->with('logoPath', rescue(fn () => AppSetting::get('logo_path'), null, false));
             $view->with('faviconPath', rescue(fn () => AppSetting::get('favicon_path'), null, false));
             $view->with('themeCss', rescue(fn () => \App\Support\Theme::css(), '', false));
+            $view->with('fontCssUrl', rescue(fn () => \App\Support\Theme::fontCssUrl(), null, false));
         });
         View::composer('layouts.app', function ($view) {
             $user = auth()->user();
