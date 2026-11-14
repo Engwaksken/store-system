@@ -15,7 +15,7 @@
     <div><label>&nbsp;</label><button class="btn small">Filter</button></div>
 </div></form>
 <div class="card table-wrap"><table>
-    <thead><tr><th>Code</th><th>Name</th><th>Client / location</th><th>Manager</th><th>Team</th><th>Status</th>@can('view-finance-reports')<th class="num">Budget (UGX)</th>@endcan @can('manage-projects')<th></th>@endcan</tr></thead>
+    <thead><tr><th>Code</th><th>Name</th><th>Client / location</th><th>Manager</th><th>Team</th><th>Status</th>@can('view-finance-reports')<th class="num">Budget ({{ currency() }})</th>@endcan @can('manage-projects')<th></th>@endcan</tr></thead>
     <tbody>@forelse($projects as $p)
         <tr><td><a href="{{ route('projects.show', $p) }}">{{ $p->code }}</a></td><td>{{ $p->name }}</td><td>{{ $p->client }}<br><small class="muted">{{ $p->location }}</small></td>
             <td>{{ $p->manager?->name ?? '-' }}</td><td>{{ $p->members_count }}</td><td><span class="badge muted">{{ $p->status }}</span></td>

@@ -5,13 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\AppSetting;
 use App\Models\ExpenseCategory;
+use App\Support\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class SettingsController extends Controller
 {
-    public const KEYS = ['company_name', 'app_subtitle', 'company_address', 'company_phone', 'company_email', 'voucher_footer', 'po_owner_threshold'];
+    public const KEYS = ['company_name', 'app_subtitle', 'company_address', 'company_phone', 'company_email', 'voucher_footer', 'po_owner_threshold', 'currency'];
 
     public function edit()
     {
@@ -20,6 +22,7 @@ class SettingsController extends Controller
         return view('settings', [
             'values' => collect(self::KEYS)->mapWithKeys(fn ($k) => [$k => AppSetting::get($k)]),
             'expenseCategories' => ExpenseCategory::orderBy('name')->get(),
+            'currentCurrency' => Currency::code(),
         ]);
     }
 
@@ -34,11 +37,14 @@ class SettingsController extends Controller
             'company_email' => 'nullable|email|max:150',
             'voucher_footer' => 'nullable|string|max:300',
             'po_owner_threshold' => 'nullable|numeric|min:0',
+            'currency' => ['nullable', Rule::in(array_keys(Currency::LIST))],
             'logo' => 'nullable|image|mimes:png,jpg,jpeg|max:1024',
             'favicon' => 'nullable|file|mimes:png,ico|max:256',
             'remove_logo' => 'nullable|boolean',
             'remove_favicon' => 'nullable|boolean',
         ]);
+        $before = Currency::code();
+        $data['currency'] ??= $before;
         foreach (self::KEYS as $k) {
             AppSetting::put($k, $data[$k] ?? null);
         }
@@ -53,7 +59,7 @@ class SettingsController extends Controller
                 AppSetting::put($asset.'_path', null);
             }
         }
-        ActivityLog::record('settings.updated', 'Company settings updated');
+        ActivityLog::record('settings.updated', 'Company settings updated'.($before !== $data['currency'] ? " (currency {$before} -> {$data['currency']})" : ''));
 
         return back()->with('status', 'Settings saved.');
     }

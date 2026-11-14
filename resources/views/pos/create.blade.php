@@ -23,7 +23,7 @@
     </div>
     @php($rows = old('lines', $prefill))
     <div class="table-wrap"><table id="lines">
-        <thead><tr><th>Item</th><th class="num">Quantity</th><th class="num">Unit price (UGX)</th></tr></thead>
+        <thead><tr><th>Item</th><th class="num">Quantity</th><th class="num">Unit price ({{ currency() }})</th></tr></thead>
         <tbody>@for($n = 0; $n < max(3, count($rows)); $n++)
             <tr><td><select name="lines[{{ $n }}][item_id]" aria-label="Item"><option value="">None</option>@foreach($items as $i)<option value="{{ $i->id }}" @selected(($rows[$n]['item_id'] ?? null) == $i->id)>{{ $i->sku }} - {{ $i->name }} ({{ $i->unit->abbreviation }})</option>@endforeach</select></td>
                 <td><input type="number" step="0.001" min="0" name="lines[{{ $n }}][qty]" value="{{ $rows[$n]['qty'] ?? '' }}" aria-label="Quantity"></td>

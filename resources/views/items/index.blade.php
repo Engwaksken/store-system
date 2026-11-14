@@ -4,7 +4,7 @@
 <div class="page-head"><div><h1>Stock &amp; items</h1><p>On hand is the total across all stores; open an item for the per-store split. Highlighted rows are at or below minimum level.</p></div>
     <div class="actions">
         @can('manage-catalog')<a class="btn" data-modal href="{{ route('items.create') }}"><i class="fas fa-plus"></i> New item</a>@endcan
-        @can('manage-stock')<a class="btn secondary" data-modal href="{{ route('receipts.create', ['type' => 'opening']) }}">Opening balances</a><a class="btn secondary" data-modal href="{{ route('adjustments.create') }}">Adjustment</a>@endcan
+        @can('manage-stock')<a class="btn secondary" data-modal href="{{ route('receipts.create', ['type' => 'opening']) }}"><i class="fas fa-door-open"></i> Opening balances</a><a class="btn secondary" data-modal href="{{ route('adjustments.create') }}">Adjustment</a>@endcan
     </div></div>
 <x-stats :cards="[
     ['Items', number_format($stats['items']), 'fa-boxes-stacked', 'navy'],

@@ -5,8 +5,8 @@
     @can('record-expense')<a class="btn" data-modal href="{{ route('expenses.create') }}"><i class="fas fa-plus"></i> Record expense</a>@endcan</div>
 <x-stats :cards="[
     ['Expenses (filtered)', number_format($stats['count']), 'fa-receipt', 'navy'],
-    ['Total (filtered, UGX)', ugx($total), 'fa-money-bill-wave'],
-    ['This month (UGX)', ugx($stats['month']), 'fa-calendar-day', 'gold'],
+    ['Total (filtered, '.currency().')', ugx($total), 'fa-money-bill-wave'],
+    ['This month ('.currency().')', ugx($stats['month']), 'fa-calendar-day', 'gold'],
     ['Without proof', $stats['no_proof'], 'fa-paperclip', $stats['no_proof'] ? 'bad' : ''],
 ]" />
 <form method="GET" class="card filters"><div class="grid grid-4">
@@ -16,7 +16,7 @@
     <div><label>To</label><input type="date" name="to" value="{{ request('to') }}"></div>
 </div><div class="actions" style="margin-top:.75rem"><button class="btn small">Filter</button></div></form>
 <div class="card table-wrap"><table>
-    <thead><tr><th>Date</th><th>Project</th><th>Category</th><th>Description</th><th>Mode</th><th>Ref</th><th class="num">Amount (UGX)</th><th>Proof</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>Project</th><th>Category</th><th>Description</th><th>Mode</th><th>Ref</th><th class="num">Amount ({{ currency() }})</th><th>Proof</th><th></th></tr></thead>
     <tbody>@forelse($expenses as $e)
         <tr><td class="nowrap">{{ $e->incurred_on->format('d M Y') }}</td><td>{{ $e->project->code }}</td><td>{{ $e->category->name }}</td><td>{{ $e->description }}</td><td>{{ str_replace('_', ' ', $e->payment_mode) }}</td><td>{{ $e->reference }}</td>
             <td class="num">{{ ugx($e->amount) }}</td><td>@if($e->receipt_path)<a href="{{ route('expenses.proof', $e) }}"><i class="fas fa-paperclip"></i> file</a>@endif</td>

@@ -1,10 +1,26 @@
 <?php
 
+if (! function_exists('money')) {
+    /** Format an amount with thousands separators in the company currency (decimals follow the currency). */
+    function money(mixed $v): string
+    {
+        return \App\Support\Currency::format($v);
+    }
+}
+
 if (! function_exists('ugx')) {
-    /** Format money as whole Uganda shillings. */
+    /** Older name for money(), kept because it is used throughout the views. */
     function ugx(mixed $v): string
     {
-        return number_format((float) ($v ?? 0), 0);
+        return money($v);
+    }
+}
+
+if (! function_exists('currency')) {
+    /** The company currency code chosen in Settings, e.g. UGX. */
+    function currency(): string
+    {
+        return \App\Support\Currency::code();
     }
 }
 

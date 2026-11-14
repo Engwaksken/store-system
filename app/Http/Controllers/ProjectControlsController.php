@@ -54,7 +54,7 @@ class ProjectControlsController extends Controller
         ActivityLog::record('project.budgets', "Cost-code budgets updated for {$project->code}", $project, ['before' => $before, 'after' => $project->budgets()->pluck('amount', 'cost_code_id')->all()]);
         $msg = 'Budgets saved.';
         if (bccomp(bcadd((string) $total, '0', 2), (string) $project->budget, 2) !== 0) {
-            $msg .= ' Note: cost-code budgets total '.ugx($total).' UGX but the project budget is '.ugx($project->budget).' UGX.';
+            $msg .= ' Note: cost-code budgets total '.ugx($total).' '.currency().' but the project budget is '.ugx($project->budget).' '.currency().'.';
         }
 
         return redirect()->route('projects.controls', $project)->with('status', $msg);

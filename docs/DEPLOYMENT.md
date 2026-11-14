@@ -65,7 +65,7 @@ The scheduler then runs:
 Run any of them by hand to check, e.g. `php artisan cms:verify-audit`. Before go-live and after every upgrade run `php artisan cms:go-live-check`; it must show no FAIL lines. The full go-live sequence is in `docs/HANDOVER.md`.
 
 ## 3. Go-live data
-1. The admin signs in, changes the temporary password, and fills in **Settings** (company name, address, logo, voucher footer).
+1. The admin signs in, changes the temporary password, and fills in **Settings**: company name, address, logo, favicon, sidebar subtitle, voucher footer and the **company currency** (Settings → Currency & approvals). Set the currency before entering any amounts: changing it later relabels figures but does not convert them.
 2. Create users (temporary passwords; each user changes theirs at first sign-in). Name the **Overall Manager** and **Storekeeper** chosen by the owner.
 3. Create projects, assign a PM and staff.
 4. Create items (Stock & items → New item), then **Opening balances** from the physical count.

@@ -13,7 +13,7 @@
         <div class="field"><label for="needed_on">Needed by</label><input id="needed_on" type="date" name="needed_on" value="{{ old('needed_on') }}"></div>
     </div>
     <div class="table-wrap"><table id="lines">
-        <thead><tr><th>Item</th><th class="num">Quantity</th><th class="num">Est. unit cost (UGX)</th></tr></thead>
+        <thead><tr><th>Item</th><th class="num">Quantity</th><th class="num">Est. unit cost ({{ currency() }})</th></tr></thead>
         <tbody>@for($n = 0; $n < max(3, count(old('lines', []))); $n++)
             <tr><td><select name="lines[{{ $n }}][item_id]" aria-label="Item"><option value="">None</option>@foreach($items as $i)<option value="{{ $i->id }}" @selected(old("lines.$n.item_id") == $i->id)>{{ $i->sku }} - {{ $i->name }} ({{ $i->unit->abbreviation }})</option>@endforeach</select></td>
                 <td><input type="number" step="0.001" min="0" name="lines[{{ $n }}][qty]" value="{{ old("lines.$n.qty") }}" aria-label="Quantity"></td>

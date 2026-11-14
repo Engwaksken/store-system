@@ -60,6 +60,22 @@ class BrandingSettingsTest extends TestCase
         Storage::disk('public')->assertMissing($second);
     }
 
+    public function test_admin_chooses_the_currency_and_amounts_follow_it(): void
+    {
+        $this->assertSame('UGX', currency());
+        $this->assertSame('1,250,000', money('1250000.4'));
+
+        $this->save(['currency' => 'USD'])->assertSessionHasNoErrors();
+        $this->assertSame('USD', currency());
+        $this->assertSame('1,250,000.40', money('1250000.4'));
+        $this->get(route('expenses.index'))->assertOk()->assertSee('Amount (USD)')->assertDontSee('(UGX)');
+
+        // Leaving the field out keeps the chosen currency; an unknown code is rejected.
+        $this->save()->assertSessionHasNoErrors();
+        $this->assertSame('USD', currency());
+        $this->save(['currency' => 'XXX'])->assertSessionHasErrors('currency');
+    }
+
     public function test_favicon_must_be_png_or_ico_and_non_admins_cannot_change_branding(): void
     {
         $this->save(['favicon' => UploadedFile::fake()->create('icon.pdf', 10, 'application/pdf')])->assertSessionHasErrors('favicon');

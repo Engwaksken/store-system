@@ -3,14 +3,17 @@
 @section('content')
 <div class="page-head"><div><h1>{{ $project->code }} · budget, BOQ &amp; milestones</h1><p><a href="{{ route('projects.show', $project) }}"><i class="fas fa-arrow-left"></i> {{ $project->name }}</a></p></div></div>
 
-<div class="grid grid-4" style="margin-bottom:1.25rem">
-    <div class="stat navy"><span class="stat-icon"><i class="fas fa-wallet"></i></span><div class="stat-body"><div class="label">Budget</div><div class="value">{{ ugx($summary->budget) }}</div></div></div>
-    <div class="stat"><span class="stat-icon"><i class="fas fa-money-bill-trend-up"></i></span><div class="stat-body"><div class="label">Actual cost</div><div class="value">{{ ugx($summary->total) }}</div></div></div>
-    <div class="stat gold"><span class="stat-icon"><i class="fas fa-file-contract"></i></span><div class="stat-body"><div class="label">Committed</div><div class="value">{{ ugx($summary->committed) }}</div></div></div>
-    <div @class(['stat', 'bad' => $summary->flag === 'over'])><span class="stat-icon"><i class="fas fa-piggy-bank"></i></span><div class="stat-body"><div class="label">Uncommitted budget</div><div class="value">{{ ugx($summary->uncommitted) }}</div></div></div>
-</div>
+<x-stats :cards="[
+    ['Budget', ugx($summary->budget), 'fa-wallet', 'navy'],
+    ['Actual cost', ugx($summary->total), 'fa-money-bill-trend-up'],
+    ['Committed', ugx($summary->committed), 'fa-file-contract', 'gold'],
+    ['Uncommitted budget', ugx($summary->uncommitted), 'fa-piggy-bank', $summary->flag === 'over' ? 'bad' : ''],
+]" />
 
-<div class="card table-wrap"><h2><i class="fas fa-scale-balanced"></i> Budget vs committed vs actual by cost code</h2>
+<x-tabs id="project-controls">
+<x-tab title="Budget by cost code" icon="fa-scale-balanced" :count="$byCode->count()" name="budget">
+<p class="muted" style="margin-top:0">Budget vs committed vs actual by cost code.</p>
+<div class="table-wrap">
 <form method="POST" action="{{ route('projects.budgets.save', $project) }}">
     @csrf @method('PUT')
     <table>
@@ -36,14 +39,15 @@
     </table>
     @if($canEdit)<p><button class="btn"><i class="fas fa-floppy-disk"></i> Save budgets</button></p>@endif
 </form>
-<p class="hint">Actual = materials issued (net of returns, allocated by the BOQ line on the request) + expenses. Committed = approved purchase orders not yet received + approved claims not yet paid. Variance = budget - (actual + committed). Rows turn amber from {{ \App\Services\ProjectCostService::WARN_PCT }}% and red above 100%.</p>
 </div>
+<p class="hint">Actual = materials issued (net of returns, allocated by the BOQ line on the request) + expenses. Committed = approved purchase orders not yet received + approved claims not yet paid. Variance = budget - (actual + committed). Rows turn amber from {{ \App\Services\ProjectCostService::WARN_PCT }}% and red above 100%.</p>
+</x-tab>
 
-<div class="card table-wrap">
-    <div class="page-head" style="margin-bottom:.75rem"><h2 style="margin:0"><i class="fas fa-list-ol"></i> Bill of quantities</h2>
-        @if($canEdit && $costCodes->isNotEmpty())<div class="actions">
-            <button type="button" class="btn small" data-modal-target="#boq-create"><i class="fas fa-plus"></i> Add BOQ line</button>
-            <button type="button" class="btn secondary small" data-modal-target="#boq-import"><i class="fas fa-file-import"></i> Import CSV</button></div>@endif</div>
+<x-tab title="Bill of quantities" icon="fa-list-ol" :count="$boq->count()" name="boq">
+@if($canEdit && $costCodes->isNotEmpty())<div class="actions" style="margin-bottom:.75rem">
+    <button type="button" class="btn small" data-modal-target="#boq-create"><i class="fas fa-plus"></i> Add BOQ line</button>
+    <button type="button" class="btn secondary small" data-modal-target="#boq-import"><i class="fas fa-file-import"></i> Import CSV</button></div>@endif
+<div class="table-wrap">
 <table>
     <thead><tr><th>Ref</th><th>Description</th><th>Cost code</th><th class="num">Qty</th><th>Unit</th><th class="num">Rate</th><th class="num">Amount</th><th class="num">Materials used</th><th>%</th>@if($canEdit)<th></th>@endif</tr></thead>
     <tbody>@forelse($boq as $row)
@@ -64,6 +68,7 @@
     @empty <tr><td colspan="10" class="empty">No BOQ lines yet.</td></tr> @endforelse</tbody>
     <tfoot><tr><td colspan="6">Total</td><td class="num">{{ ugx($boq->reduce(fn ($c, $r) => bcadd($c, (string) $r->boq->amount, 2), '0')) }}</td><td class="num">{{ ugx($boq->reduce(fn ($c, $r) => bcadd($c, $r->consumed_value, 2), '0')) }}</td><td colspan="{{ $canEdit ? 2 : 1 }}"></td></tr></tfoot>
 </table>
+</div>
 @if($canEdit && $costCodes->isNotEmpty())
 <template id="boq-create" data-title="Add BOQ line">
     <form method="POST" action="{{ route('projects.boq.store', $project) }}">@csrf
@@ -81,11 +86,10 @@
 @elseif($canEdit)
 <p class="hint">Add cost codes first (Finance <i class="fas fa-arrow-right"></i> Cost codes).</p>
 @endif
-</div>
+</x-tab>
 
-<div class="card">
-    <div class="page-head" style="margin-bottom:.75rem"><h2 style="margin:0"><i class="fas fa-flag-checkered"></i> Milestones</h2>
-        @if($canEdit)<button type="button" class="btn small" data-modal-target="#milestone-create"><i class="fas fa-plus"></i> Add milestone</button>@endif</div>
+<x-tab title="Milestones" icon="fa-flag-checkered" :count="$project->milestones->count()" name="milestones">
+@if($canEdit)<div class="actions" style="margin-bottom:.75rem"><button type="button" class="btn small" data-modal-target="#milestone-create"><i class="fas fa-plus"></i> Add milestone</button></div>@endif
 <ul class="timeline">
     @forelse($project->milestones as $m)
         <li @class(['approved' => $m->state() === 'done', 'rejected' => $m->state() === 'late'])><strong>{{ $m->name }}</strong>
@@ -104,5 +108,6 @@
     </form>
 </template>
 @endif
-</div>
+</x-tab>
+</x-tabs>
 @endsection

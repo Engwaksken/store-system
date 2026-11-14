@@ -8,7 +8,7 @@
         <div class="field"><label for="supplier_invoice_no">Supplier invoice no.</label><input id="supplier_invoice_no" type="text" name="supplier_invoice_no" value="{{ old('supplier_invoice_no') }}" required></div>
         <div class="field"><label for="invoice_date">Invoice date</label><input id="invoice_date" type="date" name="invoice_date" value="{{ old('invoice_date', now()->format('Y-m-d')) }}" max="{{ now()->format('Y-m-d') }}" required></div>
         <div class="field"><label for="due_date">Due date</label><input id="due_date" type="date" name="due_date" value="{{ old('due_date') }}"></div>
-        <div class="field"><label for="tax">Tax / VAT (UGX)</label><input id="tax" type="number" step="0.01" min="0" name="tax" value="{{ old('tax', 0) }}"></div>
+        <div class="field"><label for="tax">Tax / VAT ({{ currency() }})</label><input id="tax" type="number" step="0.01" min="0" name="tax" value="{{ old('tax', 0) }}"></div>
         <div class="field"><label for="attachment">Scan (PDF/JPG/PNG, max 5 MB)</label><input id="attachment" type="file" name="attachment" accept=".pdf,image/png,image/jpeg"></div>
     </div>
     <div class="table-wrap"><table>

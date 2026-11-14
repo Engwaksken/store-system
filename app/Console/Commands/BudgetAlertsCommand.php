@@ -42,7 +42,7 @@ class BudgetAlertsCommand extends Command
                 if ($new) {
                     $to = User::whereIn('role', [Role::Admin->value, Role::OverallManager->value, Role::Accountant->value])->orWhere('id', $p->manager_id)->get();
                     $what = $level === 'over' ? 'is OVER budget' : 'has reached '.ProjectCostService::WARN_PCT.'% of budget';
-                    $n->send($to, "Budget alert: {$p->code} {$what}", "{$p->code} ({$c->label}): actual + committed ".ugx($c->exposure).' UGX against a budget of '.ugx($c->budget).' UGX.',
+                    $n->send($to, "Budget alert: {$p->code} {$what}", "{$p->code} ({$c->label}): actual + committed ".ugx($c->exposure).' '.currency().' against a budget of '.ugx($c->budget).' '.currency().'.',
                         route('projects.controls', $p), 'Open project controls', $level === 'over' ? 'bad' : 'warn');
                     $sent++;
                 }

@@ -11,6 +11,8 @@
  *  - Passwords:    every password field gets a show/hide (eye) button.
  *  - Messages:     flash messages fade out after 5 seconds (paused while the mouse is over them).
  *  - Placeholders: fields without a placeholder get one from their label.
+ *  - Amounts:      money fields show thousands separators while typing (removed again on submit).
+ *  - Tabs:         <x-tabs>/<x-tab> panels become a tab bar; the last tab used is remembered.
  */
 (function () {
     'use strict';
@@ -117,8 +119,116 @@
         });
     }
 
+    /* ---------- Amounts with thousands separators ---------- */
+    var MONEY_NAME = /(^|\[|_)(amount|budget|rate|price|unit_cost|unit_price|cost|total|tax|threshold|value|paid)(\]|\[|$)/;
+
+    function groupDigits(raw) {
+        var clean = String(raw).replace(/[^\d.\-]/g, '');
+        var neg = clean.charAt(0) === '-';
+        clean = clean.replace(/-/g, '');
+        var parts = clean.split('.');
+        var whole = parts.shift().replace(/^0+(?=\d)/, '');
+        var out = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        if (parts.length) { out += '.' + parts.join(''); }
+        return (neg ? '-' : '') + out;
+    }
+
+    function formatMoneyField(f) {
+        if (f.value === '') { return; }
+        f.value = groupDigits(f.value);
+    }
+
+    /** Number inputs for money become text inputs that show 1,250,000 while typing; commas are removed on submit. */
+    function addMoneyFormat(root) {
+        root.querySelectorAll('input[type=number], input[data-money]').forEach(function (f) {
+            if (f.dataset.moneyReady || !(f.hasAttribute('data-money') || MONEY_NAME.test(f.name || ''))) { return; }
+            f.dataset.moneyReady = '1';
+            f.setAttribute('data-money', '');
+            f.type = 'text';
+            f.setAttribute('inputmode', 'decimal');
+            f.setAttribute('autocomplete', 'off');
+            f.classList.add('money');
+            formatMoneyField(f);
+        });
+    }
+
+    function initMoney() {
+        document.addEventListener('input', function (e) {
+            var f = e.target;
+            if (!f.matches || !f.matches('input[data-money]')) { return; }
+            var caret = f.selectionStart;
+            var digitsBefore = f.value.slice(0, caret).replace(/[^\d.]/g, '').length;
+            f.value = groupDigits(f.value);
+            var pos = 0, seen = 0;
+            while (pos < f.value.length && seen < digitsBefore) {
+                if (/[\d.]/.test(f.value.charAt(pos))) { seen++; }
+                pos++;
+            }
+            f.setSelectionRange(pos, pos);
+        });
+        // Strip separators just before any form is sent (capture phase runs before the browser submits).
+        document.addEventListener('submit', function (e) {
+            e.target.querySelectorAll('input[data-money]').forEach(function (f) { f.value = f.value.replace(/,/g, ''); });
+        }, true);
+    }
+
+    /* ---------- Tabs ---------- */
+    function initTabs(root) {
+        root.querySelectorAll('[data-tabs]:not(.tabs-ready)').forEach(function (box) {
+            var panels = Array.prototype.filter.call(box.children, function (c) { return c.classList.contains('tab-panel'); });
+            if (!panels.length) { box.remove(); return; }
+            var key = 'tab:' + box.dataset.tabs;
+            var bar = el('div', 'tab-list');
+            bar.setAttribute('role', 'tablist');
+            var buttons = panels.map(function (p, i) {
+                var id = 'tab-' + box.dataset.tabs + '-' + p.dataset.tab;
+                p.id = id + '-panel';
+                p.setAttribute('role', 'tabpanel');
+                var b = el('button', 'tab');
+                b.type = 'button';
+                b.id = id;
+                b.setAttribute('role', 'tab');
+                b.setAttribute('aria-controls', p.id);
+                p.setAttribute('aria-labelledby', id);
+                b.innerHTML = (p.dataset.tabIcon ? '<i class="fas ' + p.dataset.tabIcon + '"></i> ' : '') + '<span></span>';
+                b.querySelector('span').textContent = p.dataset.tabTitle;
+                if (p.dataset.tabCount !== undefined) {
+                    var c = el('span', 'tab-count');
+                    c.textContent = p.dataset.tabCount;
+                    b.appendChild(c);
+                }
+                b.addEventListener('click', function () { select(i, true); });
+                b.addEventListener('keydown', function (e) {
+                    var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+                    if (d) { e.preventDefault(); select((i + d + panels.length) % panels.length, true); buttons[(i + d + panels.length) % panels.length].focus(); }
+                });
+                bar.appendChild(b);
+                return b;
+            });
+            function select(i, remember) {
+                panels.forEach(function (p, j) {
+                    p.hidden = j !== i;
+                    buttons[j].classList.toggle('active', j === i);
+                    buttons[j].setAttribute('aria-selected', j === i ? 'true' : 'false');
+                    buttons[j].tabIndex = j === i ? 0 : -1;
+                });
+                if (remember) { store.set(key, panels[i].dataset.tab); }
+            }
+            box.insertBefore(bar, box.firstChild);
+            box.classList.add('tabs-ready');
+            // Open the tab holding a validation error, else the one named in the URL hash, else the last one used.
+            var start = panels.findIndex(function (p) { return p.querySelector('.err, .alert.bad'); });
+            if (start < 0 && window.location.hash) {
+                start = panels.findIndex(function (p) { return '#' + p.dataset.tab === window.location.hash; });
+            }
+            if (start < 0) { start = panels.findIndex(function (p) { return p.dataset.tab === store.get(key); }); }
+            select(start < 0 ? 0 : start, false);
+        });
+    }
+
     function enhance(root) {
         addPasswordToggles(root);
+        addMoneyFormat(root);
         addPlaceholders(root);
     }
 
@@ -241,6 +351,7 @@
         dialog.classList.toggle('modal-xl', wide);
         dialog.classList.toggle('modal-lg', !wide && !!body.querySelector('[data-modal-wide], textarea, fieldset, .form-grid .field:nth-child(7)'));
         enhance(body);
+        initTabs(body);
         openModal(modal);
         return form;
     }
@@ -323,6 +434,8 @@
                 if (f.tagName === 'SELECT') { f.selectedIndex = 0; } else if (f.tagName !== 'BUTTON') { f.value = ''; }
             }
         });
+
+        form.querySelectorAll('input[data-money]').forEach(formatMoneyField);
 
         var errors = data.errors || {};
         var all = [];
@@ -432,6 +545,8 @@
         initFlash();
         initLines();
         initPrint();
+        initMoney();
+        initTabs(document);
         enhance(document);
         initModals();
         initConfirm();

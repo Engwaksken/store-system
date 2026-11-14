@@ -5,10 +5,10 @@
 <x-stats :cards="[
     ['Returns', $stats['total'], 'fa-rotate-left', 'navy'],
     ['This month', $stats['month'], 'fa-calendar-day'],
-    ['Value returned (UGX)', ugx($stats['value']), 'fa-sack-dollar', 'gold'],
+    ['Value returned ('.currency().')', ugx($stats['value']), 'fa-sack-dollar', 'gold'],
 ]" />
 <div class="card table-wrap"><table>
-    <thead><tr><th>Return</th><th>Date</th><th>Voucher</th><th>Project</th><th>Store</th><th>Returned by</th><th class="num">Value (UGX)</th><th>Received by</th></tr></thead>
+    <thead><tr><th>Return</th><th>Date</th><th>Voucher</th><th>Project</th><th>Store</th><th>Returned by</th><th class="num">Value ({{ currency() }})</th><th>Received by</th></tr></thead>
     <tbody>@forelse($returns as $r)
         <tr><td><a href="{{ route('returns.show', $r) }}">{{ $r->return_no }}</a></td><td class="nowrap">{{ $r->returned_at->format('d M Y') }}</td>
             <td><a href="{{ route('issues.show', $r->issue) }}">{{ $r->issue->issue_no }}</a></td><td>{{ $r->project->code }}</td><td>{{ $r->store->code }}</td>

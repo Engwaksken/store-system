@@ -51,7 +51,7 @@ class ExpenseController extends Controller
             $data['receipt_path'] = $request->file('proof')->store('expense-proofs', 'local');
         }
         $expense = Expense::create($data + ['recorded_by' => $request->user()->id]);
-        ActivityLog::record('expense.created', "Expense UGX ".number_format((float) $expense->amount)." recorded for {$expense->project->code}", $expense);
+        ActivityLog::record('expense.created', 'Expense '.currency().' '.money($expense->amount)." recorded for {$expense->project->code}", $expense);
 
         return redirect()->route('expenses.index')->with('status', 'Expense recorded.');
     }

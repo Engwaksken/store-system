@@ -10,7 +10,7 @@
         <div class="field"><label>Category</label><select name="category_id" required>@foreach($categories as $c)<option value="{{ $c->id }}" @selected(old('category_id', $expense->category_id) == $c->id)>{{ $c->name }}</option>@endforeach</select></div>
         <div class="field"><label for="cost_code_id">Cost code</label><select id="cost_code_id" name="cost_code_id"><option value="">None</option>@foreach($costCodes as $cc)<option value="{{ $cc->id }}" @selected(old('cost_code_id', $expense->cost_code_id) == $cc->id)>{{ $cc->label() }}</option>@endforeach</select></div>
         <div class="field"><label>Date</label><input type="date" name="incurred_on" max="{{ now()->format('Y-m-d') }}" value="{{ old('incurred_on', $expense->incurred_on?->format('Y-m-d')) }}" required></div>
-        <div class="field"><label>Amount (UGX)</label><input type="number" name="amount" step="1" min="1" value="{{ old('amount', $expense->amount) }}" required></div>
+        <div class="field"><label>Amount ({{ currency() }})</label><input type="number" name="amount" step="1" min="1" value="{{ old('amount', $expense->amount) }}" required></div>
         <div class="field"><label>Payment mode</label><select name="payment_mode">@foreach(\App\Models\Expense::PAYMENT_MODES as $m)<option value="{{ $m }}" @selected(old('payment_mode', $expense->payment_mode) === $m)>{{ str_replace('_', ' ', $m) }}</option>@endforeach</select></div>
         <div class="field"><label>Reference (receipt / txn no.)</label><input type="text" name="reference" value="{{ old('reference', $expense->reference) }}"></div>
     </div>

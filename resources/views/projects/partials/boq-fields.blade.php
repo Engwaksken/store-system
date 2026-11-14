@@ -9,7 +9,7 @@
 <div class="form-grid">
     <div class="field"><label for="unit_{{ $k }}">Unit</label><input id="unit_{{ $k }}" type="text" name="unit" value="{{ $line?->unit }}" required maxlength="20"></div>
     <div class="field"><label for="qty_{{ $k }}">Quantity</label><input id="qty_{{ $k }}" type="number" step="0.001" min="0" name="qty" value="{{ $line ? (float) $line->qty : '' }}" required></div>
-    <div class="field"><label for="rate_{{ $k }}">Rate (UGX)</label><input id="rate_{{ $k }}" type="number" step="0.01" min="0" name="rate" value="{{ $line ? (float) $line->rate : '' }}" required></div>
+    <div class="field"><label for="rate_{{ $k }}">Rate ({{ currency() }})</label><input id="rate_{{ $k }}" type="number" step="0.01" min="0" name="rate" value="{{ $line ? (float) $line->rate : '' }}" required></div>
     <div class="field"><label for="item_{{ $k }}">Catalogue item (optional)</label><select id="item_{{ $k }}" name="item_id"><option value="">None</option>
         @foreach($items as $i)<option value="{{ $i->id }}" @selected($line?->item_id == $i->id)>{{ $i->sku }} - {{ $i->name }}</option>@endforeach</select></div>
 </div>

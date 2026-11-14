@@ -92,7 +92,7 @@ class WorkflowNotifier
     {
         $to = User::whereIn('role', [Role::Admin->value, Role::OverallManager->value])->where('is_active', true)->get()
             ->filter(fn ($u) => Gate::forUser($u)->allows('decide-po', $po));
-        $this->send($to, "Purchase order to approve: {$po->po_no}", "Purchase order {$po->po_no} to {$po->supplier->name} for ".ugx($po->total).' UGX is waiting for approval.', route('pos.show', $po), 'Review PO');
+        $this->send($to, "Purchase order to approve: {$po->po_no}", "Purchase order {$po->po_no} to {$po->supplier->name} for ".ugx($po->total).' '.currency().' is waiting for approval.', route('pos.show', $po), 'Review PO');
     }
 
     public function orderApproved(PurchaseOrder $po): void
@@ -113,14 +113,14 @@ class WorkflowNotifier
     {
         $to = User::whereIn('role', [Role::Admin->value, Role::OverallManager->value, Role::ProjectManager->value])->where('is_active', true)->get()
             ->filter(fn ($u) => app(ExpenseClaimService::class)->canDecide($u, $c) && ($u->role === Role::ProjectManager || $c->project->manager_id === null || $c->project->manager_id === $c->claimant_id));
-        $this->send($to, "Expense claim to approve: {$c->claim_no}", "{$c->claimant->name} claimed ".ugx($c->amount)." UGX on {$c->project->code}: {$c->description}", route('claims.show', $c), 'Review claim');
+        $this->send($to, "Expense claim to approve: {$c->claim_no}", "{$c->claimant->name} claimed ".ugx($c->amount).' '.currency()." on {$c->project->code}: {$c->description}", route('claims.show', $c), 'Review claim');
     }
 
     public function claimDecided(ExpenseClaim $c): void
     {
         $this->send(User::whereKey($c->claimant_id)->get(), "Claim {$c->status}: {$c->claim_no}", "Your expense claim {$c->claim_no} was {$c->status}".($c->decision_reason ? ": {$c->decision_reason}" : '.'), route('claims.show', $c), 'Open claim', $c->status === 'approved' ? 'ok' : 'bad');
         if ($c->status === 'approved') {
-            $this->send($this->role(Role::Accountant), "Claim to pay: {$c->claim_no}", "Expense claim {$c->claim_no} ({$c->claimant->name}, ".ugx($c->amount).' UGX) is approved and waiting for payment.', route('claims.show', $c), 'Open claim');
+            $this->send($this->role(Role::Accountant), "Claim to pay: {$c->claim_no}", "Expense claim {$c->claim_no} ({$c->claimant->name}, ".ugx($c->amount).' '.currency().') is approved and waiting for payment.', route('claims.show', $c), 'Open claim');
         }
     }
 

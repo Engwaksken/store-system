@@ -7,7 +7,7 @@
     ['Purchase orders', $stats['total'], 'fa-file-invoice', 'navy'],
     ['Awaiting approval', $stats['pending'], 'fa-hourglass-half', 'gold', route('pos.index', ['status' => 'pending_approval'])],
     ['Open (not fully received)', $stats['open'], 'fa-truck'],
-    ['Open value (UGX)', ugx($stats['open_value']), 'fa-sack-dollar'],
+    ['Open value ('.currency().')', ugx($stats['open_value']), 'fa-sack-dollar'],
 ]" />
 <form method="GET" class="card filters"><div class="grid grid-4">
     <div><label for="status">Status</label><select id="status" name="status"><option value="">All</option>@foreach(\App\Models\PurchaseOrder::STATUSES as $k => $v)<option value="{{ $k }}" @selected(request('status') === $k)>{{ $v }}</option>@endforeach</select></div>
@@ -15,7 +15,7 @@
     <div><label>&nbsp;</label><button class="btn small">Filter</button></div>
 </div></form>
 <div class="card table-wrap"><table>
-    <thead><tr><th>PO</th><th>Date</th><th>Supplier</th><th>Project</th><th>Deliver to</th><th class="num">Total (UGX)</th><th>Status</th></tr></thead>
+    <thead><tr><th>PO</th><th>Date</th><th>Supplier</th><th>Project</th><th>Deliver to</th><th class="num">Total ({{ currency() }})</th><th>Status</th></tr></thead>
     <tbody>@forelse($orders as $o)
         <tr><td><a href="{{ route('pos.show', $o) }}">{{ $o->po_no }}</a></td><td class="nowrap">{{ $o->order_date->format('d M Y') }}</td><td>{{ $o->supplier->name }}</td><td>{{ $o->project?->code }}</td><td>{{ $o->store->code }}</td>
             <td class="num">{{ ugx($o->total) }}</td><td><span class="badge {{ $o->tone() }}">{{ $o->statusLabel() }}</span></td></tr>

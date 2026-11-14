@@ -11,7 +11,7 @@
     <tr><td class="k">Recipient</td><td>{{ $issue->recipient_name }}</td></tr>
 </table>
 <table class="grid">
-    <thead><tr><th>#</th><th>SKU</th><th>Item</th><th class="num">Qty</th><th>Unit</th>@if($showValue)<th class="num">Unit cost</th><th class="num">Value (UGX)</th>@endif</tr></thead>
+    <thead><tr><th>#</th><th>SKU</th><th>Item</th><th class="num">Qty</th><th>Unit</th>@if($showValue)<th class="num">Unit cost</th><th class="num">Value ({{ currency() }})</th>@endif</tr></thead>
     <tbody>@foreach($issue->lines as $l)<tr><td>{{ $loop->iteration }}</td><td>{{ $l->item->sku }}</td><td>{{ $l->item->name }}</td><td class="num">{{ qty($l->qty) }}</td><td>{{ $l->item->unit->abbreviation }}</td>
         @if($showValue)<td class="num">{{ ugx($l->unit_cost_snapshot) }}</td><td class="num">{{ ugx($l->line_value) }}</td>@endif</tr>@endforeach</tbody>
     @if($showValue)<tfoot><tr><td colspan="6">Total</td><td class="num">{{ ugx($issue->total_value) }}</td></tr></tfoot>@endif

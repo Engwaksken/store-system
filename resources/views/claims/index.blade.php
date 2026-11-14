@@ -6,7 +6,7 @@
 <x-stats :cards="[
     ['Awaiting approval', $stats['submitted'], 'fa-hourglass-half', 'gold', route('claims.index', ['status' => 'submitted'])],
     ['Approved, unpaid', $stats['approved'], 'fa-file-circle-check', 'navy', route('claims.index', ['status' => 'approved'])],
-    ['Unpaid value (UGX)', ugx($stats['unpaid_value']), 'fa-money-bill-wave', 'bad'],
+    ['Unpaid value ('.currency().')', ugx($stats['unpaid_value']), 'fa-money-bill-wave', 'bad'],
     ['Paid', $stats['paid'], 'fa-circle-check', '', route('claims.index', ['status' => 'paid'])],
 ]" />
 <form method="GET" class="card filters"><div class="grid grid-4">
@@ -14,7 +14,7 @@
     <div><label>&nbsp;</label><button class="btn small">Filter</button></div>
 </div></form>
 <div class="card table-wrap"><table>
-    <thead><tr><th>Claim</th><th>Date</th><th>Project</th><th>Claimant</th><th>Category</th><th class="num">Amount (UGX)</th><th>Status</th></tr></thead>
+    <thead><tr><th>Claim</th><th>Date</th><th>Project</th><th>Claimant</th><th>Category</th><th class="num">Amount ({{ currency() }})</th><th>Status</th></tr></thead>
     <tbody>@forelse($claims as $c)
         <tr><td><a href="{{ route('claims.show', $c) }}">{{ $c->claim_no }}</a></td><td class="nowrap">{{ $c->incurred_on->format('d M Y') }}</td><td>{{ $c->project->code }}</td><td>{{ $c->claimant->name }}</td><td>{{ $c->category->name }}</td>
             <td class="num">{{ ugx($c->amount) }}</td><td><span class="badge {{ $c->tone() }}">{{ $c->statusLabel() }}</span></td></tr>

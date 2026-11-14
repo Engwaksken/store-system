@@ -49,7 +49,7 @@ class ReportController extends Controller
         });
         $headers = ['SKU', 'Item', 'Category', 'Unit', 'On hand', 'Min level', 'Status'];
         if ($showValue) {
-            array_push($headers, 'Avg cost (UGX)', 'Stock value (UGX)');
+            array_push($headers, 'Avg cost ('.currency().')', 'Stock value ('.currency().')');
         }
 
         return $this->respond($request, 'Stock summary', $headers, $rows, numeric: [4, 5, 7, 8], totals: $showValue ? [8] : [], money: [7, 8], filters: ['store'],
@@ -121,7 +121,7 @@ class ReportController extends Controller
             return [$r->code, $r->project_name, $r->sku, $r->item_name, bcadd((string) $r->qty, '0', 3), $v, $rq, $rv, bcsub($v, $rv, 2)];
         });
 
-        return $this->respond($request, 'Materials issued by project', ['Project', 'Project name', 'SKU', 'Item', 'Qty issued', 'Issued value', 'Qty returned', 'Returned value', 'Net cost (UGX)'],
+        return $this->respond($request, 'Materials issued by project', ['Project', 'Project name', 'SKU', 'Item', 'Qty issued', 'Issued value', 'Qty returned', 'Returned value', 'Net cost ('.currency().')'],
             $rows, numeric: [4, 5, 6, 7, 8], totals: [5, 7, 8], filters: ['project', 'dates'], money: [5, 7, 8],
             note: 'Returns are credited at the cost on the original voucher. Returns dated outside the filter period are not shown.');
     }
@@ -139,7 +139,7 @@ class ReportController extends Controller
             ->selectRaw('projects.code, projects.name as project_name, expense_categories.name as category, COUNT(*) as n, SUM(expenses.amount) as total');
         $rows = $q->get()->map(fn ($r) => [$r->code, $r->project_name, $r->category, (string) $r->n, bcadd((string) $r->total, '0', 2)]);
 
-        return $this->respond($request, 'Cash expenses by project', ['Project', 'Project name', 'Category', 'Entries', 'Amount (UGX)'],
+        return $this->respond($request, 'Cash expenses by project', ['Project', 'Project name', 'Category', 'Entries', 'Amount ('.currency().')'],
             $rows, numeric: [3, 4], totals: [4], filters: ['project', 'dates'], money: [4]);
     }
 
@@ -196,7 +196,7 @@ class ReportController extends Controller
             ->tap(fn ($q) => $this->scopeProjects($q, $request, 'project_id'))->orderBy('id')->get()
             ->map(fn ($c) => [$c->project->code, 'Approved claim', $c->claim_no, $c->claimant->name, $c->costCode?->code ?? '', $c->incurred_on->format('Y-m-d'), (string) $c->amount]);
 
-        return $this->respond($request, 'Open commitments', ['Project', 'Type', 'Document', 'Supplier / claimant', 'Cost code', 'Date', 'Open value (UGX)'],
+        return $this->respond($request, 'Open commitments', ['Project', 'Type', 'Document', 'Supplier / claimant', 'Cost code', 'Date', 'Open value ('.currency().')'],
             $pos->concat($claims)->sortBy(0)->values(), numeric: [6], totals: [6], filters: ['project'], money: [6]);
     }
 

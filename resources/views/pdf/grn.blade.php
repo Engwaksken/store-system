@@ -11,7 +11,7 @@
     @if($receipt->notes)<tr><td class="k">Notes</td><td>{{ $receipt->notes }}</td></tr>@endif
 </table>
 <table class="grid">
-    <thead><tr><th>#</th><th>SKU</th><th>Item</th><th class="num">Qty</th><th>Unit</th><th class="num">Unit cost</th><th class="num">Amount (UGX)</th></tr></thead>
+    <thead><tr><th>#</th><th>SKU</th><th>Item</th><th class="num">Qty</th><th>Unit</th><th class="num">Unit cost</th><th class="num">Amount ({{ currency() }})</th></tr></thead>
     <tbody>@foreach($receipt->lines as $l)<tr><td>{{ $loop->iteration }}</td><td>{{ $l->item->sku }}</td><td>{{ $l->item->name }}</td><td class="num">{{ qty($l->qty) }}</td><td>{{ $l->item->unit->abbreviation }}</td><td class="num">{{ ugx($l->unit_cost) }}</td><td class="num">{{ ugx($l->line_total) }}</td></tr>@endforeach</tbody>
     <tfoot><tr><td colspan="6">Total</td><td class="num">{{ ugx($receipt->total_value) }}</td></tr></tfoot>
 </table>
