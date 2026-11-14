@@ -177,9 +177,9 @@ class ApprovalWorkflowTest extends TestCase
         $this->assertDatabaseCount('material_approvals', 4);
     }
 
-    public function test_only_draft_lines_are_editable(): void
+    public function test_lines_are_locked_once_the_final_decision_is_made(): void
     {
-        $req = $this->submittedRequest(10);
+        $req = $this->approvedRequest(10);
         $this->actingAs($this->staff)->put(route('requests.update', $req), [
             'project_id' => $this->project->id, 'purpose' => 'changed', 'lines' => [['item_id' => $this->cement->id, 'requested_qty' => 50]],
         ])->assertForbidden();

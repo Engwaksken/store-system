@@ -3,6 +3,10 @@
 @section('content')
 <div class="page-head"><div><h1>{{ $req->exists ? 'Edit '.$req->request_no.' (v'.$req->version.')' : 'New material request' }}</h1>
     <p>Route: you <i class="fas fa-arrow-right"></i> Project Manager <i class="fas fa-arrow-right"></i> Overall Manager <i class="fas fa-arrow-right"></i> Storekeeper issues.</p></div></div>
+@if($req->exists && $req->status !== \App\Enums\RequestStatus::Draft)
+    <div class="alert warn"><i class="fas fa-triangle-exclamation"></i> This request is waiting for approval{{ $req->status === \App\Enums\RequestStatus::PmApproved ? ' and the Project Manager has already approved it' : '' }}.
+        Saving your changes makes it version {{ $req->version + 1 }} and sends it back to the Project Manager to approve again.</div>
+@endif
 @if($projects->isEmpty())<div class="alert warn">You are not assigned to any active project, so you cannot raise requests.</div>@endif
 @php($old = old('lines', $req->exists ? $req->lines->map(fn ($l) => ['item_id' => $l->item_id, 'boq_item_id' => $l->boq_item_id, 'requested_qty' => $l->requested_qty + 0, 'notes' => $l->notes])->all() : []))
 @php($boqProjects = $projects->filter(fn ($p) => $p->boqItems->isNotEmpty()))
@@ -27,6 +31,10 @@
     </table></div>
     <p><button type="button" class="btn secondary small" data-add-line="#request-lines"><i class="fas fa-plus"></i> Add line</button></p>
     <p class="hint">Leave unused rows empty. Store balance is shown for information only. Approval does not reserve stock. Linking a BOQ line (of the same project) lets consumption be reported per BOQ line and cost code.</p>
-    <div class="actions"><button class="btn" name="action" value="submit">Submit for approval</button><button class="btn secondary" name="action" value="draft">Save draft</button></div>
+    @if($req->exists && $req->status !== \App\Enums\RequestStatus::Draft)
+        <div class="actions"><button class="btn" name="action" value="resubmit"><i class="fas fa-paper-plane"></i> Save &amp; send back for approval</button></div>
+    @else
+        <div class="actions"><button class="btn" name="action" value="submit"><i class="fas fa-paper-plane"></i> Submit for approval</button><button class="btn secondary" name="action" value="draft">Save draft</button></div>
+    @endif
 </form>
 @endsection

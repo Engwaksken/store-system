@@ -102,6 +102,11 @@ class MaterialRequestController extends Controller
         if ((int) $data['project_id'] !== $materialRequest->project_id) {
             return back()->withInput()->withErrors(['project_id' => 'Project cannot be changed on an existing request; cancel it and create a new one.']);
         }
+        if ($materialRequest->status !== RequestStatus::Draft) {
+            $req = $this->wf->editPending($request->user(), $materialRequest, $data['purpose'], $data['needed_on'] ?? null, $data['lines']);
+
+            return redirect()->route('requests.show', $req)->with('status', "Changes saved. The request is back with the Project Manager as version {$req->version}.");
+        }
         $this->wf->updateDraft($request->user(), $materialRequest, $data['purpose'], $data['needed_on'] ?? null, $data['lines']);
         if ($request->input('action') === 'submit') {
             $this->wf->submit($request->user(), $materialRequest);
@@ -138,7 +143,7 @@ class MaterialRequestController extends Controller
         // Refuse before validating; the workflow re-checks state and separation of duties under a lock.
         Gate::authorize('approve-any');
         $d = $this->decisionInput($request);
-        $this->wf->pmDecide($request->user(), $materialRequest, $d['decision'], $d['reason'] ?? null, $d['qty'] ?? []);
+        $this->wf->pmDecide($request->user(), $materialRequest, $d['decision'], $d['reason'] ?? null, $d['qty'] ?? [], isset($d['version']) ? (int) $d['version'] : null);
 
         return redirect()->route('requests.show', $materialRequest)->with('status', 'PM decision recorded.');
     }
@@ -148,7 +153,7 @@ class MaterialRequestController extends Controller
         // Refuse before validating; the workflow re-checks state and separation of duties under a lock.
         Gate::authorize('approve-any');
         $d = $this->decisionInput($request);
-        $this->wf->overallDecide($request->user(), $materialRequest, $d['decision'], $d['reason'] ?? null, $d['qty'] ?? []);
+        $this->wf->overallDecide($request->user(), $materialRequest, $d['decision'], $d['reason'] ?? null, $d['qty'] ?? [], isset($d['version']) ? (int) $d['version'] : null);
 
         return redirect()->route('requests.show', $materialRequest)->with('status', 'Overall decision recorded.');
     }
@@ -160,6 +165,7 @@ class MaterialRequestController extends Controller
             'reason' => 'nullable|required_if:decision,rejected|string|max:1000',
             'qty' => 'array',
             'qty.*' => 'nullable|numeric|min:0',
+            'version' => 'nullable|integer',
         ]);
     }
 

@@ -9,8 +9,10 @@
     <div class="actions">
         @include('partials.status', ['status' => $req->status])
         @can('edit-request', $req)
-            <a class="btn secondary" data-modal href="{{ route('requests.edit', $req) }}">Edit</a>
-            <form method="POST" action="{{ route('requests.submit', $req) }}" class="inline-form">@csrf<button class="btn">Submit</button></form>
+            <a class="btn secondary" data-modal href="{{ route('requests.edit', $req) }}"><i class="fas fa-pen"></i> Edit</a>
+            @if($req->status === \App\Enums\RequestStatus::Draft)
+                <form method="POST" action="{{ route('requests.submit', $req) }}" class="inline-form">@csrf<button class="btn"><i class="fas fa-paper-plane"></i> Submit</button></form>
+            @endif
         @endcan
         @if(auth()->id() === $req->requester_id && $req->status->isRejected())
             <form method="POST" action="{{ route('requests.revise', $req) }}" class="inline-form">@csrf<button class="btn gold">Revise &amp; resubmit</button></form>
@@ -32,7 +34,7 @@
 
 @if($deciding)
 <form method="POST" action="{{ $canPm ? route('requests.pm-decision', $req) : route('requests.overall-decision', $req) }}">
-@csrf
+@csrf <input type="hidden" name="version" value="{{ $req->version }}">
 <div class="card">
     <h2>{{ $canPm ? 'Project Manager decision' : 'Overall Manager decision' }}</h2>
     @include('requests.partials.lines')

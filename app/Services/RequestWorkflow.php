@@ -118,6 +118,47 @@ class RequestWorkflow
         });
     }
 
+    /** Statuses in which the requester may still change the request. */
+    public const EDITABLE = [RequestStatus::Draft, RequestStatus::Submitted, RequestStatus::PmApproved];
+
+    /**
+     * The requester edits a request that is waiting for approval. Any approval already given no longer matches the
+     * lines, so the request becomes a new version back at the PM step; deciders holding the old page are refused
+     * (see assertVersion). Prior decisions stay in the history under their own version.
+     */
+    public function editPending(User $user, MaterialRequest $req, string $purpose, ?string $neededOn, array $lines): MaterialRequest
+    {
+        $lines = $this->normaliseLines($lines, $req->project_id);
+
+        return DB::transaction(function () use ($user, $req, $purpose, $neededOn, $lines) {
+            $req = $this->lock($req);
+            $this->assertRequester($user, $req);
+            $this->assertStatus($req, RequestStatus::Submitted, RequestStatus::PmApproved);
+            $project = Project::findOrFail($req->project_id);
+            if (! $this->canRequestFor($user, $project)) {
+                throw new AuthorizationException('You are no longer assigned to this project.');
+            }
+            if ($project->manager_id === null) {
+                throw new WorkflowException('This project has no assigned Project Manager. Ask the admin to assign one.');
+            }
+            $wasPmApproved = $req->status === RequestStatus::PmApproved;
+            $req->update(['purpose' => $purpose, 'needed_on' => $neededOn]);
+            $req->lines()->delete();
+            foreach ($lines as $l) {
+                $req->lines()->create($l);
+            }
+            $req->forceFill([
+                'status' => RequestStatus::Submitted, 'version' => $req->version + 1,
+                'project_manager_id' => $project->manager_id, 'submitted_at' => now(),
+            ])->save();
+            ActivityLog::record('request.edited', "Request {$req->request_no} edited while pending and resubmitted as v{$req->version}"
+                .($wasPmApproved ? ' (PM approval of the previous version no longer applies)' : ''), $req);
+            $this->notifier->submitted($req);
+
+            return $req;
+        });
+    }
+
     public function submit(User $user, MaterialRequest $req): MaterialRequest
     {
         return DB::transaction(function () use ($user, $req) {
@@ -183,10 +224,11 @@ class RequestWorkflow
     // ---------------------------------------------------------------- decisions
 
     /** @param array<int|string, mixed> $qtys line_id => approved qty (approve only) */
-    public function pmDecide(User $user, MaterialRequest $req, string $decision, ?string $reason, array $qtys = []): MaterialRequest
+    public function pmDecide(User $user, MaterialRequest $req, string $decision, ?string $reason, array $qtys = [], ?int $expectedVersion = null): MaterialRequest
     {
-        return DB::transaction(function () use ($user, $req, $decision, $reason, $qtys) {
+        return DB::transaction(function () use ($user, $req, $decision, $reason, $qtys, $expectedVersion) {
             $req = $this->lock($req);
+            $this->assertVersion($req, $expectedVersion);
             $this->assertStatus($req, RequestStatus::Submitted);
             if (! $this->canActAsPm($user, $req)) {
                 throw new AuthorizationException('You are not the assigned Project Manager for this request.');
@@ -199,10 +241,11 @@ class RequestWorkflow
         });
     }
 
-    public function overallDecide(User $user, MaterialRequest $req, string $decision, ?string $reason, array $qtys = []): MaterialRequest
+    public function overallDecide(User $user, MaterialRequest $req, string $decision, ?string $reason, array $qtys = [], ?int $expectedVersion = null): MaterialRequest
     {
-        return DB::transaction(function () use ($user, $req, $decision, $reason, $qtys) {
+        return DB::transaction(function () use ($user, $req, $decision, $reason, $qtys, $expectedVersion) {
             $req = $this->lock($req);
+            $this->assertVersion($req, $expectedVersion);
             $this->assertStatus($req, RequestStatus::PmApproved);
             if (! $this->canActAsOverall($user, $req)) {
                 throw new AuthorizationException('You cannot give the overall decision on this request (role or independence rule).');
@@ -213,6 +256,14 @@ class RequestWorkflow
                 approved: RequestStatus::OverallApproved, rejected: RequestStatus::OverallRejected,
                 substitute: false);
         });
+    }
+
+    /** The decider must be looking at the current version: the requester may have edited it since the page loaded. */
+    private function assertVersion(MaterialRequest $req, ?int $expectedVersion): void
+    {
+        if ($expectedVersion !== null && $expectedVersion !== $req->version) {
+            throw new WorkflowException("The requester changed this request after you opened it (now version {$req->version}). Reload the page and review it again.");
+        }
     }
 
     private function decide(User $user, MaterialRequest $req, string $step, string $decision, ?string $reason, array $qtys,

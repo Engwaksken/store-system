@@ -113,7 +113,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('create-request', fn (User $u) => $u->isAdmin()
             || ($u->hasRole(Role::Staff, Role::ProjectManager) && Project::requestableBy($u)->exists()));
         Gate::define('view-request', fn (User $u, MaterialRequest $r) => MaterialRequest::visibleTo($u)->whereKey($r->id)->exists());
-        Gate::define('edit-request', fn (User $u, MaterialRequest $r) => $u->id === $r->requester_id && $r->status === RequestStatus::Draft);
+        // The requester may edit until the final decision; editing a pending request sends it back to the PM (RequestWorkflow::editPending).
+        Gate::define('edit-request', fn (User $u, MaterialRequest $r) => $u->id === $r->requester_id && in_array($r->status, \App\Services\RequestWorkflow::EDITABLE, true));
         Gate::define('pm-decide', fn (User $u, MaterialRequest $r) => $r->status === RequestStatus::Submitted && app(RequestWorkflow::class)->canActAsPm($u, $r));
         Gate::define('overall-decide', fn (User $u, MaterialRequest $r) => $r->status === RequestStatus::PmApproved && app(RequestWorkflow::class)->canActAsOverall($u, $r));
         Gate::define('approve-any', $is(Role::Admin, Role::OverallManager, Role::ProjectManager));

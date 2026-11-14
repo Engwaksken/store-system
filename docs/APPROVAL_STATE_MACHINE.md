@@ -19,6 +19,7 @@ DRAFT ── cancel ──▶ CANCELLED      (also from SUBMITTED, by requester,
 | From | Action | Actor | Guards | To |
 |---|---|---|---|---|
 | DRAFT | edit lines | requester | still assigned to project | DRAFT |
+| SUBMITTED / PM_APPROVED | edit lines (pending edit) | requester | still assigned; project has a PM; `version++`, approved qtys reset, PM notified | SUBMITTED |
 | DRAFT | submit | requester | ≥1 line, qty > 0, still assigned; snapshot `project_manager_id` | SUBMITTED |
 | SUBMITTED | pm approve | project's PM (snapshot), or admin when requester = PM | approver ≠ requester; 0 ≤ pm_qty ≤ requested; at least one qty > 0 | PM_APPROVED |
 | SUBMITTED | pm reject | same as above | reason required | PM_REJECTED |
@@ -38,3 +39,5 @@ DRAFT ── cancel ──▶ CANCELLED      (also from SUBMITTED, by requester,
 ## Concurrency
 - Every transition runs in `DB::transaction` and re-reads the request with `lockForUpdate()`. Two approvers clicking at the same moment can't both succeed, and the loser gets "request is no longer in state X".
 - Issuance locks the request, its lines and the affected `inventory_balances` rows in ascending `item_id` order to avoid deadlocks. The checks run against the locked values. Stock decrements, the ledger insert, the voucher and the status update all commit together or not at all.
+
+**Pending edits.** The requester may edit until the Overall Manager decides. Editing a SUBMITTED or PM_APPROVED request makes a new version back at the PM step, so a PM approval of the old lines never carries over. The decision forms send the version they were rendered from; a decision on an older version is refused ("the requester changed this request"), so nobody approves lines they have not seen. Decisions on earlier versions stay in the history.
