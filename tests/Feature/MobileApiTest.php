@@ -35,6 +35,18 @@ class MobileApiTest extends TestCase
 
     // ---------------------------------------------------------------- auth
 
+    public function test_public_branding_endpoint_returns_admin_brand_settings(): void
+    {
+        \App\Models\AppSetting::put('company_name', 'Project Supplies Ltd');
+        \App\Models\AppSetting::put('logo_path', 'branding/logo.png');
+        \App\Models\AppSetting::put('favicon_path', 'branding/favicon.png');
+
+        $this->getJson('/api/v1/branding')->assertOk()
+            ->assertJsonPath('company_name', 'Project Supplies Ltd')
+            ->assertJsonPath('logo_url', url('/storage/branding/logo.png'))
+            ->assertJsonPath('favicon_url', url('/storage/branding/favicon.png'));
+    }
+
     public function test_login_issues_a_token_and_me_returns_the_user_with_permissions(): void
     {
         $this->staff->forceFill(['password' => 'Secret123'])->save();

@@ -73,6 +73,13 @@ class FakeBackend {
     final segs = p.split('/');
     final json = body is Map ? body.cast<String, dynamic>() : <String, dynamic>{};
 
+    if (method == 'GET' && p == 'branding') {
+      return const FakeResponse(200, {
+        'company_name': 'Kemmy Tech',
+        'logo_url': null,
+        'favicon_url': null,
+      });
+    }
     if (method == 'POST' && p == 'auth/login') return _login(json);
 
     final userId = _authUserId(authorization);

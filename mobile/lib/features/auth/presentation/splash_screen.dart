@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/config/branding.dart';
 import '../data/auth_controller.dart';
 
 /// Restores the token and calls `/me`; the router then moves on.
@@ -38,7 +39,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 const BrandLogo(width: 220),
                 const SizedBox(height: 32),
                 if (state is AuthRestoreFailed) ...[
-                  const Icon(Icons.cloud_off_outlined, color: Colors.black45, size: 36),
+                  const Icon(
+                    Icons.cloud_off_outlined,
+                    color: Colors.black45,
+                    size: 36,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     state.message,
@@ -47,12 +52,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   ),
                   const SizedBox(height: 20),
                   FilledButton.icon(
-                    onPressed: () => ref.read(authControllerProvider.notifier).restore(),
+                    onPressed: () =>
+                        ref.read(authControllerProvider.notifier).restore(),
                     icon: const Icon(Icons.refresh),
                     label: const Text('Try again'),
                   ),
                   TextButton(
-                    onPressed: () => ref.read(authControllerProvider.notifier).logout(),
+                    onPressed: () =>
+                        ref.read(authControllerProvider.notifier).logout(),
                     style: TextButton.styleFrom(foregroundColor: Brand.navy),
                     child: const Text('Sign in as someone else'),
                   ),
@@ -60,7 +67,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   const SizedBox(
                     width: 28,
                     height: 28,
-                    child: CircularProgressIndicator(strokeWidth: 3, color: Brand.navy),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: Brand.navy,
+                    ),
                   ),
               ],
             ),
@@ -72,31 +82,68 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 }
 
 /// Company mark (the favicon uploaded in the web app's Settings), assets/branding/favicon.png.
-class BrandMark extends StatelessWidget {
+class BrandMark extends ConsumerWidget {
   const BrandMark({super.key, this.size = 64});
   final double size;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-        label: 'Company logo',
-        image: true,
-        child: Image.asset('assets/branding/favicon.png', width: size, height: size, fit: BoxFit.contain),
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final url = ref.watch(appBrandingProvider).asData?.value.faviconUrl;
+    return Semantics(
+      label: 'Company mark',
+      image: true,
+      child: url == null
+          ? Image.asset(
+              'assets/branding/favicon.png',
+              width: size,
+              height: size,
+              fit: BoxFit.contain,
+            )
+          : Image.network(
+              url,
+              width: size,
+              height: size,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Image.asset(
+                'assets/branding/favicon.png',
+                width: size,
+                height: size,
+                fit: BoxFit.contain,
+              ),
+            ),
+    );
+  }
 }
 
 /// Full company logo (the logo uploaded in the web app's Settings), assets/branding/logo.png.
 /// The artwork has a white background, so on dark surfaces pass [onDark] to set it on a white tile.
-class BrandLogo extends StatelessWidget {
+class BrandLogo extends ConsumerWidget {
   const BrandLogo({super.key, this.width = 200, this.onDark = false});
   final double width;
   final bool onDark;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final url = ref.watch(appBrandingProvider).asData?.value.logoUrl;
     final image = Semantics(
       label: 'Company logo',
       image: true,
-      child: Image.asset('assets/branding/logo.png', width: width, fit: BoxFit.contain),
+      child: url == null
+          ? Image.asset(
+              'assets/branding/logo.png',
+              width: width,
+              fit: BoxFit.contain,
+            )
+          : Image.network(
+              url,
+              width: width,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Image.asset(
+                'assets/branding/logo.png',
+                width: width,
+                fit: BoxFit.contain,
+              ),
+            ),
     );
     if (!onDark) return image;
     return Container(
@@ -104,7 +151,13 @@ class BrandLogo extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 16, offset: Offset(0, 6))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: image,
     );

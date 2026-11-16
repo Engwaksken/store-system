@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/providers.dart';
+import '../../../core/config/branding.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/fake/fake_backend.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/auth_controller.dart';
@@ -42,7 +44,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _busy = true);
     try {
       final device = await ref.read(deviceNameProvider.future);
-      await ref.read(authControllerProvider.notifier).login(_email.text, _password.text, device);
+      await ref
+          .read(authControllerProvider.notifier)
+          .login(_email.text, _password.text, device);
       // The router redirects on success.
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -66,6 +70,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final config = ref.watch(appConfigProvider);
+    final branding = ref.watch(appBrandingProvider).asData?.value;
     final auth = ref.watch(authControllerProvider);
     final signedOutReason = auth is AuthSignedOut ? auth.message : null;
     final banner = _error ?? signedOutReason;
@@ -82,7 +87,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   const BrandLogo(width: 150, onDark: true),
                   const SizedBox(height: 16),
-                  Text('Store management system', style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontWeight: FontWeight.w600)),
+                  Text(
+                    branding?.name ?? AppConfig.appName,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   Card(
                     child: Padding(
@@ -93,19 +104,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Text('Sign in', style: theme.textTheme.titleLarge, textAlign: TextAlign.left),
+                              Text(
+                                'Sign in',
+                                style: theme.textTheme.titleLarge,
+                                textAlign: TextAlign.left,
+                              ),
                               const SizedBox(height: 16),
                               if (config.useFakeApi) ...[
                                 _Notice(
                                   icon: Icons.science_outlined,
-                                  text: 'Demo mode: any e-mail, password "${FakeBackend.password}". '
+                                  text:
+                                      'Demo mode: any e-mail, password "${FakeBackend.password}". '
                                       'Use an e-mail containing "engineer" for a site engineer, "new" to test the '
                                       'forced password change.',
                                 ),
                                 const SizedBox(height: 12),
                               ],
                               if (banner != null) ...[
-                                _Notice(icon: Icons.error_outline, text: banner, error: true),
+                                _Notice(
+                                  icon: Icons.error_outline,
+                                  text: banner,
+                                  error: true,
+                                ),
                                 const SizedBox(height: 12),
                               ],
                               TextFormField(
@@ -113,7 +133,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 controller: _email,
                                 keyboardType: TextInputType.emailAddress,
                                 textInputAction: TextInputAction.next,
-                                autofillHints: const [AutofillHints.username, AutofillHints.email],
+                                autofillHints: const [
+                                  AutofillHints.username,
+                                  AutofillHints.email,
+                                ],
                                 autocorrect: false,
                                 enabled: !_busy,
                                 decoration: InputDecoration(
@@ -125,7 +148,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 validator: (v) {
                                   final s = (v ?? '').trim();
                                   if (s.isEmpty) return 'Enter your e-mail';
-                                  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s)) {
+                                  if (!RegExp(
+                                    r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                                  ).hasMatch(s)) {
                                     return 'Enter a valid e-mail address';
                                   }
                                   return null;
@@ -145,12 +170,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   prefixIcon: const Icon(Icons.lock_outline),
                                   errorText: _fieldErrors['password'],
                                   suffixIcon: IconButton(
-                                    tooltip: _obscure ? 'Show password' : 'Hide password',
-                                    icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                                    onPressed: () => setState(() => _obscure = !_obscure),
+                                    tooltip: _obscure
+                                        ? 'Show password'
+                                        : 'Hide password',
+                                    icon: Icon(
+                                      _obscure
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                    ),
+                                    onPressed: () =>
+                                        setState(() => _obscure = !_obscure),
                                   ),
                                 ),
-                                validator: (v) => (v ?? '').isEmpty ? 'Enter your password' : null,
+                                validator: (v) => (v ?? '').isEmpty
+                                    ? 'Enter your password'
+                                    : null,
                               ),
                               const SizedBox(height: 20),
                               FilledButton(
@@ -160,14 +194,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ? const SizedBox(
                                         width: 22,
                                         height: 22,
-                                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          color: Colors.white,
+                                        ),
                                       )
                                     : const Text('Sign in'),
                               ),
                               const SizedBox(height: 12),
                               Text(
                                 'Forgot your password? Ask your administrator to reset it.',
-                                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                             ],
@@ -194,18 +233,26 @@ class _Notice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = ToneColors.of(error ? Tone.rejected : Tone.gold, Theme.of(context).brightness);
+    final c = ToneColors.of(
+      error ? Tone.rejected : Tone.gold,
+      Theme.of(context).brightness,
+    );
     return Semantics(
       liveRegion: error,
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: c.background, borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(
+          color: c.background,
+          borderRadius: BorderRadius.circular(10),
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, color: c.foreground, size: 20),
             const SizedBox(width: 10),
-            Expanded(child: Text(text, style: TextStyle(color: c.foreground))),
+            Expanded(
+              child: Text(text, style: TextStyle(color: c.foreground)),
+            ),
           ],
         ),
       ),

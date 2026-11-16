@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BrandingController;
 use App\Http\Controllers\Api\ClaimController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MaterialRequestController;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 */
 Route::prefix('v1')->name('api.')->group(function () {
     Route::post('auth/login', [AuthController::class, 'login'])->name('login');
+    Route::get('branding', BrandingController::class)->name('branding');
 
     Route::middleware(['auth:sanctum', 'api.usable', 'throttle:120,1'])->group(function () {
         Route::get('me', [AuthController::class, 'me'])->name('me');
