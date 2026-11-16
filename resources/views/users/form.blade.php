@@ -13,6 +13,11 @@
         <div class="field"><label for="u_role">Role</label><select id="u_role" name="role" required data-user-role>
             @foreach(\App\Enums\Role::cases() as $r)<option value="{{ $r->value }}" @selected(old('role', $user->role?->value) === $r->value)>{{ $r->label() }}</option>@endforeach
         </select></div>
+        @if($customRoles->isNotEmpty())
+        <div class="field"><label for="u_custom_role">Custom role name (optional)</label><select id="u_custom_role" name="custom_role_id"><option value="">Use standard role name</option>
+            @foreach($customRoles as $customRole)<option value="{{ $customRole->id }}" data-profile="{{ $customRole->permission_profile }}" @selected((string) old('custom_role_id', $user->custom_role_id) === (string) $customRole->id)>{{ $customRole->name }} — {{ \App\Enums\Role::from($customRole->permission_profile)->label() }} profile</option>@endforeach
+        </select><div class="hint">Custom roles use one existing permission profile; they do not create new permissions.</div>@error('custom_role_id')<div class="err">{{ $message }}</div>@enderror</div>
+        @endif
         <div class="field"><label for="u_password">{{ $user->exists ? 'New temporary password (optional)' : 'Temporary password (optional)' }}</label><input id="u_password" type="password" name="password" autocomplete="new-password" placeholder="Leave blank to generate one">
             <div class="hint">Leave blank and a strong one is generated. At least 8 characters with letters and numbers if you type one. It is e-mailed to the user, who must change it at next sign-in.</div>
             @if($user->exists)<label class="check" style="margin-top:.4rem"><input type="checkbox" name="reset_password" value="1" @checked(old('reset_password'))> Reset password: generate a new temporary one and e-mail it</label>@endif</div>
@@ -49,4 +54,18 @@
     <button class="btn">Save</button> <a class="btn secondary" href="{{ route('users.index') }}">Cancel</a>
 </form>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const profile = document.getElementById('u_role'), custom = document.getElementById('u_custom_role');
+    if (!profile || !custom) return;
+    const sync = () => {
+        for (const option of custom.options) {
+            if (!option.value) continue;
+            option.hidden = option.dataset.profile !== profile.value;
+            if (option.selected && option.hidden) custom.value = '';
+        }
+    };
+    profile.addEventListener('change', sync); sync();
+});
+</script>
 @endsection

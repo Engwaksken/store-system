@@ -25,6 +25,7 @@ class AuditorAccessTest extends TestCase
         'claim' => \App\Models\ExpenseClaim::class, 'boq' => \App\Models\BoqItem::class, 'milestone' => \App\Models\ProjectMilestone::class,
         'costCode' => \App\Models\CostCode::class, 'category' => \App\Models\InventoryCategory::class, 'unit' => \App\Models\InventoryUnit::class,
         'expenseCategory' => \App\Models\ExpenseCategory::class, 'id' => \App\Models\InventoryCategory::class,
+        'customRole' => \App\Models\CustomRole::class,
     ];
 
     /** Route parameters that are fixed words rather than records. */
@@ -40,6 +41,7 @@ class AuditorAccessTest extends TestCase
         $this->withoutMiddleware(ThrottleRequests::class);
         $this->seed([BaseSeeder::class, DemoSeeder::class]);
         $auditor = User::where('email', 'auditor@demo.test')->sole();
+        \App\Models\CustomRole::create(['name' => 'Test Role', 'permission_profile' => 'staff']);
 
         foreach (['dashboard', 'projects.index', 'requests.index', 'issues.index', 'items.index', 'receipts.index', 'stores.index', 'transfers.index',
             'returns.index', 'counts.index', 'prs.index', 'pos.index', 'suppliers.index', 'invoices.index', 'claims.index', 'expenses.index',

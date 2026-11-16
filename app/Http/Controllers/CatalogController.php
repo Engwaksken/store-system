@@ -22,6 +22,8 @@ class CatalogController extends Controller
             ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->integer('category_id')))
             ->when($request->boolean('low'), fn ($q) => $q->where('min_level', '>', 0)
                 ->whereRaw('(select coalesce(sum(b.on_hand), 0) from inventory_balances b where b.item_id = inventory_items.id) <= inventory_items.min_level'))
+            ->when($request->boolean('out'), fn ($q) => $q->where('is_active', true)
+                ->whereRaw('(select coalesce(sum(b.on_hand), 0) from inventory_balances b where b.item_id = inventory_items.id) <= 0'))
             ->orderBy('name');
 
         $all = InventoryItem::with('balances')->get();

@@ -33,7 +33,7 @@
         </x-nav-group>
 
         <x-nav-group id="store" icon="fa-warehouse" label="Store" :open="$is('items.*', 'stores.*', 'receipts.*', 'adjustments.*', 'transfers.*', 'returns.*', 'counts.*', 'catalog.*')" :count="$transferInboxCount">
-            <a href="{{ route('items.index') }}" @class(['nav-link', 'active' => $is('items.*')])><span><i class="fas fa-boxes-stacked fa-fw"></i> Stock &amp; items</span></a>
+            <a href="{{ route('items.index', ['out' => 1]) }}" @class(['nav-link', 'active' => $is('items.*')])><span><i class="fas fa-boxes-stacked fa-fw"></i> Stock &amp; items</span>@if($outOfStockCount)<span class="count" title="Out-of-stock items">{{ $outOfStockCount }}</span>@endif</a>
             @can('viewAny', App\Models\Store::class)
                 <a href="{{ route('stores.index') }}" @class(['nav-link', 'active' => $is('stores.*')])><span><i class="fas fa-store fa-fw"></i> Stores</span></a>
             @endcan

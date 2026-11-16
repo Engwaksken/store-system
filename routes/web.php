@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CustomRoleController;
 use App\Http\Controllers\CostCodeController;
 use App\Http\Controllers\ExpenseClaimController;
 use App\Http\Controllers\DashboardController;
@@ -54,6 +55,10 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
 
     // Administration
     Route::resource('users', UserController::class)->except(['show', 'destroy']);
+    Route::get('users/roles', [CustomRoleController::class, 'index'])->name('users.roles');
+    Route::post('users/roles', [CustomRoleController::class, 'store'])->name('users.roles.store');
+    Route::put('users/roles/{customRole}', [CustomRoleController::class, 'update'])->name('users.roles.update');
+    Route::delete('users/roles/{customRole}', [CustomRoleController::class, 'destroy'])->name('users.roles.destroy');
     Route::get('settings', [SettingsController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
     Route::post('settings/font', [SettingsController::class, 'storeFont'])->middleware('throttle:10,1')->name('settings.font.store');

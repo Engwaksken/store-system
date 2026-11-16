@@ -38,7 +38,7 @@ final class Present
 
         return [
             'id' => $u->id, 'name' => $u->name, 'email' => $u->email, 'phone' => $u->phone,
-            'role' => $u->role->value, 'role_label' => $u->role->label(),
+            'role' => $u->role->value, 'role_label' => $u->roleLabel(),
             'must_change_password' => (bool) $u->must_change_password,
             'currency' => Currency::code(), 'currency_decimals' => Currency::decimals(),
             'company_name' => AppSetting::get('company_name') ?: config('app.name'),

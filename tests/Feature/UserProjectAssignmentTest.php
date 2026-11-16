@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ActivityLog;
+use App\Models\CustomRole;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -45,6 +46,23 @@ class UserProjectAssignmentTest extends TestCase
 
         // Other roles see every project, so they do not need one.
         $this->newUser(['role' => 'accountant', 'email' => 'acc2@example.test'])->assertSessionHasNoErrors();
+    }
+
+    public function test_admin_can_create_and_assign_named_permission_profile_roles(): void
+    {
+        $this->actingAs($this->admin)->post(route('users.roles.store'), [
+            'name' => 'Finance Lead', 'permission_profile' => 'accountant',
+        ])->assertRedirect(route('users.roles'));
+        $role = CustomRole::where('name', 'Finance Lead')->sole();
+
+        $this->newUser(['role' => 'accountant', 'custom_role_id' => $role->id, 'email' => 'finance@example.test'])
+            ->assertSessionHasNoErrors();
+        $user = User::where('email', 'finance@example.test')->sole();
+        $this->assertSame('Finance Lead', $user->roleLabel());
+
+        $this->actingAs($this->staff)->post(route('users.roles.store'), [
+            'name' => 'Unauthorized', 'permission_profile' => 'staff',
+        ])->assertForbidden();
     }
 
     public function test_editing_changes_open_projects_and_keeps_closed_ones(): void

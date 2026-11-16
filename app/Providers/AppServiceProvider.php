@@ -7,6 +7,7 @@ use App\Enums\Role;
 use App\Models\AppSetting;
 use App\Models\Expense;
 use App\Models\ExpenseClaim;
+use App\Models\InventoryItem;
 use App\Models\MaterialIssue;
 use App\Models\MaterialRequest;
 use App\Models\Project;
@@ -73,7 +74,10 @@ class AppServiceProvider extends ServiceProvider
             $claimCount = $user && $user->hasRole(Role::Admin, Role::OverallManager, Role::ProjectManager)
                 ? ExpenseClaim::with('project')->where('status', 'submitted')->get()->filter(fn ($c) => Gate::allows('decide-claim', $c))->count()
                 : ($user && $user->hasRole(Role::Accountant) ? ExpenseClaim::where('status', 'approved')->count() : 0);
-            $view->with(compact('approvalCount', 'issueQueueCount', 'transferInboxCount', 'purchaseApprovalCount', 'claimCount'));
+            $outOfStockCount = $user && Gate::allows('view-stock')
+                ? InventoryItem::where('is_active', true)->whereRaw('(select coalesce(sum(b.on_hand), 0) from inventory_balances b where b.item_id = inventory_items.id) <= 0')->count()
+                : 0;
+            $view->with(compact('approvalCount', 'issueQueueCount', 'transferInboxCount', 'purchaseApprovalCount', 'claimCount', 'outOfStockCount'));
         });
     }
 

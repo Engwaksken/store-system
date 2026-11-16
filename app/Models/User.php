@@ -14,7 +14,7 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'phone', 'is_active', 'must_change_password', 'notify_email', 'notify_push'];
+    protected $fillable = ['name', 'email', 'password', 'role', 'custom_role_id', 'phone', 'is_active', 'must_change_password', 'notify_email', 'notify_push'];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -58,6 +58,16 @@ class User extends Authenticatable
     public function managedProjects(): HasMany
     {
         return $this->hasMany(Project::class, 'manager_id');
+    }
+
+    public function customRole(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(CustomRole::class);
+    }
+
+    public function roleLabel(): string
+    {
+        return $this->customRole?->name ?? $this->role->label();
     }
 
     /** True when the user is the project's manager or an assigned member. */

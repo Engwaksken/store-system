@@ -28,7 +28,7 @@ class UserController extends Controller
             'inactive' => User::where('is_active', false)->count(),
             'admins' => User::where('role', Role::Admin->value)->where('is_active', true)->count(),
         ];
-        $query = User::query()->withCount('projects')
+        $query = User::query()->with('customRole')->withCount('projects')
             ->when($request->filled('role'), fn ($q) => $q->where('role', $request->query('role')))
             ->when($request->query('status') === 'active', fn ($q) => $q->where('is_active', true))
             ->when($request->query('status') === 'inactive', fn ($q) => $q->where('is_active', false))
@@ -38,7 +38,7 @@ class UserController extends Controller
             ->store(fn ($q, $id) => $q->whereHas('stores', fn ($s) => $s->where('stores.id', $id)))
             ->search(['name', 'email', 'phone'], 'Name, e-mail or phone')
             ->columns([
-                'Name' => fn ($u) => $u->name, 'E-mail' => fn ($u) => $u->email, 'Role' => fn ($u) => $u->role->label(),
+                'Name' => fn ($u) => $u->name, 'E-mail' => fn ($u) => $u->email, 'Role' => fn ($u) => $u->roleLabel(),
                 'Phone' => fn ($u) => $u->phone, 'Projects' => [fn ($u) => $u->projects_count, 'number'],
                 'Status' => fn ($u) => $u->is_active ? 'Active' : 'Inactive',
             ])
@@ -49,7 +49,7 @@ class UserController extends Controller
     {
         Gate::authorize('manage-users');
 
-        return view('users.form', ['user' => new User(['is_active' => true, 'role' => Role::Staff]), 'projects' => $this->projectOptions(), 'assigned' => []]);
+        return view('users.form', ['user' => new User(['is_active' => true, 'role' => Role::Staff]), 'projects' => $this->projectOptions(), 'assigned' => [], 'customRoles' => \App\Models\CustomRole::orderBy('name')->get()]);
     }
 
     public function store(Request $request)
@@ -62,7 +62,7 @@ class UserController extends Controller
         $user = User::create(['password' => $temporary, 'must_change_password' => true] + $data);
         $user->projects()->sync($projectIds);
         $codes = Project::whereIn('id', $projectIds)->orderBy('code')->pluck('code')->implode(', ');
-        ActivityLog::record('user.created', "User {$user->email} created as {$user->role->label()}".($codes ? ", assigned to {$codes}" : ''), $user);
+        ActivityLog::record('user.created', "User {$user->email} created as {$user->roleLabel()}".($codes ? ", assigned to {$codes}" : ''), $user);
 
         return $this->sendCredentials($user, $temporary, false, redirect()->route('users.index'), 'User created.');
     }
@@ -71,7 +71,7 @@ class UserController extends Controller
     {
         Gate::authorize('manage-users');
 
-        return view('users.form', ['user' => $user, 'projects' => $this->projectOptions($user), 'assigned' => $user->projects()->pluck('projects.id')->all()]);
+        return view('users.form', ['user' => $user, 'projects' => $this->projectOptions($user), 'assigned' => $user->projects()->pluck('projects.id')->all(), 'customRoles' => \App\Models\CustomRole::orderBy('name')->get()]);
     }
 
     public function update(Request $request, User $user)
@@ -162,12 +162,20 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user?->id)],
             'phone' => 'nullable|string|max:30',
             'role' => ['required', Rule::enum(Role::class)],
+            'custom_role_id' => ['nullable', 'integer', Rule::exists('custom_roles', 'id')],
             'is_active' => 'sometimes|boolean',
             'password' => ['nullable', Password::min(8)->letters()->numbers()],
             'project_ids' => 'nullable|array',
             'project_ids.*' => ['integer', Rule::exists('projects', 'id')],
         ]);
         $data['is_active'] = $request->boolean('is_active');
+        $data['custom_role_id'] = $request->filled('custom_role_id') ? (int) $request->input('custom_role_id') : null;
+        if ($data['custom_role_id']) {
+            $profile = \App\Models\CustomRole::findOrFail($data['custom_role_id'])->permission_profile;
+            if ($profile !== $data['role']) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['custom_role_id' => 'The selected custom role uses a different permission profile.']);
+            }
+        }
         $data['project_ids'] = array_values(array_unique(array_map('intval', $data['project_ids'] ?? [])));
         // Staff can only see and request for projects they are assigned to: a new staff account needs at least one.
         if (! $user && $data['role'] === Role::Staff->value && ! $data['project_ids'] && $this->projectOptions()->isNotEmpty()) {

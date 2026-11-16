@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Users')
 @section('content')
-<div class="page-head"><h1>Users</h1><a class="btn" data-modal href="{{ route('users.create') }}"><i class="fas fa-plus"></i> Add user</a></div>
+<div class="page-head"><h1>Users</h1><div class="actions"><a class="btn secondary" href="{{ route('users.roles') }}"><i class="fas fa-user-tag"></i> Manage roles</a><a class="btn" data-modal href="{{ route('users.create') }}"><i class="fas fa-plus"></i> Add user</a></div></div>
 <x-stats :cards="[
     ['Users', $stats['total'], 'fa-users', 'navy'],
     ['Active', $stats['active'], 'fa-user-check'],
@@ -15,7 +15,7 @@
 <div class="card table-wrap"><table>
     <thead><tr><th>Name</th><th>E-mail</th><th>Role</th><th>Phone</th><th class="num">Projects</th><th>Status</th><th></th></tr></thead>
     <tbody>@forelse($users as $user)
-        <tr><td>{{ $user->name }}</td><td>{{ $user->email }}</td><td>{{ $user->role->label() }}</td><td>{{ $user->phone }}</td>
+        <tr><td>{{ $user->name }}</td><td>{{ $user->email }}</td><td>{{ $user->roleLabel() }}</td><td>{{ $user->phone }}</td>
             <td class="num">@if($user->projects_count){{ $user->projects_count }}@elseif(in_array($user->role, [\App\Enums\Role::Staff, \App\Enums\Role::ProjectManager], true))<span class="badge pending" title="Cannot see or request anything until assigned">None</span>@else<span class="muted">-</span>@endif</td>            <td>@if($user->is_active)<span class="badge approved">Active</span>@else<span class="badge muted">Inactive</span>@endif</td>
             <td class="right"><a class="btn-icon" data-modal href="{{ route('users.edit', $user) }}" title="Edit {{ $user->name }}" aria-label="Edit {{ $user->name }}"><i class="fas fa-pen"></i></a></td></tr>
     @empty <tr><td colspan="7" class="empty">No users{{ $list->isFiltered() ? ' match these filters' : '' }}.</td></tr> @endforelse</tbody>

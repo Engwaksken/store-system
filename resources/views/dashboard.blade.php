@@ -14,6 +14,7 @@
     ['Awaiting my decision', $awaitingMe->count(), 'fa-hourglass-half', 'gold'],
     ['Ready to issue', ($statusCounts['overall_approved'] ?? 0) + ($statusCounts['partially_issued'] ?? 0), 'fa-dolly', '', route('issues.index')],
     ['Low-stock items', $lowStock->count(), 'fa-triangle-exclamation', 'bad', route('items.index', ['low' => 1])],
+    ['Out-of-stock items', $outOfStock->count(), 'fa-box-open', 'bad', route('items.index', ['out' => 1])],
 ]" />
 
 @if($queues->isNotEmpty())
@@ -56,6 +57,17 @@
         </table></div>
         @if($lowStock->count() > 15)<p><a href="{{ route('items.index', ['low' => 1]) }}">See all {{ $lowStock->count() }} low-stock items <i class="fas fa-arrow-right"></i></a></p>@endif
         @else <p class="empty"><i class="fas fa-circle-check text-ok"></i> No items below minimum level.</p> @endif
+    </x-tab>
+    <x-tab title="Out of stock" icon="fa-box-open" name="out-of-stock" :count="$outOfStock->count()">
+        @if($outOfStock->isNotEmpty())
+        <div class="table-wrap"><table>
+            <thead><tr><th>Item</th><th class="num">On hand</th><th>Unit</th></tr></thead>
+            <tbody>@foreach($outOfStock->take(15) as $i)
+                <tr class="low"><td><a href="{{ route('items.show', $i) }}">{{ $i->name }}</a></td><td class="num"><strong>{{ qty($i->onHand()) }}</strong></td><td>{{ $i->unit->abbreviation }}</td></tr>
+            @endforeach</tbody>
+        </table></div>
+        @if($outOfStock->count() > 15)<p><a href="{{ route('items.index', ['out' => 1]) }}">See all {{ $outOfStock->count() }} out-of-stock items <i class="fas fa-arrow-right"></i></a></p>@endif
+        @else <p class="empty"><i class="fas fa-circle-check text-ok"></i> No items are out of stock.</p> @endif
     </x-tab>
     <x-tab title="My recent requests" icon="fa-list-check" name="my-requests" :count="$myRequests->count()">
         @if($myRequests->isNotEmpty())

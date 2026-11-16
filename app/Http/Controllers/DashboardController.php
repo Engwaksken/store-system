@@ -28,7 +28,9 @@ class DashboardController extends Controller
         $user = $request->user();
 
         $projects = Project::visibleTo($user)->whereIn('status', ['planned', 'active'])->orderBy('code')->get();
-        $lowStock = InventoryItem::with('balances', 'unit')->where('is_active', true)->get()->filter->isLowStock()->values();
+        $stockItems = InventoryItem::with('balances', 'unit')->where('is_active', true)->get();
+        $outOfStock = $stockItems->filter(fn ($item) => bccomp($item->onHand(), '0', 3) <= 0)->values();
+        $lowStock = $stockItems->filter->isLowStock()->values();
 
         // "My queue": work waiting for this user specifically.
         $awaitingMe = MaterialRequest::with('project', 'requester', 'approvals')
@@ -87,6 +89,7 @@ class DashboardController extends Controller
             'projects' => $projects,
             'costRows' => Gate::allows('view-finance-reports') ? $costs->summary($projects->filter(fn ($p) => Gate::allows('view-project-finance', $p))) : collect(),
             'lowStock' => $lowStock,
+            'outOfStock' => $outOfStock,
             'awaitingMe' => $awaitingMe,
             'readyToIssue' => $readyToIssue,
             'myRequests' => $myRequests,

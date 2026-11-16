@@ -31,7 +31,7 @@ class AccountCredentials extends Notification
             ->greeting('Hello '.$notifiable->name.',')
             ->line($this->isReset
                 ? 'An administrator reset your password for the store system. Sign in with the temporary password below.'
-                : 'An account has been created for you in the store system as '.$notifiable->role->label().'. Sign in with the details below.')
+                : 'An account has been created for you in the store system as '.$notifiable->roleLabel().'. Sign in with the details below.')
             ->line('**E-mail:** '.$notifiable->email)
             ->line('**Temporary password:** `'.$this->temporaryPassword.'`')
             ->action('Sign in', route('login'))
