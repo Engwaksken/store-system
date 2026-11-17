@@ -44,6 +44,16 @@ class MoreScreen extends ConsumerWidget {
                     ),
                     const Divider(height: 1),
                   ],
+                  if (user?.can.manageUsers ?? false) ...[
+                    ListTile(
+                      leading: const Icon(Icons.manage_accounts_outlined),
+                      title: const Text('Users'),
+                      subtitle: const Text('Add people, change roles and projects'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/users'),
+                    ),
+                    const Divider(height: 1),
+                  ],
                   ListTile(
                     leading: Badge(
                       isLabelVisible: unread > 0,
@@ -61,6 +71,16 @@ class MoreScreen extends ConsumerWidget {
                     title: const Text('Profile'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push('/profile'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.rate_review_outlined),
+                    title: const Text('Feedback'),
+                    subtitle: Text((user?.can.manageFeedback ?? false)
+                        ? 'Read and reply to feedback from everyone'
+                        : 'Report a problem or suggest an improvement'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/feedback'),
                   ),
                   const Divider(height: 1),
                   ListTile(

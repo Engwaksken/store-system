@@ -8,6 +8,7 @@ use App\Http\Controllers\CostCodeController;
 use App\Http\Controllers\ExpenseClaimController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\IssueController;
 use App\Http\Controllers\MaterialRequestController;
 use App\Http\Controllers\NotificationController;
@@ -52,6 +53,13 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::post('account/notifications/test', [NotificationController::class, 'test'])->middleware('throttle:5,1')->name('notifications.test');
     Route::post('push-subscriptions', [NotificationController::class, 'subscribe'])->middleware('throttle:20,1')->name('push.subscribe');
     Route::delete('push-subscriptions/{subscription?}', [NotificationController::class, 'unsubscribe'])->name('push.unsubscribe');
+
+    // Feedback: everyone sends and follows their own; admins reply
+    Route::get('feedback', [FeedbackController::class, 'index'])->name('feedback.index');
+    Route::get('feedback/create', [FeedbackController::class, 'create'])->name('feedback.create');
+    Route::post('feedback', [FeedbackController::class, 'store'])->middleware('throttle:10,1')->name('feedback.store');
+    Route::get('feedback/{feedback}', [FeedbackController::class, 'show'])->whereNumber('feedback')->name('feedback.show');
+    Route::put('feedback/{feedback}/respond', [FeedbackController::class, 'respond'])->whereNumber('feedback')->name('feedback.respond');
 
     // Administration
     Route::resource('users', UserController::class)->except(['show', 'destroy']);

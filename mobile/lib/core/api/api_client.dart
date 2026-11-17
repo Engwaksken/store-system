@@ -122,6 +122,8 @@ class ApiClient {
             options: Options(extra: {kSkipSessionEvents: skipSession}),
           ));
 
+  Future<Json> put(String path, {Object? body}) => _run(() => dio.put<Object?>(_rel(path), data: body));
+
   Future<Json> postMultipart(
     String path,
     FormData form, {

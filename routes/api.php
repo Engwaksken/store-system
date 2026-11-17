@@ -4,9 +4,11 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BrandingController;
 use App\Http\Controllers\Api\ClaimController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\MaterialRequestController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\StockController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -42,6 +44,18 @@ Route::prefix('v1')->name('api.')->group(function () {
         Route::get('claims/{claim}', [ClaimController::class, 'show'])->whereNumber('claim')->name('claims.show');
         Route::get('claims/{claim}/receipt', [ClaimController::class, 'receipt'])->whereNumber('claim')->name('claims.receipt');
         Route::post('claims/{claim}/decision', [ClaimController::class, 'decide'])->whereNumber('claim')->middleware('throttle:60,1')->name('claims.decision');
+
+        Route::get('users/options', [UserController::class, 'options'])->name('users.options');
+        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::post('users', [UserController::class, 'store'])->middleware('throttle:30,1')->name('users.store');
+        Route::get('users/{user}', [UserController::class, 'show'])->whereNumber('user')->name('users.show');
+        Route::put('users/{user}', [UserController::class, 'update'])->whereNumber('user')->middleware('throttle:30,1')->name('users.update');
+
+        Route::get('feedback/options', [FeedbackController::class, 'options'])->name('feedback.options');
+        Route::get('feedback', [FeedbackController::class, 'index'])->name('feedback.index');
+        Route::post('feedback', [FeedbackController::class, 'store'])->middleware('throttle:10,1')->name('feedback.store');
+        Route::get('feedback/{feedback}', [FeedbackController::class, 'show'])->whereNumber('feedback')->name('feedback.show');
+        Route::post('feedback/{feedback}/respond', [FeedbackController::class, 'respond'])->whereNumber('feedback')->middleware('throttle:60,1')->name('feedback.respond');
 
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');

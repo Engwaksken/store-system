@@ -26,5 +26,7 @@ class AppConfig {
       ? apiBaseUrl.substring(0, apiBaseUrl.length - 1)
       : apiBaseUrl;
 
-  static const String appName = 'Kemmy Store';
+  /// Shown only until the system name arrives from the server (`/branding`).
+  /// Everywhere in the UI, read `appNameProvider` instead.
+  static const String fallbackAppName = 'Kemmy Store';
 }

@@ -10,6 +10,9 @@ import '../../features/claims/presentation/claim_detail_screen.dart';
 import '../../features/claims/presentation/claims_list_screen.dart';
 import '../../features/claims/presentation/new_claim_screen.dart';
 import '../../features/dashboard/presentation/home_screen.dart';
+import '../../features/feedback/presentation/feedback_detail_screen.dart';
+import '../../features/feedback/presentation/feedback_list_screen.dart';
+import '../../features/feedback/presentation/new_feedback_screen.dart';
 import '../../features/more/presentation/about_screen.dart';
 import '../../features/more/presentation/more_screen.dart';
 import '../../features/more/presentation/profile_screen.dart';
@@ -21,6 +24,8 @@ import '../../features/requests/presentation/requests_list_screen.dart';
 import '../../features/shell/presentation/home_shell.dart';
 import '../../features/stock/presentation/item_detail_screen.dart';
 import '../../features/stock/presentation/stock_screen.dart';
+import '../../features/users/presentation/user_form_screen.dart';
+import '../../features/users/presentation/users_list_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -39,6 +44,7 @@ String? authRedirect(AuthState auth, String location) {
       }
       if (publicPaths.contains(location)) return '/home';
       if (location == '/approvals' && !user.can.approveRequests) return '/home';
+      if ((location == '/users' || location.startsWith('/users/')) && !user.can.manageUsers) return '/more';
       return null;
   }
 }
@@ -54,6 +60,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             next is AuthSignedIn &&
             (prev.user.mustChangePassword != next.user.mustChangePassword ||
                 prev.user.can.approveRequests != next.user.can.approveRequests ||
+                prev.user.can.manageUsers != next.user.can.manageUsers ||
                 prev.user.id != next.user.id));
     if (relevant) refresh.value++;
   });
@@ -87,6 +94,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: 'new', builder: (_, _) => const NewClaimScreen()),
           GoRoute(path: ':id', builder: (_, s) => ClaimDetailScreen(id: _intParam(s, 'id'))),
+        ],
+      ),
+      GoRoute(
+        path: '/users',
+        builder: (_, _) => const UsersListScreen(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, _) => const UserFormScreen()),
+          GoRoute(path: ':id', builder: (_, s) => UserFormScreen(id: _intParam(s, 'id'))),
+        ],
+      ),
+      GoRoute(
+        path: '/feedback',
+        builder: (_, _) => const FeedbackListScreen(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, _) => const NewFeedbackScreen()),
+          GoRoute(path: ':id', builder: (_, s) => FeedbackDetailScreen(id: _intParam(s, 'id'))),
         ],
       ),
       GoRoute(path: '/notifications', builder: (_, _) => const NotificationsScreen()),

@@ -1,5 +1,18 @@
 # Changelog
 
+## Users & feedback on mobile, feedback module (17 Nov 2026)
+- **Feedback** (web and mobile): anyone, including read-only auditors, can report a problem, ask a question or suggest
+  something, with an optional 1-5 rating. Admins see all feedback (sidebar count of new items), set the status
+  (new / in review / resolved / closed) and reply; admins are alerted to new feedback and the sender to replies.
+- Mobile API: `/users` (list, options, show, create, update) for admins and `/feedback` endpoints (docs/API.md);
+  `/me` exposes `can.manage_users` and `can.manage_feedback`; `/me` and `/branding` include `app_subtitle`.
+- User account rules moved into the `UserAccounts` service (app/Services/UserAccounts.php), shared by the web Users
+  pages and the API.
+- Flutter app: the title everywhere (window/task switcher, splash, sign-in, home, About) is the system name set in
+  Settings, with the tagline; new Users screens (admin: search, add, edit role/projects/status, reset password) and
+  Feedback screens (send with rating, follow replies; admins reply) under More.
+- Tests: `FeedbackTest` (7), Flutter `users_feedback_test` (11).
+
 ## Phase 6 – UAT, go-live & handover (13 Nov 2026)
 - `cms:reconcile` (scheduled daily): stock ledger = balances per store × item, voucher totals/movements, returns ≤ issued, transfers, PO received/invoiced counters, invoice payments, paid claims.
 - `cms:go-live-check`: production configuration, readiness data (admins, overall manager, storekeepers per store, no demo accounts), reconciliation and audit chain.

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/providers.dart';
 import '../../../core/config/branding.dart';
-import '../../../core/config/app_config.dart';
 import '../../../core/fake/fake_backend.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/auth_controller.dart';
@@ -70,7 +69,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final config = ref.watch(appConfigProvider);
-    final branding = ref.watch(appBrandingProvider).asData?.value;
+    final appName = ref.watch(appNameProvider);
+    final subtitle = ref.watch(appSubtitleProvider);
     final auth = ref.watch(authControllerProvider);
     final signedOutReason = auth is AuthSignedOut ? auth.message : null;
     final banner = _error ?? signedOutReason;
@@ -88,12 +88,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const BrandLogo(width: 150, onDark: true),
                   const SizedBox(height: 16),
                   Text(
-                    branding?.name ?? AppConfig.appName,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontWeight: FontWeight.w600,
+                    appName,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Card(
                     child: Padding(
