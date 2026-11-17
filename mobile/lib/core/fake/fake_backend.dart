@@ -80,8 +80,9 @@ class FakeBackend {
 
     if (method == 'GET' && p == 'branding') {
       return const FakeResponse(200, {
-        'company_name': 'Kemmy Tech',
-        'app_subtitle': 'Store & Projects',
+        'company_name': 'Archways Holdings',
+        'app_subtitle': 'Projects Management',
+        'theme': {'primary': '#12243E', 'accent': '#D4A33A', 'action': '#0F766E'},
         'logo_url': null,
         'favicon_url': null,
       });
@@ -272,11 +273,13 @@ class FakeBackend {
             !['cancelled', 'fully_issued', 'pm_rejected', 'overall_rejected'].contains(r['status']))
         .length;
     final low = _items.where((i) => _isLow(i, null)).length;
+    final out = _items.where((i) => _isOut(i, null)).length;
     final cards = <Map<String, dynamic>>[
       if (_can(userId, 'approve_requests'))
         {'key': 'awaiting_me', 'label': 'Waiting for my approval', 'value': awaiting.length, 'tone': 'gold'},
       {'key': 'my_open_requests', 'label': 'My open requests', 'value': mine, 'tone': 'navy'},
       {'key': 'low_stock', 'label': 'Low-stock items', 'value': low, 'tone': low > 0 ? 'bad' : 'ok'},
+      {'key': 'out_of_stock', 'label': 'Out of stock', 'value': out, 'tone': out > 0 ? 'bad' : 'ok'},
       if (_can(userId, 'decide_claims'))
         {
           'key': 'claims_awaiting',
@@ -549,6 +552,11 @@ class FakeBackend {
     return onHand <= Decimal.parse(item['min_level'] as String);
   }
 
+  bool _isOut(Map<String, dynamic> item, int? storeId) {
+    final onHand = storeId == null ? _totalOnHand(item['id'] as int) : (_balances[item['id']]?[storeId] ?? Decimal.zero);
+    return item['is_active'] == true && onHand <= Decimal.zero;
+  }
+
   Map<String, dynamic> _itemJson(Map<String, dynamic> item, int userId, int? storeId) {
     final onHand = storeId == null ? _totalOnHand(item['id'] as int) : (_balances[item['id']]?[storeId] ?? Decimal.zero);
     return {
@@ -560,6 +568,7 @@ class FakeBackend {
       'on_hand': _fmtQty(onHand),
       'min_level': item['min_level'],
       'low': _isLow(item, storeId),
+      'out_of_stock': _isOut(item, storeId),
       'is_active': item['is_active'],
       if (_can(userId, 'view_stock_value')) 'avg_cost': item['avg_cost'],
     };
@@ -575,6 +584,7 @@ class FakeBackend {
         return false;
       }
       if ('${query['low'] ?? ''}' == '1' && !_isLow(i, storeId)) return false;
+      if ('${query['out'] ?? ''}' == '1' && !_isOut(i, storeId)) return false;
       if ('${query['active'] ?? ''}' == '1' && i['is_active'] != true) return false;
       return true;
     }).toList()
@@ -838,8 +848,8 @@ class FakeBackend {
         'must_change_password': true,
         'currency': 'UGX',
         'currency_decimals': 0,
-        'company_name': 'Kemmy Tech',
-        'app_subtitle': 'Store & Projects',
+        'company_name': 'Archways Holdings',
+        'app_subtitle': 'Projects Management',
         'can': const {'create_request': true, 'submit_claim': true, 'view_claims': true},
       };
       _users[id] = u;
@@ -1028,8 +1038,8 @@ class FakeBackend {
           'must_change_password': mustChange,
           'currency': 'UGX',
           'currency_decimals': 0,
-          'company_name': 'Kemmy Tech',
-          'app_subtitle': 'Store & Projects',
+          'company_name': 'Archways Holdings',
+          'app_subtitle': 'Projects Management',
           'can': can,
           'is_active': true,
         };
@@ -1128,6 +1138,8 @@ class FakeBackend {
       final site = Decimal.parse(((double.parse(min) * factor * 0.3).round()).toString());
       _balances[id] = {1: main, 2: i % 3 == 0 ? site : Decimal.zero};
       if (minD == Decimal.zero) _balances[id] = {1: Decimal.parse('12.5'), 2: Decimal.zero};
+      // A few active items are completely out of stock.
+      if (i % 7 == 5) _balances[id] = {1: Decimal.zero, 2: Decimal.zero};
     }
 
     const purposes = [

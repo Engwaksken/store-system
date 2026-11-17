@@ -159,7 +159,7 @@ Body:
   "avg_cost": "32000.00" }   // avg_cost only when can.view_stock_value, otherwise absent
 ```
 
-### `GET /items` — paginated. Filters: `q` (SKU / name), `store_id` (on_hand for that store only), `low=1`, `active=1`.
+### `GET /items` — paginated. Filters: `q` (SKU / name), `store_id` (on_hand for that store only), `low=1`, `out=1` (active items with nothing on hand, in `store_id` if given, else in all stores), `active=1`. Each item has `out_of_stock: bool`. The dashboard adds an `out_of_stock` card.
 ### `GET /items/{id}` → `{ "data": Item + "balances": [ { "store": { "id", "code", "name" }, "on_hand": "..." } ] }`
 ### `GET /stores` → `{ "data": [ { "id", "code", "name" } ] }`
 

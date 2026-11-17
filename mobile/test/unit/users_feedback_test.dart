@@ -32,8 +32,22 @@ void main() {
       final container = ProviderContainer(overrides: fakeOverrides());
       addTearDown(container.dispose);
       await container.read(appBrandingProvider.future);
-      expect(container.read(appNameProvider), 'Kemmy Tech');
-      expect(container.read(appSubtitleProvider), 'Store & Projects');
+      expect(container.read(appNameProvider), 'Archways Holdings');
+      expect(container.read(appSubtitleProvider), 'Projects Management');
+    });
+
+    test('saved name shows before /branding answers, and is refreshed from the server', () async {
+      final cache = MemoryBrandingCache(const AppBranding(name: 'Old Name', subtitle: 'Old tagline'));
+      final container = ProviderContainer(overrides: [
+        ...fakeOverrides(),
+        brandingCacheProvider.overrideWithValue(cache),
+        cachedBrandingProvider.overrideWithValue(await cache.load()),
+      ]);
+      addTearDown(container.dispose);
+      expect(container.read(appNameProvider), 'Old Name'); // first frame, server not answered yet
+      await container.read(appBrandingProvider.future);
+      expect(container.read(appNameProvider), 'Archways Holdings');
+      expect((await cache.load())?.name, 'Archways Holdings'); // saved for the next start
     });
 
     test('user json carries admin permissions and subtitle', () {

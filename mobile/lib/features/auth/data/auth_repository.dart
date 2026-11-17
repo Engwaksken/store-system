@@ -8,6 +8,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/json.dart';
 import '../../../core/api/providers.dart';
 import '../../../core/api/token_storage.dart';
+import '../../../core/config/app_config.dart';
 import '../domain/user.dart';
 
 class AuthRepository {
@@ -67,7 +68,7 @@ final authRepositoryProvider = Provider<AuthRepository>(
 
 /// Device label sent as `device_name` so users can recognise their sessions.
 final deviceNameProvider = FutureProvider<String>((ref) async {
-  const fallback = 'Kemmy Store app';
+  const fallback = '${AppConfig.fallbackAppName} app';
   if (kIsWeb) return fallback;
   try {
     final info = DeviceInfoPlugin();

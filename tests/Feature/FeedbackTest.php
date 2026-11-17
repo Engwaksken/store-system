@@ -105,7 +105,10 @@ class FeedbackTest extends TestCase
             ->assertJsonPath('user.can.manage_users', true)->assertJsonPath('user.can.manage_feedback', true);
         $this->getJson('/api/v1/me', $this->tokenFor($this->staff))->assertOk()
             ->assertJsonPath('user.can.manage_users', false)->assertJsonPath('user.can.manage_feedback', false);
-        $this->getJson('/api/v1/branding')->assertOk()->assertJsonPath('app_subtitle', 'Store & Projects');
+        $this->getJson('/api/v1/branding')->assertOk()->assertJsonPath('app_subtitle', 'Store & Projects')
+            ->assertJsonPath('theme.primary', '#12243E')->assertJsonPath('theme.action', '#0F766E');
+        \App\Models\AppSetting::put('theme_primary', '#7A1F2B');
+        $this->getJson('/api/v1/branding')->assertJsonPath('theme.primary', '#7A1F2B');
     }
 
     // ---------------------------------------------------------------- mobile API: users

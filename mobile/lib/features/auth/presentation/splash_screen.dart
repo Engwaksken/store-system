@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../core/config/branding.dart';
 import '../data/auth_controller.dart';
 
@@ -27,6 +26,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider);
+    final primary = ref.watch(brandColorsProvider).primary;
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -41,7 +41,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 Text(
                   ref.watch(appNameProvider),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Brand.navy, fontSize: 20, fontWeight: FontWeight.w700),
+                  style: TextStyle(color: primary, fontSize: 20, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 24),
                 if (state is AuthRestoreFailed) ...[
@@ -54,7 +54,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   Text(
                     state.message,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Brand.navy),
+                    style: TextStyle(color: primary),
                   ),
                   const SizedBox(height: 20),
                   FilledButton.icon(
@@ -66,16 +66,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   TextButton(
                     onPressed: () =>
                         ref.read(authControllerProvider.notifier).logout(),
-                    style: TextButton.styleFrom(foregroundColor: Brand.navy),
+                    style: TextButton.styleFrom(foregroundColor: primary),
                     child: const Text('Sign in as someone else'),
                   ),
                 ] else
-                  const SizedBox(
+                  SizedBox(
                     width: 28,
                     height: 28,
                     child: CircularProgressIndicator(
                       strokeWidth: 3,
-                      color: Brand.navy,
+                      color: primary,
                     ),
                   ),
               ],

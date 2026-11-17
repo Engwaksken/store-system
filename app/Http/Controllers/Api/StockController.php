@@ -17,7 +17,13 @@ class StockController extends ApiController
         $query = InventoryItem::with('category', 'unit', 'balances')
             ->when($request->filled('q'), fn ($q) => $q->where(fn ($w) => $w->where('sku', 'like', $this->like($request->query('q')))
                 ->orWhere('name', 'like', $this->like($request->query('q')))))
-            ->when($storeId, fn ($q) => $q->whereHas('balances', fn ($b) => $b->where('store_id', $storeId)))
+            // With a store, list items held there; out-of-stock in a store also includes items never received there.
+            ->when($storeId && ! $request->boolean('out'), fn ($q) => $q->whereHas('balances', fn ($b) => $b->where('store_id', $storeId)))
+            // Same rule as the web "Out of stock" filter: active items with nothing on hand (in the chosen store, else in all stores).
+            ->when($request->boolean('out'), fn ($q) => $q->where('is_active', true)->whereRaw(
+                '(select coalesce(sum(b.on_hand), 0) from inventory_balances b where b.item_id = inventory_items.id'.($storeId ? ' and b.store_id = ?' : '').') <= 0',
+                $storeId ? [$storeId] : [],
+            ))
             ->when($request->boolean('active'), fn ($q) => $q->where('is_active', true))
             // Same rule as InventoryItem::isLowStock(): a minimum is set and the total across all stores is at or below it.
             ->when($request->boolean('low'), fn ($q) => $q->where('min_level', '>', 0)

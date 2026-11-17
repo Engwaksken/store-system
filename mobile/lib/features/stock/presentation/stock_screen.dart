@@ -20,7 +20,6 @@ class StockScreen extends ConsumerStatefulWidget {
 class _StockScreenState extends ConsumerState<StockScreen> {
   String _q = '';
   int? _storeId;
-  bool _low = false;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +27,8 @@ class _StockScreenState extends ConsumerState<StockScreen> {
     final stores = ref.watch(storesProvider).value ?? const <CodedRef>[];
     final f = ref.watch(formattersProvider);
     final storeName = stores.where((s) => s.id == _storeId).firstOrNull?.name;
+    final filter = ref.watch(stockFilterProvider);
+    void setFilter(StockFilter f) => ref.read(stockFilterProvider.notifier).set(f);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Stock')),
@@ -57,20 +58,37 @@ class _StockScreenState extends ConsumerState<StockScreen> {
                 ),
                 const SizedBox(width: 8),
                 FilterChip(
-                  avatar: _low ? null : const Icon(Icons.warning_amber, size: 18),
+                  avatar: filter == StockFilter.low ? null : const Icon(Icons.warning_amber, size: 18),
                   label: const Text('Low stock'),
-                  selected: _low,
-                  onSelected: (v) => setState(() => _low = v),
+                  selected: filter == StockFilter.low,
+                  onSelected: (v) => setFilter(v ? StockFilter.low : StockFilter.all),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  avatar: filter == StockFilter.out ? null : const Icon(Icons.remove_shopping_cart_outlined, size: 18),
+                  label: const Text('Out of stock'),
+                  selected: filter == StockFilter.out,
+                  onSelected: (v) => setFilter(v ? StockFilter.out : StockFilter.all),
                 ),
               ],
             ),
           ),
           Expanded(
             child: PagedListView<Item>(
-              filterKey: (_q, _storeId, _low),
-              fetch: (page) => repo.items(page: page, q: _q, storeId: _storeId, low: _low),
-              emptyIcon: Icons.inventory_2_outlined,
-              emptyTitle: _low ? 'No low-stock items' : 'No items found',
+              filterKey: (_q, _storeId, filter),
+              fetch: (page) => repo.items(
+                page: page,
+                q: _q,
+                storeId: _storeId,
+                low: filter == StockFilter.low,
+                outOfStock: filter == StockFilter.out,
+              ),
+              emptyIcon: filter == StockFilter.out ? Icons.check_circle_outline : Icons.inventory_2_outlined,
+              emptyTitle: switch (filter) {
+                StockFilter.low => 'No low-stock items',
+                StockFilter.out => 'Nothing is out of stock',
+                StockFilter.all => 'No items found',
+              },
               emptyMessage: _q.isEmpty ? null : 'Try another search.',
               itemBuilder: (context, item) => _ItemTile(item: item, formatters: f, storeName: storeName),
             ),
@@ -108,10 +126,13 @@ class _ItemTile extends StatelessWidget {
                       [item.sku, if ((item.category ?? '').isNotEmpty) item.category!].join(' · '),
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
-                    if (item.low || !item.isActive) ...[
+                    if (item.low || item.outOfStock || !item.isActive) ...[
                       const SizedBox(height: 6),
                       Wrap(spacing: 6, children: [
-                        if (item.low) StatusBadge.status(label: 'Low stock', statusTone: 'rejected', dense: true),
+                        if (item.outOfStock)
+                          StatusBadge.status(label: 'Out of stock', statusTone: 'rejected', dense: true)
+                        else if (item.low)
+                          StatusBadge.status(label: 'Low stock', statusTone: 'pending', dense: true),
                         if (!item.isActive) StatusBadge.status(label: 'Inactive', statusTone: 'muted', dense: true),
                       ]),
                     ],
@@ -129,7 +150,7 @@ class _ItemTile extends StatelessWidget {
                       f.qty(item.onHand),
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: item.low ? theme.colorScheme.error : null,
+                        color: item.outOfStock || item.low ? theme.colorScheme.error : null,
                       ),
                     ),
                     Text(item.unit, style: theme.textTheme.bodySmall),
