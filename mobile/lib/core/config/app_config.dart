@@ -28,5 +28,5 @@ class AppConfig {
 
   /// Shown only until the system name arrives from the server (`/branding`).
   /// Everywhere in the UI, read `appNameProvider` instead.
-  static const String fallbackAppName = 'Kemmy Store';
+  static const String fallbackAppName = 'Archways Holdings';
 }

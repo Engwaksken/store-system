@@ -142,7 +142,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                 width: 10,
                                 height: 10,
                                 margin: const EdgeInsets.only(left: 8, top: 4),
-                                decoration: BoxDecoration(color: Brand.teal, borderRadius: BorderRadius.circular(5)),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
                               ),
                             )
                           else if (n.target?.route != null)

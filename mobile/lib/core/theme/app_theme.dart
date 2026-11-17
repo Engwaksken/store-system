@@ -76,49 +76,81 @@ class ToneColors {
   }
 }
 
+/// The system colours from the web app's Settings > Appearance (`/branding` -> `theme`).
+class BrandColors {
+  const BrandColors({this.primary = Brand.navy, this.accent = Brand.gold});
+
+  /// Sidebar / headings on the web; app bar and buttons in the app.
+  final Color primary;
+  final Color accent;
+
+  static const defaults = BrandColors();
+
+  /// Text colour that stays readable on [background].
+  static Color onColor(Color background) =>
+      background.computeLuminance() > 0.45 ? const Color(0xFF111827) : Colors.white;
+
+  /// `#RRGGBB` -> Color, or null.
+  static Color? parse(Object? hex) {
+    if (hex is! String) return null;
+    final m = RegExp(r'^#?([0-9a-fA-F]{6})$').firstMatch(hex.trim());
+    return m == null ? null : Color(0xFF000000 | int.parse(m.group(1)!, radix: 16));
+  }
+
+  static String toHex(Color c) =>
+      '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+
+  @override
+  bool operator ==(Object other) => other is BrandColors && other.primary == primary && other.accent == accent;
+
+  @override
+  int get hashCode => Object.hash(primary, accent);
+}
+
 class AppTheme {
-  static ThemeData light() {
+  static ThemeData light([BrandColors brand = BrandColors.defaults]) {
+    final onPrimary = BrandColors.onColor(brand.primary);
     final scheme = ColorScheme.fromSeed(
-      seedColor: Brand.navy,
+      seedColor: brand.primary,
       brightness: Brightness.light,
     ).copyWith(
-      primary: Brand.navy,
-      onPrimary: Colors.white,
-      secondary: Brand.teal,
-      onSecondary: Colors.white,
-      tertiary: Brand.gold,
-      onTertiary: const Color(0xFF231A00),
+      primary: brand.primary,
+      onPrimary: onPrimary,
+      secondary: brand.primary,
+      onSecondary: onPrimary,
+      tertiary: brand.accent,
+      onTertiary: BrandColors.onColor(brand.accent),
       surface: Colors.white,
     );
-    return _base(scheme).copyWith(
+    return _base(scheme, brand).copyWith(
       scaffoldBackgroundColor: const Color(0xFFF5F7FA),
     );
   }
 
-  static ThemeData dark() {
+  static ThemeData dark([BrandColors brand = BrandColors.defaults]) {
+    // In dark mode a lighter tone of the same colour keeps buttons readable.
     final scheme = ColorScheme.fromSeed(
-      seedColor: Brand.navy,
+      seedColor: brand.primary,
       brightness: Brightness.dark,
     ).copyWith(
-      primary: const Color(0xFFA9C7F0),
-      onPrimary: const Color(0xFF0B1A2E),
-      secondary: const Color(0xFF5EEAD4),
-      onSecondary: const Color(0xFF00201C),
-      tertiary: const Color(0xFFE8C468),
+      tertiary: ColorScheme.fromSeed(seedColor: brand.accent, brightness: Brightness.dark).primary,
     );
-    return _base(scheme);
+    return _base(scheme, brand);
   }
 
-  static ThemeData _base(ColorScheme scheme) {
+  static ThemeData _base(ColorScheme scheme, BrandColors brand) {
     final isLight = scheme.brightness == Brightness.light;
     final radius = BorderRadius.circular(12);
+    // Buttons use the system primary colour.
+    final buttonBg = scheme.primary;
+    final buttonFg = scheme.onPrimary;
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       visualDensity: VisualDensity.standard,
       appBarTheme: AppBarTheme(
-        backgroundColor: isLight ? Brand.navy : scheme.surface,
-        foregroundColor: isLight ? Colors.white : scheme.onSurface,
+        backgroundColor: isLight ? brand.primary : scheme.surface,
+        foregroundColor: isLight ? BrandColors.onColor(brand.primary) : scheme.onSurface,
         elevation: 0,
         scrolledUnderElevation: 2,
         centerTitle: false,
@@ -135,22 +167,32 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: isLight ? Brand.teal : scheme.secondary,
-          foregroundColor: isLight ? Colors.white : scheme.onSecondary,
+          backgroundColor: buttonBg,
+          foregroundColor: buttonFg,
           minimumSize: const Size(64, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: buttonBg,
+          foregroundColor: buttonFg,
           minimumSize: const Size(64, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: scheme.primary,
+          minimumSize: const Size(64, 48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: scheme.primary)),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: isLight ? Brand.teal : scheme.secondary,
-        foregroundColor: isLight ? Colors.white : scheme.onSecondary,
+        backgroundColor: buttonBg,
+        foregroundColor: buttonFg,
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -159,7 +201,7 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        indicatorColor: isLight ? const Color(0xFFD7E6F7) : scheme.secondaryContainer,
+        indicatorColor: scheme.primaryContainer,
         labelTextStyle: WidgetStateProperty.all(
           const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         ),

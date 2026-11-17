@@ -7,11 +7,11 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Kemmy Store uses the camera to photograph receipts for expense claims.</string>
+	<string>Archways Holdings uses the camera to photograph receipts for expense claims.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Kemmy Store lets you attach a receipt photo from your library to an expense claim.</string>
+	<string>Archways Holdings lets you attach a receipt photo from your library to an expense claim.</string>
 	<key>CFBundleDisplayName</key>
-	<string>Kemmy Store</string>
+	<string>Archways Holdings</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

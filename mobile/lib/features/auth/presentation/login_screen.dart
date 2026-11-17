@@ -71,12 +71,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final config = ref.watch(appConfigProvider);
     final appName = ref.watch(appNameProvider);
     final subtitle = ref.watch(appSubtitleProvider);
+    final brand = ref.watch(brandColorsProvider);
+    final onBrand = BrandColors.onColor(brand.primary);
     final auth = ref.watch(authControllerProvider);
     final signedOutReason = auth is AuthSignedOut ? auth.message : null;
     final banner = _error ?? signedOutReason;
 
     return Scaffold(
-      backgroundColor: Brand.navy,
+      backgroundColor: brand.primary,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -90,8 +92,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Text(
                     appName,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: onBrand,
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                     ),
@@ -101,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Text(
                       subtitle,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
+                      style: TextStyle(color: onBrand.withValues(alpha: 0.75)),
                     ),
                   ],
                   const SizedBox(height: 24),

@@ -80,8 +80,9 @@ class FakeBackend {
 
     if (method == 'GET' && p == 'branding') {
       return const FakeResponse(200, {
-        'company_name': 'Kemmy Tech',
-        'app_subtitle': 'Store & Projects',
+        'company_name': 'Archways Holdings',
+        'app_subtitle': 'Projects Management',
+        'theme': {'primary': '#12243E', 'accent': '#D4A33A', 'action': '#0F766E'},
         'logo_url': null,
         'favicon_url': null,
       });
@@ -847,8 +848,8 @@ class FakeBackend {
         'must_change_password': true,
         'currency': 'UGX',
         'currency_decimals': 0,
-        'company_name': 'Kemmy Tech',
-        'app_subtitle': 'Store & Projects',
+        'company_name': 'Archways Holdings',
+        'app_subtitle': 'Projects Management',
         'can': const {'create_request': true, 'submit_claim': true, 'view_claims': true},
       };
       _users[id] = u;
@@ -1037,8 +1038,8 @@ class FakeBackend {
           'must_change_password': mustChange,
           'currency': 'UGX',
           'currency_decimals': 0,
-          'company_name': 'Kemmy Tech',
-          'app_subtitle': 'Store & Projects',
+          'company_name': 'Archways Holdings',
+          'app_subtitle': 'Projects Management',
           'can': can,
           'is_active': true,
         };

@@ -13,11 +13,12 @@ class StoreSystemApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final colors = ref.watch(brandColorsProvider);
     return MaterialApp.router(
       title: ref.watch(appNameProvider),
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.light(colors),
+      darkTheme: AppTheme.dark(colors),
       themeMode: ThemeMode.system,
       routerConfig: router,
     );
