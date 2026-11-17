@@ -12,12 +12,13 @@ class StockRepository {
   StockRepository(this._api);
   final ApiClient _api;
 
-  Future<Paginated<Item>> items({int page = 1, String? q, int? storeId, bool low = false, bool activeOnly = false}) async {
+  Future<Paginated<Item>> items({int page = 1, String? q, int? storeId, bool low = false, bool outOfStock = false, bool activeOnly = false}) async {
     final json = await _api.get('/items', query: {
       'page': page,
       'q': q,
       'store_id': storeId,
       if (low) 'low': 1,
+      if (outOfStock) 'out': 1,
       if (activeOnly) 'active': 1,
     });
     return Paginated.fromJson(json, Item.fromJson);
@@ -44,3 +45,15 @@ final storesProvider = FutureProvider<List<CodedRef>>((ref) {
 final itemDetailProvider = FutureProvider.autoDispose.family<ItemDetail, int>(
   (ref, id) => ref.watch(stockRepositoryProvider).item(id),
 );
+
+/// Which stock list the Stock tab shows. Set by the Home cards before switching tabs.
+enum StockFilter { all, low, out }
+
+class StockFilterNotifier extends Notifier<StockFilter> {
+  @override
+  StockFilter build() => StockFilter.all;
+
+  void set(StockFilter f) => state = f;
+}
+
+final stockFilterProvider = NotifierProvider<StockFilterNotifier, StockFilter>(StockFilterNotifier.new);

@@ -11,6 +11,7 @@ class Item {
     this.onHand,
     this.minLevel,
     required this.low,
+    this.outOfStock = false,
     required this.isActive,
     this.avgCost,
   });
@@ -23,6 +24,9 @@ class Item {
   final String? onHand;
   final String? minLevel;
   final bool low;
+
+  /// Active item with nothing on hand (in the selected store, else in all stores).
+  final bool outOfStock;
   final bool isActive;
 
   /// Only present when the user may view stock value.
@@ -37,6 +41,7 @@ class Item {
         onHand: asDecimalString(json['on_hand']),
         minLevel: asDecimalString(json['min_level']),
         low: asBool(json['low']),
+        outOfStock: asBool(json['out_of_stock']),
         isActive: asBool(json['is_active'], true),
         avgCost: asDecimalString(json['avg_cost']),
       );

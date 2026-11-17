@@ -189,4 +189,23 @@ class MobileApiTest extends TestCase
         $this->postJson('/api/v1/notifications/read-all', [], $pm)->assertNoContent();
         $this->getJson('/api/v1/dashboard', $pm)->assertJsonPath('unread_notifications', 0);
     }
+
+    public function test_out_of_stock_filter_flag_and_dashboard_card(): void
+    {
+        $this->receive($this->cement, 10);
+        $this->steel->update(['is_active' => true]);
+        $inactive = \App\Models\InventoryItem::create(['sku' => 'OLD', 'name' => 'Old item', 'category_id' => $this->cement->category_id, 'unit_id' => $this->cement->unit_id, 'is_active' => false]);
+        $as = $this->tokenFor($this->admin);
+
+        $this->getJson('/api/v1/items?out=1', $as)->assertOk()
+            ->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.sku', 'Y12')->assertJsonPath('data.0.out_of_stock', true);
+        $this->getJson('/api/v1/items?q=CEM', $as)->assertJsonPath('data.0.out_of_stock', false);
+        // Per store: steel was never received in the store, so it is out of stock there too.
+        $storeId = $this->cement->balances()->value('store_id');
+        $this->getJson("/api/v1/items?out=1&store_id={$storeId}", $as)->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.sku', 'Y12');
+        $this->assertNotContains($inactive->id, collect($this->getJson('/api/v1/items?out=1', $as)->json('data'))->pluck('id'));
+
+        $card = collect($this->getJson('/api/v1/dashboard', $as)->assertOk()->json('cards'))->firstWhere('key', 'out_of_stock');
+        $this->assertSame(1, $card['value']);
+    }
 }

@@ -110,10 +110,12 @@ final class Present
 
     public static function item(InventoryItem $i, User $viewer, ?int $storeId = null, bool $withBalances = false): array
     {
+        $onHand = $i->onHand($storeId);
         $data = [
             'id' => $i->id, 'sku' => $i->sku, 'name' => $i->name, 'category' => $i->category?->name, 'unit' => $i->unit?->abbreviation,
-            'on_hand' => self::qty($i->onHand($storeId)), 'min_level' => self::qty($i->min_level),
-            'low' => $i->isLowStock(), 'is_active' => (bool) $i->is_active,
+            'on_hand' => self::qty($onHand), 'min_level' => self::qty($i->min_level),
+            'low' => $i->isLowStock(), 'out_of_stock' => (bool) $i->is_active && (float) $onHand <= 0,
+            'is_active' => (bool) $i->is_active,
         ];
         if (Gate::forUser($viewer)->allows('view-stock-value')) {
             $data['avg_cost'] = self::money($i->avg_cost);

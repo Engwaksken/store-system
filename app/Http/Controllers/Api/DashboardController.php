@@ -38,6 +38,9 @@ class DashboardController extends ApiController
         if (Gate::allows('view-stock-ledger')) {
             $low = InventoryItem::with('balances')->where('is_active', true)->get()->filter->isLowStock()->count();
             $cards[] = ['key' => 'low_stock', 'label' => 'Low-stock items', 'value' => $low, 'tone' => $low ? 'bad' : 'ok'];
+            $out = InventoryItem::where('is_active', true)
+                ->whereRaw('(select coalesce(sum(b.on_hand), 0) from inventory_balances b where b.item_id = inventory_items.id) <= 0')->count();
+            $cards[] = ['key' => 'out_of_stock', 'label' => 'Out of stock', 'value' => $out, 'tone' => $out ? 'bad' : 'ok'];
         }
         $claimDecisions = ExpenseClaim::visibleTo($user)->with('project')->where('status', 'submitted')->get()
             ->filter(fn ($c) => $claims->canDecide($user, $c))->count();

@@ -9,6 +9,7 @@ import '../../../core/util/data_revision.dart';
 import '../../../core/widgets/common.dart';
 import '../../auth/data/auth_controller.dart';
 import '../../requests/presentation/request_card.dart';
+import '../../stock/data/stock_repository.dart';
 import '../data/dashboard_repository.dart';
 import '../domain/dashboard_models.dart';
 
@@ -81,8 +82,9 @@ class _DashboardBody extends ConsumerWidget {
         ResponsiveCenter(
           child: LayoutBuilder(
             builder: (context, c) {
-              final columns = c.maxWidth >= 600 ? 3 : 2;
-              const gap = 12.0;
+              // Compact tiles: 3 across on phones, 4 on tablets, 2 only on very narrow screens.
+              final columns = c.maxWidth >= 600 ? 4 : (c.maxWidth >= 330 ? 3 : 2);
+              const gap = 8.0;
               final w = (c.maxWidth - gap * (columns - 1)) / columns;
               return Wrap(
                 spacing: gap,
@@ -152,7 +154,7 @@ class _DashboardBody extends ConsumerWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _StatCard extends ConsumerWidget {
   const _StatCard({required this.card, required this.formatters});
   final DashboardCard card;
   final Formatters formatters;
@@ -167,13 +169,13 @@ class _StatCard extends StatelessWidget {
   String? get _route => switch (card.key) {
         'awaiting_me' => '/approvals',
         'my_open_requests' => '/requests',
-        'low_stock' => '/stock',
+        'low_stock' || 'out_of_stock' => '/stock',
         'claims_awaiting' || 'claims_unpaid' => '/claims',
         _ => null,
       };
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final c = ToneColors.of(toneFromCard(card.tone), theme.brightness);
     final route = _route;
@@ -185,19 +187,44 @@ class _StatCard extends StatelessWidget {
         child: InkWell(
           onTap: route == null
               ? null
-              : () => route == '/claims' ? context.push(route) : context.go(route),
+              : () {
+                  if (route == '/stock') {
+                    ref.read(stockFilterProvider.notifier).set(switch (card.key) {
+                      'low_stock' => StockFilter.low,
+                      'out_of_stock' => StockFilter.out,
+                      _ => StockFilter.all,
+                    });
+                  }
+                  route == '/claims' ? context.push(route) : context.go(route);
+                },
           child: Container(
-            decoration: BoxDecoration(border: Border(left: BorderSide(color: c.foreground, width: 4))),
-            padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+            height: 72,
+            decoration: BoxDecoration(border: Border(left: BorderSide(color: c.foreground, width: 3))),
+            padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  _value,
-                  style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, color: c.foreground),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _value,
+                    maxLines: 1,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: c.foreground,
+                      height: 1.1,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(card.label, style: theme.textTheme.bodyMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 2),
+                Text(
+                  card.label,
+                  style: theme.textTheme.bodySmall?.copyWith(height: 1.2),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
@@ -215,21 +242,24 @@ class _DashboardSkeleton extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         children: [
-          Row(
-            children: const [
-              Expanded(child: Card(child: Padding(padding: EdgeInsets.all(16), child: _CardSkel()))),
-              SizedBox(width: 12),
-              Expanded(child: Card(child: Padding(padding: EdgeInsets.all(16), child: _CardSkel()))),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: const [
-              Expanded(child: Card(child: Padding(padding: EdgeInsets.all(16), child: _CardSkel()))),
-              SizedBox(width: 12),
-              Expanded(child: Card(child: Padding(padding: EdgeInsets.all(16), child: _CardSkel()))),
-            ],
-          ),
+          for (var row = 0; row < 2; row++) ...[
+            Row(
+              children: [
+                for (var i = 0; i < 3; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  const Expanded(
+                    child: Card(
+                      child: SizedBox(
+                        height: 72,
+                        child: Padding(padding: EdgeInsets.all(10), child: _CardSkel()),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
           const SizedBox(height: 24),
           const Skeleton(width: 140, height: 16),
           const SizedBox(height: 12),
@@ -247,6 +277,6 @@ class _CardSkel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [Skeleton(width: 48, height: 24), SizedBox(height: 10), Skeleton(width: 120)],
+        children: [Skeleton(width: 36, height: 20), SizedBox(height: 8), Skeleton(width: 70, height: 10)],
       );
 }
