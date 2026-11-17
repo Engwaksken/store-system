@@ -13,15 +13,41 @@ class StockRepository {
   final ApiClient _api;
 
   Future<Paginated<Item>> items({int page = 1, String? q, int? storeId, bool low = false, bool outOfStock = false, bool activeOnly = false}) async {
-    final json = await _api.get('/items', query: {
-      'page': page,
-      'q': q,
-      'store_id': storeId,
-      if (low) 'low': 1,
-      if (outOfStock) 'out': 1,
-      if (activeOnly) 'active': 1,
-    });
-    return Paginated.fromJson(json, Item.fromJson);
+    Future<Paginated<Item>> fetch(int p) async => Paginated.fromJson(
+          await _api.get('/items', query: {
+            'page': p,
+            'q': q,
+            'store_id': storeId,
+            if (outOfStock) 'per_page': 50,
+            if (low) 'low': 1,
+            if (outOfStock) 'out': 1,
+            if (activeOnly) 'active': 1,
+          }),
+          Item.fromJson,
+        );
+
+    if (!outOfStock) return fetch(page);
+
+    // The server filters with `out=1`; servers without that filter ignore it and return
+    // every item, so the list is also filtered here. Pages with no match are skipped so the
+    // list does not look empty while later pages still hold out-of-stock items.
+    var current = page;
+    while (true) {
+      final res = await fetch(current);
+      final matches = res.data.where((i) => i.outOfStock).toList();
+      if (matches.isNotEmpty || !res.meta.hasMore || current - page >= 20) {
+        return Paginated(
+          data: matches,
+          meta: PageMeta(
+            currentPage: res.meta.currentPage,
+            lastPage: res.meta.lastPage,
+            perPage: res.meta.perPage,
+            total: matches.length == res.data.length ? res.meta.total : matches.length,
+          ),
+        );
+      }
+      current = res.meta.currentPage + 1;
+    }
   }
 
   Future<ItemDetail> item(int id) async {

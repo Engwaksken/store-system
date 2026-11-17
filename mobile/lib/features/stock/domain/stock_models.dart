@@ -1,3 +1,5 @@
+import 'package:decimal/decimal.dart';
+
 import '../../../core/api/json.dart';
 import '../../../core/api/refs.dart';
 
@@ -32,6 +34,15 @@ class Item {
   /// Only present when the user may view stock value.
   final String? avgCost;
 
+  /// Active item with nothing on hand. Older servers do not send `out_of_stock`, so it is
+  /// worked out from `on_hand` (no number counts as nothing on hand).
+  static bool _outOfStock(Json json) {
+    if (json.containsKey('out_of_stock')) return asBool(json['out_of_stock']);
+    if (!asBool(json['is_active'], true)) return false;
+    final onHand = Decimal.tryParse(asDecimalString(json['on_hand']) ?? '');
+    return onHand == null || onHand <= Decimal.zero;
+  }
+
   factory Item.fromJson(Json json) => Item(
         id: asInt(json['id']),
         sku: asString(json['sku']),
@@ -41,7 +52,7 @@ class Item {
         onHand: asDecimalString(json['on_hand']),
         minLevel: asDecimalString(json['min_level']),
         low: asBool(json['low']),
-        outOfStock: asBool(json['out_of_stock']),
+        outOfStock: _outOfStock(json),
         isActive: asBool(json['is_active'], true),
         avgCost: asDecimalString(json['avg_cost']),
       );
