@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../core/api/providers.dart';
-import '../../../core/config/app_config.dart';
+import '../../../core/config/branding.dart';
 import '../../../core/widgets/common.dart';
 import '../../auth/presentation/splash_screen.dart';
 
@@ -16,6 +16,8 @@ class AboutScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final config = ref.watch(appConfigProvider);
     final info = ref.watch(packageInfoProvider).value;
+    final appName = ref.watch(appNameProvider);
+    final subtitle = ref.watch(appSubtitleProvider);
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('About')),
@@ -30,7 +32,8 @@ class AboutScreen extends ConsumerWidget {
                   children: [
                     const BrandMark(size: 64),
                     const SizedBox(height: 12),
-                    Text(AppConfig.appName, style: theme.textTheme.titleLarge),
+                    Text(appName, style: theme.textTheme.titleLarge, textAlign: TextAlign.center),
+                    if (subtitle != null) Text(subtitle, style: theme.textTheme.bodySmall),
                     const SizedBox(height: 4),
                     Text(
                       info == null ? '' : 'Version ${info.version} (build ${info.buildNumber})',
@@ -60,7 +63,7 @@ class AboutScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => showLicensePage(
                   context: context,
-                  applicationName: AppConfig.appName,
+                  applicationName: appName,
                   applicationVersion: info?.version,
                 ),
               ),

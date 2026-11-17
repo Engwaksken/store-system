@@ -8,6 +8,8 @@ class UserCan {
     this.decideClaims = false,
     this.viewStockValue = false,
     this.viewClaims = false,
+    this.manageUsers = false,
+    this.manageFeedback = false,
   });
 
   final bool approveRequests;
@@ -17,6 +19,12 @@ class UserCan {
   final bool viewStockValue;
   final bool viewClaims;
 
+  /// Admin: Users screens.
+  final bool manageUsers;
+
+  /// Admin: sees all feedback and replies.
+  final bool manageFeedback;
+
   factory UserCan.fromJson(Json json) => UserCan(
         approveRequests: asBool(json['approve_requests']),
         createRequest: asBool(json['create_request']),
@@ -24,6 +32,8 @@ class UserCan {
         decideClaims: asBool(json['decide_claims']),
         viewStockValue: asBool(json['view_stock_value']),
         viewClaims: asBool(json['view_claims']),
+        manageUsers: asBool(json['manage_users']),
+        manageFeedback: asBool(json['manage_feedback']),
       );
 
   Json toJson() => {
@@ -33,6 +43,8 @@ class UserCan {
         'decide_claims': decideClaims,
         'view_stock_value': viewStockValue,
         'view_claims': viewClaims,
+        'manage_users': manageUsers,
+        'manage_feedback': manageFeedback,
       };
 }
 
@@ -48,6 +60,7 @@ class User {
     required this.currency,
     required this.currencyDecimals,
     required this.companyName,
+    this.appSubtitle = '',
     required this.can,
   });
 
@@ -61,6 +74,7 @@ class User {
   final String currency;
   final int currencyDecimals;
   final String companyName;
+  final String appSubtitle;
   final UserCan can;
 
   String get initials {
@@ -81,6 +95,7 @@ class User {
         currency: asString(json['currency']),
         currencyDecimals: asInt(json['currency_decimals'], 0).clamp(0, 6),
         companyName: asString(json['company_name']),
+        appSubtitle: asString(json['app_subtitle']),
         can: UserCan.fromJson(asMap(json['can'])),
       );
 
@@ -95,6 +110,7 @@ class User {
         'currency': currency,
         'currency_decimals': currencyDecimals,
         'company_name': companyName,
+        'app_subtitle': appSubtitle,
         'can': can.toJson(),
       };
 
@@ -109,6 +125,7 @@ class User {
         currency: currency,
         currencyDecimals: currencyDecimals,
         companyName: companyName,
+        appSubtitle: appSubtitle,
         can: can,
       );
 }

@@ -3,17 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Role;
-use App\Models\ActivityLog;
-use App\Models\Project;
+use App\Models\CustomRole;
 use App\Models\User;
-use App\Notifications\AccountCredentials;
+use App\Services\UserAccounts;
 use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 /** Admin-only user management. Users are deactivated, never deleted (audit trail). */
 class UserController extends Controller
@@ -45,143 +40,53 @@ class UserController extends Controller
             ->respond(fn ($users, $list) => view('users.index', ['users' => $users, 'list' => $list, 'stats' => $stats]));
     }
 
-    public function create()
+    public function create(UserAccounts $accounts)
     {
         Gate::authorize('manage-users');
 
-        return view('users.form', ['user' => new User(['is_active' => true, 'role' => Role::Staff]), 'projects' => $this->projectOptions(), 'assigned' => [], 'customRoles' => \App\Models\CustomRole::orderBy('name')->get()]);
+        return view('users.form', ['user' => new User(['is_active' => true, 'role' => Role::Staff]), 'projects' => $accounts->projectOptions(), 'assigned' => [], 'customRoles' => CustomRole::orderBy('name')->get()]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, UserAccounts $accounts)
     {
         Gate::authorize('manage-users');
-        $data = $this->validated($request);
-        $projectIds = $data['project_ids'];
-        unset($data['project_ids']);
-        $temporary = ($data['password'] ?? '') !== '' ? $data['password'] : self::temporaryPassword();
-        $user = User::create(['password' => $temporary, 'must_change_password' => true] + $data);
-        $user->projects()->sync($projectIds);
-        $codes = Project::whereIn('id', $projectIds)->orderBy('code')->pluck('code')->implode(', ');
-        ActivityLog::record('user.created', "User {$user->email} created as {$user->roleLabel()}".($codes ? ", assigned to {$codes}" : ''), $user);
+        [$user, $temporary] = $accounts->create($accounts->validate($request));
 
-        return $this->sendCredentials($user, $temporary, false, redirect()->route('users.index'), 'User created.');
+        return $this->credentialsRedirect($accounts, $user, $temporary, false, 'User created.');
     }
 
-    public function edit(User $user)
+    public function edit(User $user, UserAccounts $accounts)
     {
         Gate::authorize('manage-users');
 
-        return view('users.form', ['user' => $user, 'projects' => $this->projectOptions($user), 'assigned' => $user->projects()->pluck('projects.id')->all(), 'customRoles' => \App\Models\CustomRole::orderBy('name')->get()]);
+        return view('users.form', ['user' => $user, 'projects' => $accounts->projectOptions($user), 'assigned' => $user->projects()->pluck('projects.id')->all(), 'customRoles' => CustomRole::orderBy('name')->get()]);
     }
 
-    public function update(Request $request, User $user)
+    public function update(Request $request, User $user, UserAccounts $accounts)
     {
         Gate::authorize('manage-users');
-        $data = $this->validated($request, $user);
-        if ($user->id === $request->user()->id && (! $data['is_active'] || $data['role'] !== Role::Admin->value)) {
-            return back()->withErrors(['role' => 'You cannot deactivate or demote your own admin account.']);
-        }
-        $temporary = null;
-        if (! empty($data['password'])) {
-            $temporary = $data['password'];
-        } elseif ($request->boolean('reset_password')) {
-            $temporary = self::temporaryPassword();
-        }
-        unset($data['password']);
+        $temporary = $accounts->update($user, $accounts->validate($request, $user, $request->user()), $request->boolean('reset_password'));
         if ($temporary !== null) {
-            $data['password'] = $temporary;
-            $data['must_change_password'] = true;
-        }
-        $projectIds = $data['project_ids'];
-        unset($data['project_ids']);
-        $before = $user->only('role', 'is_active') + ['projects' => $user->projects()->pluck('projects.id')->sort()->values()->all()];
-        $user->update($data);
-        // Only projects offered on the form can change (open projects + closed ones the user is already on);
-        // a project not offered can neither be added nor silently removed.
-        $offered = $this->projectOptions($user)->pluck('id')->all();
-        $kept = array_diff($before['projects'], $offered);
-        $user->projects()->sync(array_values(array_unique(array_merge($kept, array_intersect($projectIds, $offered)))));
-        $after = $user->only('role', 'is_active') + ['projects' => $user->projects()->pluck('projects.id')->sort()->values()->all()];
-        ActivityLog::record('user.updated', "User {$user->email} updated", $user, ['before' => $before, 'after' => $after]);
-        if ($temporary !== null) {
-            return $this->sendCredentials($user, $temporary, true, redirect()->route('users.index'), 'User updated and password reset.');
+            return $this->credentialsRedirect($accounts, $user, $temporary, true, 'User updated and password reset.');
         }
 
         return redirect()->route('users.index')->with('status', 'User updated.');
     }
 
-    /** 12 characters with upper and lower case letters and digits; no symbols or look-alike characters, so it can be typed from an e-mail. */
+    /** Kept for existing callers; see UserAccounts::temporaryPassword(). */
     public static function temporaryPassword(): string
     {
-        $sets = ['ABCDEFGHJKLMNPQRSTUVWXYZ', 'abcdefghijkmnpqrstuvwxyz', '23456789'];
-        $all = implode('', $sets);
-        $chars = array_map(fn ($set) => $set[random_int(0, strlen($set) - 1)], $sets);
-        while (count($chars) < 12) {
-            $chars[] = $all[random_int(0, strlen($all) - 1)];
-        }
-        for ($i = count($chars) - 1; $i > 0; $i--) {
-            $j = random_int(0, $i);
-            [$chars[$i], $chars[$j]] = [$chars[$j], $chars[$i]];
-        }
-
-        return implode('', $chars);
+        return UserAccounts::temporaryPassword();
     }
 
-    /**
-     * E-mail the sign-in details now. If mail cannot be sent (no mail server configured, server down), the account
-     * still exists and the admin is shown the temporary password once, to hand over in person.
-     */
-    private function sendCredentials(User $user, string $temporary, bool $isReset, $redirect, string $done)
+    /** If the e-mail could not be sent, the admin is shown the temporary password once, to hand over in person. */
+    private function credentialsRedirect(UserAccounts $accounts, User $user, string $temporary, bool $isReset, string $done)
     {
-        try {
-            $user->notifyNow(new AccountCredentials($temporary, $isReset));
-            ActivityLog::record($isReset ? 'user.password_reset_sent' : 'user.credentials_sent', "Sign-in details e-mailed to {$user->email}", $user);
-
+        $redirect = redirect()->route('users.index');
+        if ($accounts->sendCredentials($user, $temporary, $isReset)) {
             return $redirect->with('status', "{$done} The sign-in details were e-mailed to {$user->email}; they must change the temporary password at first sign-in.");
-        } catch (\Throwable $e) {
-            Log::warning('Could not e-mail sign-in details', ['user_id' => $user->id, 'error' => $e->getMessage()]);
-            ActivityLog::record('user.credentials_not_sent', "Sign-in details could not be e-mailed to {$user->email}", $user);
-
-            return $redirect->with('status', $done)->with('credentials', ['email' => $user->email, 'password' => $temporary]);
-        }
-    }
-
-    /** Projects that can be assigned: open ones, plus any closed project the user already belongs to. */
-    private function projectOptions(?User $user = null)
-    {
-        return Project::with('manager:id,name')
-            ->where(fn ($q) => $q->whereIn('status', ['planned', 'active', 'on_hold'])
-                ->when($user?->exists, fn ($w) => $w->orWhereHas('members', fn ($m) => $m->whereKey($user->id))))
-            ->orderBy('code')->get(['id', 'code', 'name', 'status', 'manager_id']);
-    }
-
-    private function validated(Request $request, ?User $user = null): array
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user?->id)],
-            'phone' => 'nullable|string|max:30',
-            'role' => ['required', Rule::enum(Role::class)],
-            'custom_role_id' => ['nullable', 'integer', Rule::exists('custom_roles', 'id')],
-            'is_active' => 'sometimes|boolean',
-            'password' => ['nullable', Password::min(8)->letters()->numbers()],
-            'project_ids' => 'nullable|array',
-            'project_ids.*' => ['integer', Rule::exists('projects', 'id')],
-        ]);
-        $data['is_active'] = $request->boolean('is_active');
-        $data['custom_role_id'] = $request->filled('custom_role_id') ? (int) $request->input('custom_role_id') : null;
-        if ($data['custom_role_id']) {
-            $profile = \App\Models\CustomRole::findOrFail($data['custom_role_id'])->permission_profile;
-            if ($profile !== $data['role']) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['custom_role_id' => 'The selected custom role uses a different permission profile.']);
-            }
-        }
-        $data['project_ids'] = array_values(array_unique(array_map('intval', $data['project_ids'] ?? [])));
-        // Staff can only see and request for projects they are assigned to: a new staff account needs at least one.
-        if (! $user && $data['role'] === Role::Staff->value && ! $data['project_ids'] && $this->projectOptions()->isNotEmpty()) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['project_ids' => 'Assign the new staff member to at least one project, otherwise they cannot see or request anything.']);
         }
 
-        return $data;
+        return $redirect->with('status', $done)->with('credentials', ['email' => $user->email, 'password' => $temporary]);
     }
 }

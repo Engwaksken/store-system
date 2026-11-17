@@ -37,7 +37,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const BrandLogo(width: 220),
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
+                Text(
+                  ref.watch(appNameProvider),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Brand.navy, fontSize: 20, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 24),
                 if (state is AuthRestoreFailed) ...[
                   const Icon(
                     Icons.cloud_off_outlined,

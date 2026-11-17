@@ -79,6 +79,9 @@
             </x-nav-group>
         @endcan
 
+        @php($newFeedbackCount = Gate::allows('manage-feedback') ? \App\Models\Feedback::where('status', 'new')->count() : 0)
+        <a href="{{ route('feedback.index') }}" @class(['nav-link', 'active' => $is('feedback.*')])><span><i class="fas fa-comments fa-fw"></i> Feedback</span>@if($newFeedbackCount)<span class="count" title="New feedback">{{ $newFeedbackCount }}</span>@endif</a>
+
         @if(Gate::allows('manage-users') || Gate::allows('view-activity'))
             <x-nav-group id="admin" icon="fa-user-shield" label="Admin" :open="$is('users.*', 'activity.*', 'settings.*')">
                 @can('manage-users')<a href="{{ route('users.index') }}" @class(['nav-link', 'active' => $is('users.*')])><span><i class="fas fa-users fa-fw"></i> Users</span></a>@endcan

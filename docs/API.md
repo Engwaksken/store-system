@@ -55,17 +55,23 @@ from the current one. → `200 { "user": {...User} }` (clears `must_change_passw
   "role": "project_manager", "role_label": "Project Manager",
   "must_change_password": false,
   "currency": "UGX", "currency_decimals": 0,
-  "company_name": "Kemmy Tech",
+  "company_name": "Kemmy Tech",      // the system name: the app uses it as its title
+  "app_subtitle": "Store & Projects",
   "can": {
     "approve_requests": true,      // sees the Approvals tab
     "create_request": true,        // may raise material requests
     "submit_claim": true,          // may submit expense claims
     "decide_claims": true,         // may approve/reject claims (still checked per claim)
     "view_stock_value": false,     // avg cost / stock value visible
-    "view_claims": true
+    "view_claims": true,
+    "manage_users": false,         // admin: Users screens (/users)
+    "manage_feedback": false       // admin: sees all feedback and replies
   }
 }
 ```
+
+### `GET /branding` (public) → `{ "company_name", "app_subtitle", "logo_url", "favicon_url" }`
+The system name and tagline set in the web app (Settings). The app shows `company_name` as its title.
 
 ## Dashboard
 
@@ -188,6 +194,47 @@ Body:
 ### `GET /notifications` — paginated, newest first; `?unread=1`.
 ### `POST /notifications/{id}/read` → `204`
 ### `POST /notifications/read-all` → `204`
+
+## Users (admin only, `can.manage_users`)
+
+Same rules as the web Users pages: users are deactivated, never deleted; a new Staff account needs a project; an
+admin cannot deactivate or demote themselves (422 on `role`). Everyone else gets 403.
+
+**Account**
+```json
+{ "id": 12, "name": "Sam", "email": "sam@example.com", "phone": null,
+  "role": "staff", "role_label": "Site Clerk", "profile_label": "Staff", "custom_role_id": 3,
+  "is_active": true, "must_change_password": true, "projects_count": 1, "created_at": "...",
+  "projects": [ { "id", "code", "name" } ] }      // detail and save responses only
+```
+### `GET /users` — paginated Account, by name. Filters: `q` (name / e-mail / phone), `role`, `status=active|inactive`.
+### `GET /users/options[?user_id=]` → `{ "roles": [ { "value", "label" } ], "custom_roles": [ { "id", "name", "permission_profile" } ], "projects": [ { "id", "code", "name", "status" } ], "stats": { "total", "active", "inactive" } }`
+### `GET /users/{id}` → `{ "data": Account }`
+### `POST /users` / `PUT /users/{id}`
+Body: `{ "name", "email", "phone?", "role", "custom_role_id?", "is_active", "password?", "reset_password?" (PUT), "project_ids": [] }`
+→ `201` / `200 { "data": Account, "credentials_emailed": true | false | null, "temporary_password": null | "..." }`.
+A temporary password is e-mailed when the account is created or the password is reset; `temporary_password` is only
+returned when that e-mail could not be sent, so the admin can hand it over once.
+
+## Feedback
+
+Everyone sends feedback and follows their own; admins (`can.manage_feedback`) see all of it, set the status and reply.
+Admins are notified of new feedback; the sender is notified of a reply or status change.
+
+**Feedback**
+```json
+{ "id": 4, "reference": "FB-00004", "category": "bug", "category_label": "Problem / bug",
+  "subject": "...", "message": "...", "rating": 4,                      // 1-5 or null
+  "source": "web | mobile", "app_version": "1.0.0+1", "device": "Pixel 8", // version/device: admins only
+  "status": "new | in_review | resolved | closed", "status_label": "New", "status_tone": "pending",
+  "user": { "id", "name" }, "response": null, "responder": null, "responded_at": null,
+  "created_at": "...", "updated_at": "...", "can_respond": false }
+```
+### `GET /feedback` — paginated, newest first. Filters: `status`, `category`, `q`, `scope=mine` (admins: only their own).
+### `GET /feedback/options` → `{ "categories": [ { "value", "label" } ], "statuses": [ { "value", "label" } ] }`
+### `POST /feedback` — `{ "category", "subject", "message", "rating?", "app_version?", "device?" }` → `201 { "data": Feedback }` (10/min).
+### `GET /feedback/{id}` → `{ "data": Feedback }` (sender or admin, else 403)
+### `POST /feedback/{id}/respond` — admin: `{ "status", "response?" }` → `200 { "data": Feedback }`
 
 ## Deploying the API to store.kemmytech.com
 

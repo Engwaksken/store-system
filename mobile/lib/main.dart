@@ -18,7 +18,7 @@ void main() {
         // The fake backend keeps state in memory only, so the token can too.
         if (config.useFakeApi) tokenStorageProvider.overrideWithValue(MemoryTokenStorage()),
       ],
-      child: const KemmyStoreApp(),
+      child: const StoreSystemApp(),
     ),
   );
 }

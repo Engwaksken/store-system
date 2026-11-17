@@ -53,9 +53,14 @@ class FakeBackend {
   final _notifications = <Map<String, dynamic>>[];
   final _categories = <Map<String, dynamic>>[];
   final _costCodes = <Map<String, dynamic>>[];
+  final _feedback = <Map<String, dynamic>>[];
+
+  /// user id -> assigned project ids.
+  final _userProjects = <int, Set<int>>{};
   int _nextRequestId = 1;
   int _nextLineId = 1;
   int _nextClaimId = 1;
+  int _nextFeedbackId = 1;
   int _tokenSeq = 1;
 
   // ---------------------------------------------------------------- routing
@@ -76,6 +81,7 @@ class FakeBackend {
     if (method == 'GET' && p == 'branding') {
       return const FakeResponse(200, {
         'company_name': 'Kemmy Tech',
+        'app_subtitle': 'Store & Projects',
         'logo_url': null,
         'favicon_url': null,
       });
@@ -153,6 +159,30 @@ class FakeBackend {
           if (n == null) return const FakeResponse(404, {'message': 'Not found.'});
           n['read'] = true;
           return const FakeResponse(204);
+        case ('GET', ['users']):
+          return _admin(userId, () => _userList(query));
+        case ('GET', ['users', 'options']):
+          return _admin(userId, () => FakeResponse(200, _userOptions()));
+        case ('POST', ['users']):
+          return _admin(userId, () => _saveUser(userId, null, json));
+        case ('GET', ['users', final id]):
+          return _admin(userId, () => _withAccount(id, (u) => FakeResponse(200, {'data': _accountJson(u, withProjects: true)})));
+        case ('PUT', ['users', final id]):
+          return _admin(userId, () => _withAccount(id, (u) => _saveUser(userId, u, json)));
+        case ('GET', ['feedback']):
+          return _feedbackList(userId, query);
+        case ('GET', ['feedback', 'options']):
+          return FakeResponse(200, {
+            'categories': [for (final e in _feedbackCategories.entries) {'value': e.key, 'label': e.value}],
+            'statuses': [for (final e in _feedbackStatuses.entries) {'value': e.key, 'label': e.value}],
+          });
+        case ('POST', ['feedback']):
+          return _sendFeedback(userId, json);
+        case ('GET', ['feedback', final id]):
+          return _withFeedback(id, userId, (f) => FakeResponse(200, {'data': _feedbackJson(f, userId)}));
+        case ('POST', ['feedback', final id, 'respond']):
+          if (!_can(userId, 'manage_feedback')) return const FakeResponse(403, {'message': 'This action is unauthorized.'});
+          return _withFeedback(id, userId, (f) => _respondFeedback(f, userId, json));
       }
     } on _Validation catch (v) {
       return FakeResponse(422, {'message': v.errors.values.first.first, 'errors': v.errors});
@@ -706,6 +736,256 @@ class FakeBackend {
     ], query));
   }
 
+  // ---------------------------------------------------------------- users (admin)
+
+  static const _roles = {
+    'admin': 'Owner / Admin',
+    'overall_manager': 'Overall Manager',
+    'project_manager': 'Project Manager',
+    'storekeeper': 'Storekeeper',
+    'staff': 'Staff',
+    'accountant': 'Accountant',
+    'procurement': 'Procurement Officer',
+    'auditor': 'Auditor (read-only)',
+    'site_engineer': 'Site Engineer',
+  };
+
+  FakeResponse _admin(int userId, FakeResponse Function() f) =>
+      _can(userId, 'manage_users') ? f() : const FakeResponse(403, {'message': 'This action is unauthorized.'});
+
+  FakeResponse _withAccount(String id, FakeResponse Function(Map<String, dynamic>) f) {
+    final u = _users[int.tryParse(id)];
+    return u == null ? const FakeResponse(404, {'message': 'Not found.'}) : f(u);
+  }
+
+  Map<String, dynamic> _accountJson(Map<String, dynamic> u, {bool withProjects = false}) {
+    final ids = _userProjects[u['id']] ?? const <int>{};
+    return {
+      'id': u['id'],
+      'name': u['name'],
+      'email': u['email'],
+      'phone': u['phone'],
+      'role': u['role'],
+      'role_label': u['role_label'],
+      'profile_label': _roles[u['role']] ?? u['role_label'],
+      'custom_role_id': null,
+      'is_active': u['is_active'],
+      'must_change_password': u['must_change_password'],
+      'projects_count': ids.length,
+      if (withProjects) 'projects': _projects.where((p) => ids.contains(p['id'])).toList(),
+    };
+  }
+
+  FakeResponse _userList(Map<String, dynamic> query) {
+    var list = _users.values.toList()..sort((a, b) => '${a['name']}'.compareTo('${b['name']}'));
+    final status = '${query['status'] ?? ''}';
+    if (status == 'active') list = list.where((u) => u['is_active'] == true).toList();
+    if (status == 'inactive') list = list.where((u) => u['is_active'] != true).toList();
+    final term = '${query['q'] ?? ''}'.trim().toLowerCase();
+    if (term.isNotEmpty) {
+      list = list
+          .where((u) => ['name', 'email', 'phone'].any((k) => '${u[k] ?? ''}'.toLowerCase().contains(term)))
+          .toList();
+    }
+    return FakeResponse(200, _paginate(list.map(_accountJson).toList(), query));
+  }
+
+  Map<String, dynamic> _userOptions() => {
+        'roles': [for (final e in _roles.entries) {'value': e.key, 'label': e.value}],
+        'custom_roles': const <Object>[],
+        'projects': [for (final p in _projects) {...p, 'status': 'active'}],
+        'stats': {
+          'total': _users.length,
+          'active': _users.values.where((u) => u['is_active'] == true).length,
+          'inactive': _users.values.where((u) => u['is_active'] != true).length,
+        },
+      };
+
+  FakeResponse _saveUser(int actorId, Map<String, dynamic>? existing, Map<String, dynamic> json) {
+    final name = '${json['name'] ?? ''}'.trim();
+    final email = '${json['email'] ?? ''}'.trim().toLowerCase();
+    final role = '${json['role'] ?? ''}';
+    final active = json['is_active'] == true;
+    final password = '${json['password'] ?? ''}';
+    final projectIds = {for (final v in (json['project_ids'] as List? ?? const [])) int.tryParse('$v') ?? 0}..remove(0);
+    final errors = <String, List<String>>{};
+    if (name.isEmpty) errors['name'] = ['The name field is required.'];
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      errors['email'] = ['The email field must be a valid email address.'];
+    } else if (_users.values.any((u) => u['email'] == email && u['id'] != existing?['id'])) {
+      errors['email'] = ['The email has already been taken.'];
+    }
+    if (!_roles.containsKey(role)) errors['role'] = ['The selected role is invalid.'];
+    if (password.isNotEmpty && (password.length < 8 || !RegExp(r'\d').hasMatch(password))) {
+      errors['password'] = ['The password field must be at least 8 characters and contain a number.'];
+    }
+    if (existing != null && existing['id'] == actorId && (!active || role != existing['role'])) {
+      errors['role'] = ['You cannot deactivate or demote your own admin account.'];
+    }
+    if (existing == null && role == 'staff' && projectIds.isEmpty) {
+      errors['project_ids'] = [
+        'Assign the new staff member to at least one project, otherwise they cannot see or request anything.',
+      ];
+    }
+    if (errors.isNotEmpty) throw _Validation(errors);
+
+    final reset = password.isNotEmpty || json['reset_password'] == true;
+    final Map<String, dynamic> u;
+    if (existing == null) {
+      final id = _users.keys.fold(0, max) + 1;
+      u = {
+        'id': id,
+        'must_change_password': true,
+        'currency': 'UGX',
+        'currency_decimals': 0,
+        'company_name': 'Kemmy Tech',
+        'app_subtitle': 'Store & Projects',
+        'can': const {'create_request': true, 'submit_claim': true, 'view_claims': true},
+      };
+      _users[id] = u;
+    } else {
+      u = existing;
+    }
+    final phone = '${json['phone'] ?? ''}'.trim();
+    u
+      ..['name'] = name
+      ..['email'] = email
+      ..['phone'] = phone.isEmpty ? null : phone
+      ..['role'] = role
+      ..['role_label'] = _roles[role]
+      ..['is_active'] = active;
+    if (existing == null || reset) {
+      u['must_change_password'] = true;
+      _passwords[u['id'] as int] = password.isNotEmpty ? password : 'Temp${Random().nextInt(900000) + 100000}';
+    }
+    _userProjects[u['id'] as int] = projectIds;
+    return FakeResponse(existing == null ? 201 : 200, {
+      'data': _accountJson(u, withProjects: true),
+      'credentials_emailed': existing == null || reset ? true : null,
+      'temporary_password': null,
+    });
+  }
+
+  // ---------------------------------------------------------------- feedback
+
+  static const _feedbackCategories = {
+    'bug': 'Problem / bug',
+    'suggestion': 'Suggestion',
+    'question': 'Question',
+    'praise': 'Praise',
+    'other': 'Other',
+  };
+  static const _feedbackStatuses = {'new': 'New', 'in_review': 'In review', 'resolved': 'Resolved', 'closed': 'Closed'};
+  static const _feedbackTones = {'new': 'pending', 'in_review': 'partial', 'resolved': 'approved', 'closed': 'muted'};
+
+  bool _feedbackVisible(Map<String, dynamic> f, int userId) => f['user_id'] == userId || _can(userId, 'manage_feedback');
+
+  FakeResponse _withFeedback(String id, int userId, FakeResponse Function(Map<String, dynamic>) f) {
+    final item = _feedback.where((x) => '${x['id']}' == id).firstOrNull;
+    if (item == null) return const FakeResponse(404, {'message': 'Not found.'});
+    if (!_feedbackVisible(item, userId)) return const FakeResponse(403, {'message': 'This action is unauthorized.'});
+    return f(item);
+  }
+
+  Map<String, dynamic>? _person(Object? id) {
+    final u = id is int ? _users[id] : null;
+    return u == null ? null : {'id': u['id'], 'name': u['name']};
+  }
+
+  Map<String, dynamic> _feedbackJson(Map<String, dynamic> f, int viewerId) {
+    final manage = _can(viewerId, 'manage_feedback');
+    return {
+      'id': f['id'],
+      'reference': 'FB-${'${f['id']}'.padLeft(5, '0')}',
+      'category': f['category'],
+      'category_label': _feedbackCategories[f['category']],
+      'subject': f['subject'],
+      'message': f['message'],
+      'rating': f['rating'],
+      'source': f['source'],
+      'app_version': manage ? f['app_version'] : null,
+      'device': manage ? f['device'] : null,
+      'status': f['status'],
+      'status_label': _feedbackStatuses[f['status']],
+      'status_tone': _feedbackTones[f['status']],
+      'user': _person(f['user_id']),
+      'response': f['response'],
+      'responder': _person(f['responded_by']),
+      'responded_at': f['responded_at'],
+      'created_at': f['created_at'],
+      'updated_at': f['updated_at'],
+      'can_respond': manage,
+    };
+  }
+
+  FakeResponse _feedbackList(int userId, Map<String, dynamic> query) {
+    var list = _feedback.where((f) => _feedbackVisible(f, userId)).toList()
+      ..sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
+    if ('${query['scope'] ?? ''}' == 'mine') list = list.where((f) => f['user_id'] == userId).toList();
+    final status = '${query['status'] ?? ''}';
+    if (status.isNotEmpty) list = list.where((f) => f['status'] == status).toList();
+    final term = '${query['q'] ?? ''}'.trim().toLowerCase();
+    if (term.isNotEmpty) {
+      list = list
+          .where((f) => '${f['subject']}'.toLowerCase().contains(term) || '${f['message']}'.toLowerCase().contains(term))
+          .toList();
+    }
+    return FakeResponse(200, _paginate(list.map((f) => _feedbackJson(f, userId)).toList(), query));
+  }
+
+  FakeResponse _sendFeedback(int userId, Map<String, dynamic> json) {
+    final category = '${json['category'] ?? ''}';
+    final subject = '${json['subject'] ?? ''}'.trim();
+    final message = '${json['message'] ?? ''}'.trim();
+    final rating = json['rating'] == null ? null : int.tryParse('${json['rating']}');
+    final errors = <String, List<String>>{};
+    if (!_feedbackCategories.containsKey(category)) errors['category'] = ['The selected category is invalid.'];
+    if (subject.isEmpty) errors['subject'] = ['The subject field is required.'];
+    if (message.isEmpty) errors['message'] = ['The message field is required.'];
+    if (rating != null && (rating < 1 || rating > 5)) errors['rating'] = ['The rating field must be between 1 and 5.'];
+    if (errors.isNotEmpty) throw _Validation(errors);
+    final now = _iso(DateTime.now());
+    final f = <String, dynamic>{
+      'id': _nextFeedbackId++,
+      'user_id': userId,
+      'category': category,
+      'subject': subject,
+      'message': message,
+      'rating': rating,
+      'source': 'mobile',
+      'app_version': json['app_version'],
+      'device': json['device'],
+      'status': 'new',
+      'response': null,
+      'responded_by': null,
+      'responded_at': null,
+      'created_at': now,
+      'updated_at': now,
+    };
+    _feedback.add(f);
+    return FakeResponse(201, {'data': _feedbackJson(f, userId)});
+  }
+
+  FakeResponse _respondFeedback(Map<String, dynamic> f, int userId, Map<String, dynamic> json) {
+    final status = '${json['status'] ?? ''}';
+    if (!_feedbackStatuses.containsKey(status)) {
+      throw _Validation({
+        'status': ['The selected status is invalid.'],
+      });
+    }
+    final response = '${json['response'] ?? ''}'.trim();
+    final now = _iso(DateTime.now());
+    f['status'] = status;
+    if (response.isNotEmpty && response != f['response']) {
+      f
+        ..['response'] = response
+        ..['responded_by'] = userId
+        ..['responded_at'] = now;
+    }
+    f['updated_at'] = now;
+    return FakeResponse(200, {'data': _feedbackJson(f, userId)});
+  }
+
   // ---------------------------------------------------------------- helpers
 
   Map<String, dynamic> _paginate(List<Map<String, dynamic>> all, Map<String, dynamic> query) {
@@ -749,6 +1029,7 @@ class FakeBackend {
           'currency': 'UGX',
           'currency_decimals': 0,
           'company_name': 'Kemmy Tech',
+          'app_subtitle': 'Store & Projects',
           'can': can,
           'is_active': true,
         };
@@ -759,6 +1040,8 @@ class FakeBackend {
       'decide_claims': true,
       'view_stock_value': true,
       'view_claims': true,
+      'manage_users': true,
+      'manage_feedback': true,
     };
     _users[3] = user(3, 'Brian Okello', 'brian@kemmy.test', 'project_manager', 'Project Manager', pmCan);
     _users[5] = user(5, 'Jane Akello', 'engineer@kemmy.test', 'site_engineer', 'Site Engineer', const {

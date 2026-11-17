@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/branding.dart';
 import '../../../core/format/formatters.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/util/data_revision.dart';
@@ -33,9 +34,8 @@ class HomeScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Hello, ${user?.name.split(' ').first ?? ''}'),
-            if ((user?.companyName ?? '').isNotEmpty)
-              Text(
-                user!.companyName,
+            Text(
+                ref.watch(appNameProvider),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
               ),
           ],

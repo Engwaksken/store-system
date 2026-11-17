@@ -13,6 +13,7 @@ class BrandingController
 
         return response()->json([
             'company_name' => AppSetting::get('company_name') ?: config('app.name'),
+            'app_subtitle' => AppSetting::get('app_subtitle') ?: 'Store & Projects',
             'logo_url' => $url(AppSetting::get('logo_path')),
             'favicon_url' => $url(AppSetting::get('favicon_path')),
         ]);

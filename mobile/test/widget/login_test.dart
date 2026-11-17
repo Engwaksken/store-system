@@ -13,7 +13,7 @@ Future<void> _pumpApp(WidgetTester tester) async {
   await tester.pumpWidget(ProviderScope(
     retry: (_, _) => null,
     overrides: fakeOverrides(backend: FakeBackend()),
-    child: const KemmyStoreApp(),
+    child: const StoreSystemApp(),
   ));
   await tester.pumpAndSettle();
 }

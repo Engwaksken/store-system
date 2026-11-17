@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Enums\Role;
 use App\Models\AppSetting;
 use App\Models\ExpenseClaim;
+use App\Models\Feedback;
 use App\Models\InventoryItem;
 use App\Models\MaterialRequest;
 use App\Models\User;
@@ -42,6 +43,7 @@ final class Present
             'must_change_password' => (bool) $u->must_change_password,
             'currency' => Currency::code(), 'currency_decimals' => Currency::decimals(),
             'company_name' => AppSetting::get('company_name') ?: config('app.name'),
+            'app_subtitle' => AppSetting::get('app_subtitle') ?: 'Store & Projects',
             'can' => [
                 'approve_requests' => $as->allows('approve-any'),
                 'create_request' => $as->allows('create-request'),
@@ -49,6 +51,8 @@ final class Present
                 'decide_claims' => $u->hasRole(Role::Admin, Role::OverallManager, Role::ProjectManager),
                 'view_stock_value' => $as->allows('view-stock-value'),
                 'view_claims' => true,
+                'manage_users' => $as->allows('manage-users'),
+                'manage_feedback' => $as->allows('manage-feedback'),
             ],
         ];
     }
@@ -155,6 +159,41 @@ final class Present
         return [
             'id' => $n->id, 'subject' => $data['subject'] ?? '', 'body' => $data['body'] ?? '', 'kind' => $data['kind'] ?? 'info',
             'read' => $n->read_at !== null, 'created_at' => self::time($n->created_at), 'target' => $target,
+        ];
+    }
+    /** A user account as the admin sees it (Users screens). */
+    public static function account(User $u, bool $withProjects = false): array
+    {
+        $row = [
+            'id' => $u->id, 'name' => $u->name, 'email' => $u->email, 'phone' => $u->phone,
+            'role' => $u->role->value, 'role_label' => $u->roleLabel(), 'profile_label' => $u->role->label(),
+            'custom_role_id' => $u->custom_role_id,
+            'is_active' => (bool) $u->is_active, 'must_change_password' => (bool) $u->must_change_password,
+            'projects_count' => (int) ($u->projects_count ?? $u->projects()->count()),
+            'created_at' => self::time($u->created_at),
+        ];
+        if ($withProjects) {
+            $row['projects'] = $u->projects()->orderBy('code')->get(['projects.id', 'code', 'name'])->map(fn ($p) => self::project($p))->values();
+        }
+
+        return $row;
+    }
+
+    public static function feedback(Feedback $f, User $viewer): array
+    {
+        $manage = Gate::forUser($viewer)->allows('manage-feedback');
+
+        return [
+            'id' => $f->id, 'reference' => $f->reference(),
+            'category' => $f->category, 'category_label' => $f->categoryLabel(),
+            'subject' => $f->subject, 'message' => $f->message, 'rating' => $f->rating,
+            'source' => $f->source,
+            'app_version' => $manage ? $f->app_version : null, 'device' => $manage ? $f->device : null,
+            'status' => $f->status, 'status_label' => $f->statusLabel(), 'status_tone' => $f->statusTone(),
+            'user' => self::person($f->user),
+            'response' => $f->response, 'responder' => self::person($f->responder), 'responded_at' => self::time($f->responded_at),
+            'created_at' => self::time($f->created_at), 'updated_at' => self::time($f->updated_at),
+            'can_respond' => $manage,
         ];
     }
 }
