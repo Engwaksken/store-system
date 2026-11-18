@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Offline</title>
+    <style>
+        :root { color-scheme: light dark; }
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
+               font-family: Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #F4F6F9; color: #12243E; }
+        .card { max-width: 360px; text-align: center; background: #fff; border-radius: 14px; padding: 28px 22px; box-shadow: 0 6px 24px rgba(18, 36, 62, .1); }
+        h1 { font-size: 1.2rem; margin: 0 0 .5rem; }
+        p { margin: 0 0 1.2rem; line-height: 1.5; color: #475569; }
+        button { font: inherit; border: 0; border-radius: 8px; padding: .65rem 1.3rem; background: #0F766E; color: #fff; cursor: pointer; }
+        @media (prefers-color-scheme: dark) {
+            body { background: #0F172A; color: #E2E8F0; }
+            .card { background: #1E293B; box-shadow: none; }
+            p { color: #94A3B8; }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>You are offline</h1>
+    <p>This app needs an internet connection to show live stock, requests and approvals. Check your connection and try again.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+</div>
+</body>
+</html>

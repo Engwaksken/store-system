@@ -84,6 +84,13 @@ Stock is only deducted when the storekeeper issues. Approval reserves nothing.
 - The bell (🔔) at the top shows alerts for you: approvals waiting, goods to receive, claims to pay, rejections, reminders and budget alerts. Click one to open the document; it is then marked read. The same alerts are e-mailed if the company enabled e-mail.
 - Anything waiting more than 2 days is reminded every weekday morning; after 5 days the Owner/Admin is told as well.
 
+## Install the app on your phone (until it is in the Play Store / App Store)
+The website can be installed like an app. It opens full screen with the company icon (the favicon from **Settings → Branding**, the same mark as the Android/iPhone app) and needs an internet connection.
+- **Android (Chrome, Edge, Samsung Internet):** open the site and tap **Install** on the banner at the bottom, or browser menu **⋮ → Install app / Add to Home screen**.
+- **iPhone / iPad (Safari):** open the site, tap **Share** (square with an arrow), then **Add to Home Screen → Add**. Push notifications on iPhone work only from the installed icon (iOS 16.4 or later).
+- **Computer (Chrome / Edge):** click the install icon at the right of the address bar.
+- Tap **Not now** to hide the banner for 14 days. After the admin uploads a new favicon, remove and re-add the icon to see it on the home screen.
+
 ## Auditor
 - You can open every register, report and the activity log, and export them (Excel, PDF, CSV). You cannot change anything.
 - **Activity log → Excel** exports the full trail with each row's hash. The system checks the trail every night; ask the Owner/Admin for the latest `cms:verify-audit` result.

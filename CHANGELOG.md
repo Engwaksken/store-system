@@ -1,5 +1,13 @@
 # Changelog
 
+## Installable web app (PWA) for Android and iPhone (18 Nov 2026)
+- The web app can be installed on phones and computers until the store apps are published: web manifest with the
+  company name and Appearance primary colour, home-screen icons built from the uploaded favicon like the Flutter
+  launcher icon (regular, maskable and Apple touch icon), and iOS home-screen meta tags.
+- `sw.js` is registered on every page, adds an offline screen (pages themselves are never cached) and uses the new icon
+  for push notifications.
+- Install banner: **Install** button on Android/desktop Chrome and Edge, Add to Home Screen steps on iPhone/iPad.
+
 ## Mobile reports, charts, profile editing and a refreshed look (18 Nov 2026)
 - Mobile API: `GET /reports?days=` returns KPIs and chart series (stock status, value or items by category, requests by
   status and over time, most issued items, issued value by project, expense claims by status), each limited to what

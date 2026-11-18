@@ -23,7 +23,8 @@ class SecurityHeaders
             $h->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }
         // Authenticated pages carry business data: do not let shared proxies or the browser back-cache keep them.
-        if ($request->user() && ! $h->has('Content-Disposition')) {
+        // The PWA manifest and icons are public branding and keep their own cache headers.
+        if ($request->user() && ! $h->has('Content-Disposition') && ! $request->routeIs('pwa.*')) {
             $h->set('Cache-Control', 'no-store, private');
         }
 

@@ -14,6 +14,8 @@
  *  - Amounts:      money fields show thousands separators while typing (removed again on submit).
  *  - Tabs:         <x-tabs>/<x-tab> panels become a tab bar; the last tab used is remembered.
  *  - Notifications: the bell polls once a minute and pops up new alerts; push on/off per device (sw.js).
+ *  - Install app:  registers sw.js on every page and offers "Install app" (Android/desktop prompt, iPhone/iPad
+ *                  Add to Home Screen steps). Hidden when already installed; "Not now" hides it for 14 days.
  */
 (function () {
     'use strict';
@@ -826,6 +828,69 @@
         });
     }
 
+    /* ---------- Install as an app (PWA) ---------- */
+    function initPwa() {
+        if (!('serviceWorker' in navigator) || !window.isSecureContext) { return; }
+        navigator.serviceWorker.register('/sw.js').catch(function () { /* the site still works without it */ });
+
+        var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+        if (standalone) { return; }
+        var snoozed = parseInt(store.get('pwa-install-dismissed') || '0', 10);
+        if (snoozed && Date.now() - snoozed < 14 * 864e5) { return; }
+
+        var ua = window.navigator.userAgent;
+        var isIos = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        var deferred = null;
+        var banner = null;
+
+        function hide(remember) {
+            if (remember) { store.set('pwa-install-dismissed', String(Date.now())); }
+            if (banner) { banner.remove(); banner = null; }
+        }
+        function show(text, actionLabel, onAction) {
+            if (banner) { return; }
+            var appName = (document.querySelector('meta[name=application-name]') || {}).content || 'this app';
+            var icon = (document.querySelector('link[rel=apple-touch-icon]') || {}).href;
+            banner = el('div', 'pwa-install');
+            banner.setAttribute('role', 'dialog');
+            banner.setAttribute('aria-label', 'Install app');
+            if (icon) { var img = el('img'); img.src = icon; img.alt = ''; banner.appendChild(img); }
+            var body = el('div', 'pwa-install-text');
+            var title = el('strong'); title.textContent = 'Install ' + appName;
+            var p = el('span', '', text);
+            body.appendChild(title); body.appendChild(p);
+            banner.appendChild(body);
+            var actions = el('div', 'pwa-install-actions');
+            if (actionLabel) {
+                var go = el('button', 'btn small'); go.type = 'button'; go.textContent = actionLabel;
+                go.addEventListener('click', onAction);
+                actions.appendChild(go);
+            }
+            var no = el('button', 'btn small secondary'); no.type = 'button'; no.textContent = 'Not now';
+            no.addEventListener('click', function () { hide(true); });
+            actions.appendChild(no);
+            banner.appendChild(actions);
+            document.body.appendChild(banner);
+        }
+
+        // Android (Chrome, Edge, Samsung Internet) and desktop Chrome/Edge: the browser's own install dialog.
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            deferred = e;
+            show('Add it to your home screen and open it like any other app.', 'Install', function () {
+                if (!deferred) { return; }
+                deferred.prompt();
+                deferred.userChoice.then(function (choice) { hide(choice.outcome !== 'accepted'); deferred = null; });
+            });
+        });
+        window.addEventListener('appinstalled', function () { hide(false); });
+
+        // iPhone / iPad: no install dialog exists, so explain the two taps.
+        if (isIos) {
+            show('Tap <i class="fas fa-arrow-up-from-bracket" aria-label="Share"></i> <b>Share</b>, then <b>Add to Home Screen</b>.', null, null);
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         initSidebar();
         initFlash();
@@ -835,6 +900,7 @@
         initThemePreview();
         initLiveNotifications();
         initPush();
+        initPwa();
         initListFilters();
         initTablePager(document);
         initBulk();

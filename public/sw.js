@@ -1,9 +1,50 @@
 /*
- * Service worker for browser push notifications (Construction CMS).
- * It only shows pushes and opens the linked page; it does not cache pages or work offline.
+ * Service worker (Construction CMS): makes the site installable as an app (PWA) and shows push notifications.
+ *  - Pages are always loaded from the server (they carry live business data and are never cached).
+ *    Only when the device is offline does a page request get the small offline screen below.
+ *  - Static files (CSS, JS, icons, fonts) are served from the network and kept as a fallback copy.
  */
-self.addEventListener('install', function () { self.skipWaiting(); });
-self.addEventListener('activate', function (event) { event.waitUntil(self.clients.claim()); });
+var CACHE = 'cms-shell-v1';
+var OFFLINE_URL = '/offline.html';
+
+self.addEventListener('install', function (event) {
+    event.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll([OFFLINE_URL]); }).then(function () { return self.skipWaiting(); }));
+});
+
+self.addEventListener('activate', function (event) {
+    event.waitUntil(caches.keys().then(function (keys) {
+        return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
+    }).then(function () { return self.clients.claim(); }));
+});
+
+function isStaticAsset(url) {
+    return url.origin === self.location.origin && /^\/(css|js|vendor|icons|pwa|storage\/branding|storage\/fonts)\//.test(url.pathname);
+}
+
+self.addEventListener('fetch', function (event) {
+    var req = event.request;
+    if (req.method !== 'GET') { return; }
+    var url = new URL(req.url);
+
+    if (req.mode === 'navigate') {
+        event.respondWith(fetch(req).catch(function () {
+            return caches.match(OFFLINE_URL);
+        }));
+        return;
+    }
+
+    if (isStaticAsset(url)) {
+        event.respondWith(fetch(req).then(function (res) {
+            if (res && res.ok) {
+                var copy = res.clone();
+                caches.open(CACHE).then(function (c) { c.put(req, copy); });
+            }
+            return res;
+        }).catch(function () {
+            return caches.match(req).then(function (hit) { return hit || Response.error(); });
+        }));
+    }
+});
 
 self.addEventListener('push', function (event) {
     var data = {};
@@ -13,8 +54,8 @@ self.addEventListener('push', function (event) {
         body: data.body || '',
         tag: data.tag || undefined,
         renotify: !!data.tag,
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
+        icon: '/pwa/icon-192.png',
+        badge: '/pwa/icon-192.png',
         data: { url: data.url || '/' }
     }));
 });

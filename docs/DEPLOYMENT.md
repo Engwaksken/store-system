@@ -120,3 +120,9 @@ It launches 8 parallel processes that try to (1) take the last 5 units for 8 com
 - Security headers (CSP, frame, nosniff, HSTS on HTTPS) are set by the application. See `docs/SECURITY.md` for the full control list.
 - Keep a copy of `APP_KEY` with the backups (sealed): it is needed to verify the audit chain after a restore.
 - Deactivate (don't delete) staff who leave.
+
+## 9. Installable web app (PWA)
+- Phones and desktops can install the site as an app (see USER_MANUAL "Install the app on your phone"). This **requires HTTPS** with a valid certificate; on plain HTTP browsers offer no install and `sw.js` is not registered.
+- Served by Laravel: `/manifest.webmanifest`, `/pwa/icon-{192|512}.png`, `/pwa/maskable-{192|512}.png`, `/apple-touch-icon.png`. If the web server serves `*.png` directly, make sure missing files fall through to `index.php` (the default Laravel nginx `try_files $uri $uri/ /index.php?$query_string;` does this).
+- Icons are built (PHP GD) from the PNG favicon in Settings → Branding, the same way the Flutter app builds its launcher icon; with no PNG favicon `public/icons/app-icon.png` is used. They are cached; `php artisan cache:clear` regenerates them.
+- `public/sw.js` never caches pages (business data); it only shows `public/offline.html` when the device is offline and keeps CSS/JS/icons as a fallback. Serve `sw.js` with `Cache-Control: no-cache` so updates reach devices.

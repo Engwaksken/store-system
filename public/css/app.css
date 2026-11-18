@@ -445,3 +445,13 @@ template { display: none; }
   .report-table .badge { background: none !important; border: 1px solid currentColor; }
   .report-bar, .report-bar-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Install as an app (PWA) banner, see initPwa() in app.js */
+.pwa-install { position: fixed; z-index: 1200; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: 460px; margin: 0 auto;
+  display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; padding: .75rem .9rem; background: var(--card); color: var(--text);
+  border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(18, 36, 62, .18); }
+.pwa-install img { width: 44px; height: 44px; border-radius: 10px; flex: none; }
+.pwa-install-text { flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: .1rem; font-size: .88rem; }
+.pwa-install-text strong { color: var(--navy); font-size: .95rem; }
+.pwa-install-actions { display: flex; gap: .4rem; margin-left: auto; }
+@media print { .pwa-install { display: none !important; } }

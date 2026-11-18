@@ -15,6 +15,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectControlsController;
 use App\Http\Controllers\PurchaseInvoiceController;
+use App\Http\Controllers\PwaController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseRequisitionController;
 use App\Http\Controllers\ReportController;
@@ -27,6 +28,13 @@ use App\Http\Controllers\StoreController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+
+// Installable web app (PWA): manifest and home-screen icons, public so browsers can fetch them before sign-in.
+Route::get('manifest.webmanifest', [PwaController::class, 'manifest'])->name('pwa.manifest');
+Route::get('pwa/icon-{size}.png', [PwaController::class, 'icon'])->whereNumber('size')->name('pwa.icon');
+Route::get('pwa/maskable-{size}.png', [PwaController::class, 'maskable'])->whereNumber('size')->name('pwa.maskable');
+Route::get('apple-touch-icon.png', [PwaController::class, 'appleTouchIcon'])->name('pwa.apple');
+Route::get('apple-touch-icon-precomposed.png', [PwaController::class, 'appleTouchIcon'])->name('pwa.apple-precomposed');
 
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthController::class, 'showLogin'])->name('login');
