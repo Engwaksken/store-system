@@ -87,6 +87,14 @@ class AuthController extends Notifier<AuthState> {
     state = AuthSignedIn(user);
   }
 
+  Future<void> uploadAvatar(String path, String fileName) async {
+    state = AuthSignedIn(await _repo.uploadAvatar(path, fileName));
+  }
+
+  Future<void> deleteAvatar() async {
+    state = AuthSignedIn(await _repo.deleteAvatar());
+  }
+
   /// Re-reads `/me` (e.g. after the app resumes) without disturbing the UI on failure.
   Future<void> refreshUser() async {
     if (state is! AuthSignedIn) return;

@@ -40,6 +40,7 @@ final class Present
         return [
             'id' => $u->id, 'name' => $u->name, 'email' => $u->email, 'phone' => $u->phone,
             'role' => $u->role->value, 'role_label' => $u->roleLabel(),
+            'avatar_url' => $u->avatar_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($u->avatar_path) : null,
             'must_change_password' => (bool) $u->must_change_password,
             'currency' => Currency::code(), 'currency_decimals' => Currency::decimals(),
             'company_name' => AppSetting::get('company_name') ?: config('app.name'),
@@ -104,6 +105,7 @@ final class Present
                 'final_approved_qty' => self::qty($l->final_approved_qty), 'issued_qty' => self::qty($l->issued_qty),
                 'on_hand' => self::qty($l->item->onHand()), 'notes' => $l->notes,
             ])->values()->all(),
+            'restock' => app(\App\Services\RestockService::class)->tracking($r),
             'approvals' => $r->approvals->sortBy('id')->map(fn ($a) => [
                 'step' => $a->step, 'version' => $a->version, 'decision' => $a->decision, 'reason' => $a->reason,
                 'approver' => self::person($a->approver), 'was_substitute' => (bool) $a->was_substitute, 'decided_at' => self::time($a->decided_at),

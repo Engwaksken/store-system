@@ -13,7 +13,6 @@ import '../../features/dashboard/presentation/home_screen.dart';
 import '../../features/feedback/presentation/feedback_detail_screen.dart';
 import '../../features/feedback/presentation/feedback_list_screen.dart';
 import '../../features/feedback/presentation/new_feedback_screen.dart';
-import '../../features/more/presentation/about_screen.dart';
 import '../../features/more/presentation/edit_profile_screen.dart';
 import '../../features/more/presentation/more_screen.dart';
 import '../../features/more/presentation/profile_screen.dart';
@@ -165,7 +164,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [GoRoute(path: 'edit', builder: (_, _) => const EditProfileScreen())],
       ),
       GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
-      GoRoute(path: '/about', builder: (_, _) => const AboutScreen()),
     ],
   );
   ref.onDispose(router.dispose);

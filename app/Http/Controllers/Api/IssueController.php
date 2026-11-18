@@ -20,9 +20,7 @@ class IssueController extends ApiController
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = MaterialIssue::with('project', 'request', 'issuer', 'acknowledgment', 'store')->withCount('lines')
-            ->when(! $user->hasRole(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant, Role::Auditor),
-                fn ($q) => $q->whereHas('request', fn ($r) => $r->visibleTo($user)))
+        $query = MaterialIssue::with('project', 'request', 'issuer', 'acknowledgment', 'store')->withCount('lines')->visibleTo($user)
             ->when($request->filled('q'), fn ($q) => $q->where(fn ($w) => $w->where('issue_no', 'like', $this->like($request->query('q')))
                 ->orWhere('recipient_name', 'like', $this->like($request->query('q')))
                 ->orWhereHas('request', fn ($r) => $r->where('request_no', 'like', $this->like($request->query('q'))))))
@@ -80,8 +78,8 @@ class IssueController extends ApiController
                 'line_id' => $s[0]->id, 'item' => ['id' => $s[0]->item->id, 'name' => $s[0]->item->name, 'unit' => $s[0]->item->unit?->abbreviation],
                 'short_qty' => Present::qty($s[1]), 'on_hand' => Present::qty($s[2]), 'restock_qty' => Present::qty($s[3]),
             ])->values(),
-            'open_restock' => $materialRequest->restockRequisitions()->whereIn('status', RestockService::OPEN)->get(['id', 'pr_no', 'status'])
-                ->map(fn ($pr) => ['id' => $pr->id, 'pr_no' => $pr->pr_no])->values(),
+            'open_restock' => RestockService::available() ? $materialRequest->restockRequisitions()->whereIn('status', RestockService::OPEN)->get(['id', 'pr_no', 'status'])
+                ->map(fn ($pr) => ['id' => $pr->id, 'pr_no' => $pr->pr_no])->values() : [],
         ]]);
     }
 

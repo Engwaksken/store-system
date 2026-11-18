@@ -17,6 +17,12 @@
     ['Out-of-stock items', $outOfStock->count(), 'fa-box-open', 'bad', route('items.index', ['out' => 1])],
 ]" />
 
+<x-stats :cards="[
+    ['Issue vouchers this month', number_format($issued['vouchers_month']), 'fa-file-lines', 'navy', route('issues.index', ['period' => 'this_month'])],
+    ['Items issued this month', number_format($issued['items_month']), 'fa-dolly'],
+    ['Vouchers not acknowledged', number_format($issued['unacknowledged']), 'fa-signature', $issued['unacknowledged'] ? 'gold' : '', route('issues.index')],
+]" />
+
 @if($queues->isNotEmpty())
 <x-stats :cards="$queues->map(fn ($q) => [$q[0], $q[2], 'fa-list-check', 'gold', $q[1]])->all()" />
 @endif

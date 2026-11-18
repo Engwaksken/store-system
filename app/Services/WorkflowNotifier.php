@@ -125,6 +125,10 @@ class WorkflowNotifier
     {
         $this->send(User::whereKey($pr->requested_by)->get(), "Purchase requisition {$pr->status}: {$pr->pr_no}",
             "Your purchase requisition {$pr->pr_no} was {$pr->status}".($pr->decision_reason ? ": {$pr->decision_reason}" : '.'), route('prs.show', $pr), 'Open requisition', $pr->status === 'approved' ? 'ok' : 'bad');
+        if ($pr->material_request_id && ($req = $pr->materialRequest)) {
+            $this->send(User::whereKey($req->requester_id)->get(), "Restock for {$req->request_no}: {$pr->status}",
+                \App\Services\RestockService::stage($pr), route('requests.show', $req), 'Track request', $pr->status === 'approved' ? 'ok' : 'bad');
+        }
         if ($pr->status === 'approved') {
             $this->send($this->role(Role::Procurement), "Ready to quote / order: {$pr->pr_no}", "Purchase requisition {$pr->pr_no} is approved. Record quotes and raise the purchase order.", route('prs.show', $pr), 'Open requisition');
         }

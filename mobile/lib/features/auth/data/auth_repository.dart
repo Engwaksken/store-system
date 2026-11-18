@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
@@ -48,6 +49,18 @@ class AuthRepository {
       'phone': phone,
       if ((currentPassword ?? '').isNotEmpty) 'current_password': currentPassword,
     });
+    return User.fromJson(asMap(json['user']));
+  }
+
+  /// `POST /me/avatar` (multipart `avatar`).
+  Future<User> uploadAvatar(String path, String fileName) async {
+    final form = FormData.fromMap({'avatar': await MultipartFile.fromFile(path, filename: fileName)});
+    final json = await _api.postMultipart('/me/avatar', form);
+    return User.fromJson(asMap(json['user']));
+  }
+
+  Future<User> deleteAvatar() async {
+    final json = await _api.delete('/me/avatar');
     return User.fromJson(asMap(json['user']));
   }
 

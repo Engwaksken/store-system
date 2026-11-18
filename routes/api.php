@@ -26,6 +26,8 @@ Route::prefix('v1')->name('api.')->group(function () {
     Route::middleware(['auth:sanctum', 'api.usable', 'throttle:120,1'])->group(function () {
         Route::get('me', [AuthController::class, 'me'])->name('me');
         Route::put('me', [AuthController::class, 'updateProfile'])->middleware('throttle:10,1')->name('me.update');
+        Route::post('me/avatar', [AuthController::class, 'uploadAvatar'])->middleware('throttle:10,1')->name('me.avatar');
+        Route::delete('me/avatar', [AuthController::class, 'deleteAvatar'])->middleware('throttle:10,1')->name('me.avatar.delete');
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('logout');
         Route::post('auth/change-password', [AuthController::class, 'changePassword'])->middleware('throttle:10,1')->name('change-password');
 

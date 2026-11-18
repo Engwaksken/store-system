@@ -35,7 +35,7 @@ class ProfileScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(3),
                   decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                  child: ProfileAvatar(initials: user.initials, radius: 38),
+                  child: ProfileAvatar(initials: user.initials, radius: 38, imageUrl: user.avatarUrl),
                 ),
                 const SizedBox(height: 12),
                 Text(

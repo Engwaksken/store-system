@@ -1,5 +1,19 @@
 # Changelog
 
+## Feedback round 2: restock tracking, issue statistics, profile photo, biometric unlock (19 Nov 2026)
+- **Requesters track restocking**: the request page (web and mobile) shows each restock requisition with a plain-language
+  step (waiting for approval, approved, ordered, delivered). Stock-shortage wording is now shown only to the
+  storekeeper, Overall Manager and Owner/Admin. Requesters are notified when a restock is raised and decided.
+- **Issue statistics** on the web and mobile dashboards: issue vouchers this month, items issued this month, vouchers
+  not acknowledged (scoped to what each user may see).
+- **Profile photo** (mobile, Edit profile): take or choose a photo, or remove it; shown on More and Profile.
+  Migration `users.avatar_path`, `POST/DELETE /me/avatar`.
+- **Biometric unlock** (mobile, Edit profile): fingerprint / face / phone PIN when the app opens and after 30 seconds
+  in the background; turned off on sign-out. Android uses FlutterFragmentActivity and AppCompat launch themes.
+- Mobile: About screen removed.
+- Restock steps are skipped (logged) on a server where the restock migration has not run, instead of failing.
+- Tests: `RestockTrackingAndProfileTest` (3), Flutter `profile_security_test` (4).
+
 ## User feedback round: restocking, catalogue fixes, stock prices, store operations on mobile (18 Nov 2026)
 - **Short issues go to restocking**: the storekeeper issues what is in stock; the balance stays outstanding and a restock
   purchase requisition (quantity = larger of the balance not in stock and the minimum stock level) is submitted to the

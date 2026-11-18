@@ -603,6 +603,39 @@ class _FakeStoreOps {
     'can': {'decide': p['status'] == 'pending_approval' && b._can(userId, 'decide_purchasing')},
   };
 
+  /// Same keys as the server's issue cards on `GET /dashboard`.
+  List<Map<String, dynamic>> dashboardCards(int userId) {
+    final mine = issues.where((i) => b._can(userId, 'issue_stock') || i['requester_id'] == userId).toList();
+    final month = DateTime(b._now.year, b._now.month);
+    final thisMonth = mine.where((i) => DateTime.parse(i['issued_at'] as String).isAfter(month)).toList();
+    final unack = mine.where((i) => i['acknowledgment'] == null).length;
+    return [
+      {'key': 'issued_vouchers_month', 'label': 'Issue vouchers this month', 'value': thisMonth.length, 'tone': 'navy'},
+      {'key': 'issued_items_month', 'label': 'Items issued this month', 'value': thisMonth.fold<int>(0, (a, i) => a + (i['lines'] as List).length), 'tone': ''},
+      {'key': 'issues_unacknowledged', 'label': 'Vouchers not acknowledged', 'value': unack, 'tone': unack > 0 ? 'gold' : 'ok'},
+    ];
+  }
+
+  /// Restock progress shown to the requester on the request.
+  List<Map<String, dynamic>> tracking(Map<String, dynamic> r) => [
+        for (final p in prs.where((p) => p['material_request']?['id'] == r['id']))
+          {
+            'id': p['id'],
+            'pr_no': p['pr_no'],
+            'status': p['status'],
+            'status_label': p['status_label'],
+            'status_tone': p['status_tone'],
+            'stage': switch (p['status']) {
+              'submitted' => 'Waiting for the Overall Manager to approve the restock.',
+              'approved' => 'Restock approved; procurement is getting quotes and ordering.',
+              'rejected' => 'Restock was not approved${p['decision_reason'] != null ? ': ${p['decision_reason']}' : '.'}',
+              _ => 'Restock cancelled.',
+            },
+            'orders': const [],
+            'updated_at': p['decided_at'] ?? p['submitted_at'],
+          },
+      ];
+
   void seed() {
     final cement = _item(1);
     final steel = _item(5);

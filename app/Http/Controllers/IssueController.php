@@ -71,7 +71,7 @@ class IssueController extends Controller
             'req' => $materialRequest->load(['project', 'requester', 'lines.item.unit', 'lines.item.balances' => fn ($q) => $q->where('store_id', $storeId)]),
             'stores' => $stores, 'storeId' => $storeId,
             'shortfall' => app(RestockService::class)->shortfall($materialRequest, $storeId),
-            'openRestock' => $materialRequest->restockRequisitions()->whereIn('status', RestockService::OPEN)->get(),
+            'openRestock' => RestockService::available() ? $materialRequest->restockRequisitions()->whereIn('status', RestockService::OPEN)->get() : collect(),
         ]);
     }
 

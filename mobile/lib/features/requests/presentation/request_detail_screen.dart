@@ -275,6 +275,26 @@ class _RequestBody extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 10),
             child: ResponsiveCenter(child: _LineCard(line: line, formatters: f)),
           ),
+        if (r.restock.isNotEmpty) ...[
+          const ResponsiveCenter(child: SectionTitle('Restock progress')),
+          ResponsiveCenter(
+            child: Card(
+              key: const Key('restock-progress'),
+              child: Column(children: [
+                for (final t in r.restock)
+                  ListTile(
+                    leading: const Icon(Icons.local_shipping_outlined),
+                    title: Text(t.stage),
+                    subtitle: Text([t.prNo, ...t.orders, if (t.updatedAt != null) f.relative(t.updatedAt)].join(' · ')),
+                    trailing: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 120),
+                      child: StatusBadge.status(label: t.statusLabel, statusTone: t.statusTone, dense: true),
+                    ),
+                  ),
+              ]),
+            ),
+          ),
+        ],
         const ResponsiveCenter(child: SectionTitle('Approval history')),
         ResponsiveCenter(
           child: r.approvals.isEmpty

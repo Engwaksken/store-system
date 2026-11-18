@@ -295,6 +295,13 @@ short, a purchase requisition (status `submitted`, raised by the storekeeper, li
 Owner/Admin and Overall Manager with quantity = max(balance not in stock, the item's minimum level). Items already on an
 open restock requisition for the same request are not asked for twice.
 
+**Profile photo.** `POST /me/avatar` (multipart `avatar`: JPG / PNG / WebP, max 3 MB) and `DELETE /me/avatar` return
+`{user}`; the user object has `avatar_url` (null when none).
+
+**Restock tracking.** Request detail has `restock`: `[{pr_no, status, status_label, status_tone, stage, orders: [{po_no,
+status_label}], updated_at}]`, where `stage` is a plain-language step for the requester. Dashboard cards include
+`issued_vouchers_month`, `issued_items_month` and `issues_unacknowledged`.
+
 ## Deploying the API to store.kemmytech.com
 
 1. Pull the code, then `composer install --no-dev --optimize-autoloader` (adds `laravel/sanctum`).

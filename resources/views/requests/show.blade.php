@@ -80,11 +80,20 @@
                 <td>@if($i->acknowledgment)<span class="badge approved">Yes</span>@else<span class="badge pending">Pending</span>@endif</td></tr>@endforeach</tbody>
         </table></div>
         @endif
-        @php($restocks = $req->restockRequisitions)
-        @if($restocks->isNotEmpty())
+        @php($restocks = app(\App\Services\RestockService::class)->tracking($req))
+        @if($restocks)
+            @if(auth()->user()->hasRole(\App\Enums\Role::Admin, \App\Enums\Role::OverallManager, \App\Enums\Role::Storekeeper))
             <div class="alert warn" style="margin-top:.75rem"><i class="fas fa-truck-ramp-box"></i> Not enough stock to issue in full. Restock requested from the Overall Manager:
-                @foreach($restocks as $pr)@can('view-pr', $pr)<a href="{{ route('prs.show', $pr) }}">{{ $pr->pr_no }}</a>@else{{ $pr->pr_no }}@endcan ({{ $pr->statusLabel() }})@if(! $loop->last), @endif @endforeach.
+                @foreach($restocks as $pr)<a href="{{ route('prs.show', $pr['id']) }}">{{ $pr['pr_no'] }}</a> ({{ $pr['status_label'] }})@if(! $loop->last), @endif @endforeach.
                 The balance stays outstanding on this request and can be issued once the stock arrives.</div>
+            @else
+            <div class="card" style="margin-top:.75rem"><h3 style="margin-top:0"><i class="fas fa-truck-ramp-box"></i> Restock progress</h3>
+                <ul class="timeline">@foreach($restocks as $pr)
+                    <li><span class="badge {{ $pr['status_tone'] }}">{{ $pr['pr_no'] }}</span> {{ $pr['stage'] }}
+                        @foreach($pr['orders'] as $po)<span class="muted">· {{ $po['po_no'] }}: {{ $po['status_label'] }}</span>@endforeach</li>
+                @endforeach</ul>
+                <p class="hint">You are notified as it moves; the remaining items are issued when the stock arrives.</p></div>
+            @endif
         @endif
     </x-tab>
 </x-tabs>

@@ -3,6 +3,7 @@
 
     <!-- API access. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <!-- image_picker uses the system camera app / Photo Picker and file_picker uses the
          Storage Access Framework, so no camera or storage permission is requested.

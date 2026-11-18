@@ -84,6 +84,7 @@ class DashboardController extends Controller
 
         return view('dashboard', [
             'queues' => $queues,
+            'issued' => MaterialIssue::statsFor($user),
             'finance' => $finance,
             'storeValues' => $storeValues,
             'projects' => $projects,

@@ -106,6 +106,7 @@ class User {
     required this.currencyDecimals,
     required this.companyName,
     this.appSubtitle = '',
+    this.avatarUrl,
     required this.can,
   });
 
@@ -120,6 +121,9 @@ class User {
   final int currencyDecimals;
   final String companyName;
   final String appSubtitle;
+
+  /// Profile photo (public URL), or null for initials.
+  final String? avatarUrl;
   final UserCan can;
 
   String get initials {
@@ -141,6 +145,7 @@ class User {
         currencyDecimals: asInt(json['currency_decimals'], 0).clamp(0, 6),
         companyName: asString(json['company_name']),
         appSubtitle: asString(json['app_subtitle']),
+        avatarUrl: asStringOrNull(json['avatar_url']),
         can: UserCan.fromJson(asMap(json['can'])),
       );
 
@@ -156,6 +161,7 @@ class User {
         'currency_decimals': currencyDecimals,
         'company_name': companyName,
         'app_subtitle': appSubtitle,
+        'avatar_url': avatarUrl,
         'can': can.toJson(),
       };
 
@@ -171,6 +177,7 @@ class User {
         currencyDecimals: currencyDecimals,
         companyName: companyName,
         appSubtitle: appSubtitle,
+        avatarUrl: avatarUrl,
         can: can,
       );
 }

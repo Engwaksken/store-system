@@ -204,6 +204,36 @@ class RequestCan {
       );
 }
 
+/// A restock requisition raised for this request, as the requester follows it.
+class RestockTrack {
+  const RestockTrack({required this.prNo, required this.status, required this.statusLabel, required this.statusTone, required this.stage, required this.orders, this.updatedAt});
+  final String prNo;
+  final String status;
+  final String statusLabel;
+  final String statusTone;
+
+  /// Plain-language step ("Waiting for the Overall Manager...", "Ordered from the supplier...").
+  final String stage;
+
+  /// `PO-... : status` labels.
+  final List<String> orders;
+  final String? updatedAt;
+
+  factory RestockTrack.fromJson(Json json) => RestockTrack(
+        prNo: asString(json['pr_no']),
+        status: asString(json['status']),
+        statusLabel: asString(json['status_label'], asString(json['status'])),
+        statusTone: asString(json['status_tone']),
+        stage: asString(json['stage']),
+        orders: [
+          if (json['orders'] is List)
+            for (final o in json['orders'] as List)
+              if (o is Map) '${o['po_no']}: ${o['status_label']}',
+        ],
+        updatedAt: asStringOrNull(json['updated_at']),
+      );
+}
+
 class RequestDetail extends RequestSummary {
   const RequestDetail({
     required super.id,
@@ -222,12 +252,16 @@ class RequestDetail extends RequestSummary {
     this.projectManager,
     required this.lines,
     required this.approvals,
+    this.restock = const [],
     required this.can,
   });
 
   final NamedRef? projectManager;
   final List<RequestLine> lines;
   final List<ApprovalEntry> approvals;
+
+  /// Restock progress (empty when the store could issue everything).
+  final List<RestockTrack> restock;
   final RequestCan can;
 
   /// Ceiling for the approved quantity of [line] at the current step.
@@ -255,6 +289,7 @@ class RequestDetail extends RequestSummary {
       projectManager: NamedRef.maybe(json['project_manager']),
       lines: lines,
       approvals: asList(json['approvals'], ApprovalEntry.fromJson),
+      restock: asList(json['restock'], RestockTrack.fromJson),
       can: RequestCan.fromJson(asMap(json['can'])),
     );
   }

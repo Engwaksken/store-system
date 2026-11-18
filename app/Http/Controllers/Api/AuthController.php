@@ -75,6 +75,32 @@ class AuthController extends ApiController
         return response()->json(['user' => Present::user($user->fresh())]);
     }
 
+    /** Profile photo: JPG / PNG / WebP up to 3 MB, stored on the public disk (avatars/). */
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $request->validate(['avatar' => 'required|file|image|mimes:jpg,jpeg,png,webp|max:3072|dimensions:max_width=6000,max_height=6000']);
+        $user = $request->user();
+        $old = $user->avatar_path;
+        $user->forceFill(['avatar_path' => $request->file('avatar')->store('avatars', 'public')])->save();
+        if ($old) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($old);
+        }
+        ActivityLog::record('auth.avatar_updated', "{$user->name} changed their profile photo", $user);
+
+        return response()->json(['user' => Present::user($user->fresh())]);
+    }
+
+    public function deleteAvatar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if ($user->avatar_path) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar_path);
+            $user->forceFill(['avatar_path' => null])->save();
+        }
+
+        return response()->json(['user' => Present::user($user->fresh())]);
+    }
+
     public function changePassword(Request $request): JsonResponse
     {
         $request->validate([

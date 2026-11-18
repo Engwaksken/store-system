@@ -120,6 +120,13 @@ class FakeBackend {
           return _changePassword(userId, json);
         case ('PUT', ['me']):
           return _updateProfile(userId, json);
+        case ('POST', ['me', 'avatar']):
+          if (!files.containsKey('avatar')) throw _Validation({'avatar': ['Choose a photo.']});
+          _users[userId]!['avatar_url'] = '$baseUrl/fake-avatars/$userId-${_tokenSeq++}.jpg';
+          return FakeResponse(200, {'user': _userJson(userId)});
+        case ('DELETE', ['me', 'avatar']):
+          _users[userId]!['avatar_url'] = null;
+          return FakeResponse(200, {'user': _userJson(userId)});
         case ('GET', ['dashboard']):
           return FakeResponse(200, _dashboard(userId));
         case ('GET', ['reports']):
@@ -290,6 +297,7 @@ class FakeBackend {
       {'key': 'my_open_requests', 'label': 'My open requests', 'value': mine, 'tone': 'navy'},
       {'key': 'low_stock', 'label': 'Low-stock items', 'value': low, 'tone': low > 0 ? 'bad' : 'ok'},
       {'key': 'out_of_stock', 'label': 'Out of stock', 'value': out, 'tone': out > 0 ? 'bad' : 'ok'},
+      ..._ops.dashboardCards(userId),
       if (_can(userId, 'decide_claims'))
         {
           'key': 'claims_awaiting',
@@ -553,6 +561,7 @@ class FakeBackend {
           },
       ],
       'approvals': r['approvals'],
+      'restock': _ops.tracking(r),
       'can': {
         'decide': step != null,
         'decision_step': step,

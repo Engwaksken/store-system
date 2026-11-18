@@ -7,7 +7,7 @@ import '../../../core/config/branding.dart';
 import '../../../core/util/data_revision.dart';
 import '../../../core/widgets/common.dart';
 import '../../auth/data/auth_repository.dart';
-import '../../more/presentation/about_screen.dart';
+import '../../../core/config/app_info.dart';
 import '../data/feedback_repository.dart';
 import '../domain/feedback_models.dart';
 

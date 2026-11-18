@@ -12,6 +12,8 @@ use App\Models\Store;
 use App\Models\User;
 use App\Support\Decimal;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Restocking after a short issue.
@@ -29,8 +31,58 @@ class RestockService
 {
     public const OPEN = ['draft', 'submitted', 'approved'];
 
-    public function __construct(private PurchasingService $purchasing)
+    public function __construct(private PurchasingService $purchasing, private WorkflowNotifier $notifier)
     {
+    }
+
+    /** False until the restock migration has run on this server; issuing then works without restock requisitions. */
+    public static function available(): bool
+    {
+        static $ok = null;
+
+        return $ok ??= Schema::hasColumn('purchase_requisitions', 'material_request_id');
+    }
+
+    /**
+     * What the requester sees: each restock requisition with its status and any purchase orders raised from it.
+     *
+     * @return list<array{pr_no:string, status:string, status_label:string, status_tone:string, stage:string, orders:list<array{po_no:string, status_label:string}>, updated_at:?string}>
+     */
+    public function tracking(MaterialRequest $req): array
+    {
+        if (! self::available()) {
+            return [];
+        }
+
+        return $req->restockRequisitions()->with('purchaseOrders')->get()->map(fn (PurchaseRequisition $pr) => [
+            'id' => $pr->id, 'pr_no' => $pr->pr_no, 'status' => $pr->status, 'status_label' => $pr->statusLabel(), 'status_tone' => $pr->tone(),
+            'stage' => self::stage($pr),
+            'orders' => $pr->purchaseOrders->map(fn ($po) => ['po_no' => $po->po_no, 'status' => $po->status, 'status_label' => $po->statusLabel()])->values()->all(),
+            'updated_at' => $pr->updated_at?->toIso8601String(),
+        ])->values()->all();
+    }
+
+    /** Plain-language step for the requester. */
+    public static function stage(PurchaseRequisition $pr): string
+    {
+        $po = $pr->relationLoaded('purchaseOrders') ? $pr->purchaseOrders->sortByDesc('id')->first() : $pr->purchaseOrders()->latest('id')->first();
+        if ($po && in_array($po->status, ['received', 'closed'], true)) {
+            return 'Stock delivered to the store; the storekeeper can now issue the balance.';
+        }
+        if ($po && $po->status === 'partially_received') {
+            return 'Part of the order has been delivered.';
+        }
+        if ($po && $po->status === 'approved') {
+            return 'Ordered from the supplier; waiting for delivery.';
+        }
+
+        return match ($pr->status) {
+            'submitted', 'draft' => 'Waiting for the Overall Manager to approve the restock.',
+            'approved' => 'Restock approved; procurement is getting quotes and ordering.',
+            'ordered' => 'Purchase order raised; waiting for approval or delivery.',
+            'rejected' => 'Restock was not approved'.($pr->decision_reason ? ": {$pr->decision_reason}" : '.'),
+            default => 'Restock cancelled.',
+        };
     }
 
     /** Lines of the request the store cannot cover: [request_line_id => [line, balance not covered, on_hand, restock_qty]]. */
@@ -56,6 +108,11 @@ class RestockService
     /** Raise and submit the restock requisition for what the store is short of; null when nothing is short or already asked for. */
     public function requestFor(User $storekeeper, MaterialRequest $req, int $storeId): ?PurchaseRequisition
     {
+        if (! self::available()) {
+            Log::warning('Restock skipped: run php artisan migrate (purchase_requisitions.material_request_id is missing).');
+
+            return null;
+        }
         $short = $this->shortfall($req, $storeId);
         $already = PurchaseRequisitionLine::whereHas('requisition', fn ($q) => $q->where('material_request_id', $req->id)
             ->where('store_id', $storeId)->whereIn('status', self::OPEN))->pluck('item_id')->flip();
@@ -79,7 +136,12 @@ class RestockService
             $pr->forceFill(['material_request_id' => $req->id])->save();
             ActivityLog::record('pr.restock', "Restock requisition {$pr->pr_no} raised for {$req->request_no}", $pr);
 
-            return $this->purchasing->submitRequisition($storekeeper, $pr);
+            $pr = $this->purchasing->submitRequisition($storekeeper, $pr);
+            $this->notifier->send(\App\Models\User::whereKey($req->requester_id)->get(), "Restock requested for {$req->request_no}",
+                "Some items on {$req->request_no} are being restocked ({$pr->pr_no}). Follow progress on the request; the store issues the balance when stock arrives.",
+                route('requests.show', $req), 'Track request');
+
+            return $pr;
         });
     }
 

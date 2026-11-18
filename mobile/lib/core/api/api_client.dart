@@ -124,6 +124,8 @@ class ApiClient {
 
   Future<Json> put(String path, {Object? body}) => _run(() => dio.put<Object?>(_rel(path), data: body));
 
+  Future<Json> delete(String path, {Object? body}) => _run(() => dio.delete<Object?>(_rel(path), data: body));
+
   Future<Json> postMultipart(
     String path,
     FormData form, {

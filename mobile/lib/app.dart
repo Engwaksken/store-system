@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/config/branding.dart';
 import 'core/router/app_router.dart';
+import 'core/security/biometric_lock.dart';
 import 'core/theme/app_theme.dart';
 
 /// Root widget. The window / task-switcher title is the system name set by the
@@ -21,6 +22,7 @@ class StoreSystemApp extends ConsumerWidget {
       darkTheme: AppTheme.dark(colors),
       themeMode: ThemeMode.system,
       routerConfig: router,
+      builder: (context, child) => BiometricGate(child: child ?? const SizedBox.shrink()),
     );
   }
 }

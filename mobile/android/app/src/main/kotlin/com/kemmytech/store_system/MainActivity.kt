@@ -1,5 +1,6 @@
 package com.kemmytech.store_system
 
-import io.flutter.embedding.android.FlutterActivity
+// FlutterFragmentActivity: required by local_auth (biometric prompt).
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+class MainActivity : FlutterFragmentActivity()

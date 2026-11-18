@@ -23,7 +23,7 @@ class MoreScreen extends ConsumerWidget {
             child: Card(
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                leading: ProfileAvatar(initials: user?.initials ?? '?', radius: 24),
+                leading: ProfileAvatar(initials: user?.initials ?? '?', radius: 24, imageUrl: user?.avatarUrl),
                 title: Text(user?.name ?? ''),
                 subtitle: Text(user?.roleLabel ?? ''),
                 trailing: const Icon(Icons.chevron_right),
@@ -103,13 +103,6 @@ class MoreScreen extends ConsumerWidget {
                     ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push('/feedback'),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.info_outline),
-                    title: const Text('About'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/about'),
                   ),
                 ],
               ),

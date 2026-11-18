@@ -319,6 +319,7 @@ class _StatCard extends ConsumerWidget {
     'my_open_requests' => '/requests',
     'low_stock' || 'out_of_stock' => '/stock',
     'claims_awaiting' || 'claims_unpaid' => '/claims',
+    'issued_vouchers_month' || 'issued_items_month' || 'issues_unacknowledged' || 'ready_to_issue' => '/issues',
     _ => null,
   };
 
@@ -343,7 +344,7 @@ class _StatCard extends ConsumerWidget {
                       _ => StockFilter.all,
                     });
                   }
-                  route == '/claims' ? context.push(route) : context.go(route);
+                  route == '/claims' || route == '/issues' ? context.push(route) : context.go(route);
                 },
           child: Container(
             height: 72,

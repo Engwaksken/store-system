@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/widgets/common.dart';
+import '../../../core/security/biometric_lock.dart';
 import '../../auth/data/auth_controller.dart';
 
 final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
@@ -76,7 +78,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
+    ref.watch(currentUserProvider);
     final theme = Theme.of(context);
     final generalError = _error != null && _error!.fieldErrors.isEmpty ? _error!.message : null;
 
@@ -100,7 +102,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         children: [
                           Row(
                             children: [
-                              ProfileAvatar(initials: user?.initials ?? '?', radius: 26),
+                              _AvatarEditor(busy: _busy),
                               const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
@@ -195,6 +197,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  const Card(child: BiometricToggle()),
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     onPressed: _busy ? null : _save,
@@ -214,21 +218,155 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 }
 
 /// Round avatar with the user's initials in the brand colour.
+/// Tap the photo to take a new one, pick one from the gallery, or remove it.
+class _AvatarEditor extends ConsumerStatefulWidget {
+  const _AvatarEditor({required this.busy});
+  final bool busy;
+
+  @override
+  ConsumerState<_AvatarEditor> createState() => _AvatarEditorState();
+}
+
+class _AvatarEditorState extends ConsumerState<_AvatarEditor> {
+  bool _uploading = false;
+
+  Future<void> _change() async {
+    final user = ref.read(currentUserProvider);
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(leading: const Icon(Icons.photo_camera_outlined), title: const Text('Take a photo'), onTap: () => Navigator.pop(context, 'camera')),
+          ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Choose from gallery'), onTap: () => Navigator.pop(context, 'gallery')),
+          if (user?.avatarUrl != null)
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+              title: const Text('Remove photo'),
+              onTap: () => Navigator.pop(context, 'remove'),
+            ),
+        ]),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    final auth = ref.read(authControllerProvider.notifier);
+    try {
+      if (choice == 'remove') {
+        setState(() => _uploading = true);
+        await auth.deleteAvatar();
+      } else {
+        final picked = await ImagePicker().pickImage(
+          source: choice == 'camera' ? ImageSource.camera : ImageSource.gallery,
+          maxWidth: 800,
+          maxHeight: 800,
+          imageQuality: 85,
+          preferredCameraDevice: CameraDevice.front,
+        );
+        if (picked == null || !mounted) return;
+        setState(() => _uploading = true);
+        await auth.uploadAvatar(picked.path, picked.name);
+      }
+      if (mounted) showSnack(context, choice == 'remove' ? 'Photo removed' : 'Photo updated');
+    } catch (e) {
+      if (mounted) showSnack(context, ApiException.messageOf(e), error: true);
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(currentUserProvider);
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: 'Change profile photo',
+      child: InkWell(
+        key: const Key('avatar-edit'),
+        customBorder: const CircleBorder(),
+        onTap: widget.busy || _uploading ? null : _change,
+        child: Stack(clipBehavior: Clip.none, children: [
+          ProfileAvatar(initials: user?.initials ?? '?', radius: 30, imageUrl: user?.avatarUrl),
+          if (_uploading) const Positioned.fill(child: CircularProgressIndicator(strokeWidth: 2.5)),
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: CircleAvatar(
+              radius: 11,
+              backgroundColor: scheme.secondaryContainer,
+              child: Icon(Icons.photo_camera, size: 13, color: scheme.onSecondaryContainer),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Turn fingerprint / face unlock on or off for this phone.
+class BiometricToggle extends ConsumerStatefulWidget {
+  const BiometricToggle({super.key});
+
+  @override
+  ConsumerState<BiometricToggle> createState() => _BiometricToggleState();
+}
+
+class _BiometricToggleState extends ConsumerState<BiometricToggle> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = ref.watch(biometricLockProvider).enabled;
+    return SwitchListTile(
+      key: const Key('biometric-toggle'),
+      secondary: const Icon(Icons.fingerprint),
+      title: const Text('Unlock with fingerprint or face'),
+      subtitle: const Text('Asks for it when the app opens and after 30 seconds in the background'),
+      value: on,
+      onChanged: _busy
+          ? null
+          : (v) async {
+              setState(() => _busy = true);
+              final error = await ref.read(biometricLockProvider.notifier).setEnabled(v);
+              if (!mounted) return;
+              setState(() => _busy = false);
+              showSnack(this.context, error ?? (v ? 'Biometric unlock is on' : 'Biometric unlock is off'), error: error != null);
+            },
+    );
+  }
+}
+
 class ProfileAvatar extends StatelessWidget {
-  const ProfileAvatar({super.key, required this.initials, this.radius = 20});
+  const ProfileAvatar({super.key, required this.initials, this.radius = 20, this.imageUrl});
   final String initials;
   final double radius;
+
+  /// Profile photo; initials show while it loads or when it cannot be loaded.
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return CircleAvatar(
+    final fallback = CircleAvatar(
       radius: radius,
       backgroundColor: scheme.primary,
       foregroundColor: scheme.onPrimary,
       child: Text(
         initials,
         style: TextStyle(fontSize: radius * 0.7, fontWeight: FontWeight.w700),
+      ),
+    );
+    final url = imageUrl;
+    if (url == null || url.isEmpty) return fallback;
+    return ClipOval(
+      child: Image.network(
+        url,
+        width: radius * 2,
+        height: radius * 2,
+        fit: BoxFit.cover,
+        semanticLabel: 'Profile photo',
+        loadingBuilder: (context, child, progress) => progress == null ? child : fallback,
+        errorBuilder: (_, _, _) => fallback,
       ),
     );
   }

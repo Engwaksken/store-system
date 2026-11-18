@@ -6,6 +6,7 @@ use App\Enums\RequestStatus;
 use App\Enums\Role;
 use App\Models\ExpenseClaim;
 use App\Models\InventoryItem;
+use App\Models\MaterialIssue;
 use App\Models\MaterialRequest;
 use App\Services\ExpenseClaimService;
 use Illuminate\Http\JsonResponse;
@@ -42,6 +43,12 @@ class DashboardController extends ApiController
                 ->whereRaw('(select coalesce(sum(b.on_hand), 0) from inventory_balances b where b.item_id = inventory_items.id) <= 0')->count();
             $cards[] = ['key' => 'out_of_stock', 'label' => 'Out of stock', 'value' => $out, 'tone' => $out ? 'bad' : 'ok'];
         }
+        // Issued materials (everyone sees the vouchers they may open).
+        $issued = MaterialIssue::statsFor($user);
+        $cards[] = ['key' => 'issued_vouchers_month', 'label' => 'Issue vouchers this month', 'value' => $issued['vouchers_month'], 'tone' => 'navy'];
+        $cards[] = ['key' => 'issued_items_month', 'label' => 'Items issued this month', 'value' => $issued['items_month'], 'tone' => ''];
+        $cards[] = ['key' => 'issues_unacknowledged', 'label' => 'Vouchers not acknowledged', 'value' => $issued['unacknowledged'], 'tone' => $issued['unacknowledged'] ? 'gold' : 'ok'];
+
         $claimDecisions = ExpenseClaim::visibleTo($user)->with('project')->where('status', 'submitted')->get()
             ->filter(fn ($c) => $claims->canDecide($user, $c))->count();
         if ($claimDecisions || $user->hasRole(Role::Admin, Role::OverallManager, Role::ProjectManager)) {
