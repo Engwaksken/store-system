@@ -5,10 +5,13 @@ use App\Http\Controllers\Api\BrandingController;
 use App\Http\Controllers\Api\ClaimController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FeedbackController;
+use App\Http\Controllers\Api\IssueController;
 use App\Http\Controllers\Api\MaterialRequestController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PurchasingController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\StockController;
+use App\Http\Controllers\Api\StoreOpsController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +43,39 @@ Route::prefix('v1')->name('api.')->group(function () {
         Route::get('items', [StockController::class, 'items'])->name('items.index');
         Route::get('items/{item}', [StockController::class, 'item'])->whereNumber('item')->name('items.show');
         Route::get('stores', [StockController::class, 'stores'])->name('stores.index');
+        Route::get('store-ops/options', [StoreOpsController::class, 'options'])->name('store-ops.options');
+
+        // Issuing approved requests and issue vouchers
+        Route::get('issues/queue', [IssueController::class, 'queue'])->name('issues.queue');
+        Route::get('issues', [IssueController::class, 'index'])->name('issues.index');
+        Route::get('issues/{issue}', [IssueController::class, 'show'])->whereNumber('issue')->name('issues.show');
+        Route::post('issues/{issue}/acknowledge', [IssueController::class, 'acknowledge'])->whereNumber('issue')->middleware('throttle:30,1')->name('issues.acknowledge');
+        Route::post('issues/{issue}/return', [StoreOpsController::class, 'storeReturn'])->whereNumber('issue')->middleware('throttle:30,1')->name('returns.store');
+        Route::get('requests/{materialRequest}/issue', [IssueController::class, 'form'])->whereNumber('materialRequest')->name('issues.form');
+        Route::post('requests/{materialRequest}/issue', [IssueController::class, 'store'])->whereNumber('materialRequest')->middleware('throttle:30,1')->name('issues.store');
+        Route::post('requests/{materialRequest}/restock', [IssueController::class, 'restock'])->whereNumber('materialRequest')->middleware('throttle:30,1')->name('issues.restock');
+
+        // Receipts, adjustments, transfers, returns
+        Route::get('receipts', [StoreOpsController::class, 'receipts'])->name('receipts.index');
+        Route::post('receipts', [StoreOpsController::class, 'storeReceipt'])->middleware('throttle:30,1')->name('receipts.store');
+        Route::get('receipts/{receipt}', [StoreOpsController::class, 'receipt'])->whereNumber('receipt')->name('receipts.show');
+        Route::post('adjustments', [StoreOpsController::class, 'storeAdjustment'])->middleware('throttle:30,1')->name('adjustments.store');
+        Route::get('transfers', [StoreOpsController::class, 'transfers'])->name('transfers.index');
+        Route::post('transfers', [StoreOpsController::class, 'storeTransfer'])->middleware('throttle:30,1')->name('transfers.store');
+        Route::get('transfers/{transfer}', [StoreOpsController::class, 'transfer'])->whereNumber('transfer')->name('transfers.show');
+        Route::post('transfers/{transfer}/receive', [StoreOpsController::class, 'receiveTransfer'])->whereNumber('transfer')->middleware('throttle:30,1')->name('transfers.receive');
+        Route::post('transfers/{transfer}/cancel', [StoreOpsController::class, 'cancelTransfer'])->whereNumber('transfer')->middleware('throttle:30,1')->name('transfers.cancel');
+        Route::get('returns', [StoreOpsController::class, 'returns'])->name('returns.index');
+        Route::get('returns/{return}', [StoreOpsController::class, 'stockReturn'])->whereNumber('return')->name('returns.show');
+
+        // Purchasing: view, submit, approve / reject
+        Route::get('purchase-requisitions', [PurchasingController::class, 'requisitions'])->name('prs.index');
+        Route::get('purchase-requisitions/{pr}', [PurchasingController::class, 'requisition'])->whereNumber('pr')->name('prs.show');
+        Route::post('purchase-requisitions/{pr}/submit', [PurchasingController::class, 'submitRequisition'])->whereNumber('pr')->middleware('throttle:30,1')->name('prs.submit');
+        Route::post('purchase-requisitions/{pr}/decision', [PurchasingController::class, 'decideRequisition'])->whereNumber('pr')->middleware('throttle:60,1')->name('prs.decision');
+        Route::get('purchase-orders', [PurchasingController::class, 'orders'])->name('pos.index');
+        Route::get('purchase-orders/{po}', [PurchasingController::class, 'order'])->whereNumber('po')->name('pos.show');
+        Route::post('purchase-orders/{po}/decision', [PurchasingController::class, 'decideOrder'])->whereNumber('po')->middleware('throttle:60,1')->name('pos.decision');
 
         Route::get('claims/options', [ClaimController::class, 'options'])->name('claims.options');
         Route::get('claims', [ClaimController::class, 'index'])->name('claims.index');

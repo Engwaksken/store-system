@@ -25,6 +25,11 @@ class StockController extends ApiController
                 $storeId ? [$storeId] : [],
             ))
             ->when($request->boolean('active'), fn ($q) => $q->where('is_active', true))
+            // In stock: something on hand (in the chosen store, else in any store). Used to split the new-request item picker.
+            ->when($request->boolean('in_stock'), fn ($q) => $q->whereRaw(
+                '(select coalesce(sum(b.on_hand), 0) from inventory_balances b where b.item_id = inventory_items.id'.($storeId ? ' and b.store_id = ?' : '').') > 0',
+                $storeId ? [$storeId] : [],
+            ))
             // Same rule as InventoryItem::isLowStock(): a minimum is set and the total across all stores is at or below it.
             ->when($request->boolean('low'), fn ($q) => $q->where('min_level', '>', 0)
                 ->whereRaw('(select coalesce(sum(b.on_hand), 0) from inventory_balances b where b.item_id = inventory_items.id) <= inventory_items.min_level'))

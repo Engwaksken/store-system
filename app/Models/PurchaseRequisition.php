@@ -23,11 +23,13 @@ class PurchaseRequisition extends Model
     protected function casts(): array
     {
         return ['needed_on' => 'date', 'submitted_at' => 'datetime', 'decided_at' => 'datetime', 'estimated_total' => 'decimal:2',
-            'requested_by' => 'integer', 'project_id' => 'integer', 'store_id' => 'integer'];
+            'requested_by' => 'integer', 'project_id' => 'integer', 'store_id' => 'integer', 'material_request_id' => 'integer'];
     }
 
     public function project(): BelongsTo { return $this->belongsTo(Project::class); }
     public function store(): BelongsTo { return $this->belongsTo(Store::class); }
+    /** Set on restock requisitions raised because this request could not be issued in full. */
+    public function materialRequest(): BelongsTo { return $this->belongsTo(MaterialRequest::class); }
     public function requester(): BelongsTo { return $this->belongsTo(User::class, 'requested_by'); }
     public function decider(): BelongsTo { return $this->belongsTo(User::class, 'decided_by'); }
     public function lines(): HasMany { return $this->hasMany(PurchaseRequisitionLine::class); }

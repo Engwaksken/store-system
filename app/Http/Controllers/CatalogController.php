@@ -152,10 +152,28 @@ class CatalogController extends Controller
         'expense-categories' => [ExpenseCategory::class, 'manage-settings', 'expense-categories', 'Expense category', 'settings.expense_category_deleted'],
     ];
 
-    public function destroySetup(string $type, int $id)
+    public function destroySetup(Request $request, string $type, int $id)
     {
         [$model, , $tab, $label] = $this->setupType($type);
         $record = $model::findOrFail($id);
+        // A category or unit still in use can be deleted after moving its items to another one.
+        if ($type !== 'expense-categories' && $request->filled('move_to')) {
+            $target = $model::whereKey($request->integer('move_to'))->whereKeyNot($record->id)->first();
+            if (! $target) {
+                return $this->backTo($tab, null)->withErrors(['setup' => 'Choose a different '.strtolower($label).' to move the items to.']);
+            }
+            $moved = \Illuminate\Support\Facades\DB::transaction(function () use ($type, $record, $target) {
+                $n = $record->items()->update([$type === 'units' ? 'unit_id' : 'category_id' => $target->id]);
+                if ($error = $this->deleteSetupRecord($type, $record)) {
+                    throw new \App\Exceptions\WorkflowException($error);
+                }
+
+                return $n;
+            });
+            ActivityLog::record(self::SETUP_TYPES[$type][4], "{$moved} item(s) moved from {$this->setupName($type, $record)} to {$this->setupName($type, $target)}", $target);
+
+            return $this->backTo($tab, "{$label} {$this->setupName($type, $record)} deleted; {$moved} item(s) moved to {$this->setupName($type, $target)}.");
+        }
         if ($error = $this->deleteSetupRecord($type, $record)) {
             return $this->backTo($tab, null)->withErrors(['setup' => $error]);
         }
@@ -180,6 +198,39 @@ class CatalogController extends Controller
         $response = $this->backTo($tab, "{$done} deleted.");
 
         return $skipped ? $response->withErrors(['setup' => 'Skipped '.count($skipped).': '.implode(' ', $skipped)]) : $response;
+    }
+
+    /**
+     * Delete the ticked catalogue items. Only items never used are deleted: an item with stock history, or on a
+     * request, requisition, order or count, keeps its record (untick Active on it instead); those are skipped and listed.
+     */
+    public function bulkDestroyItems(Request $request)
+    {
+        Gate::authorize('manage-catalog');
+        $ids = $request->validate(['ids' => 'required|array|min:1|max:500', 'ids.*' => 'integer'], ['ids.required' => 'Select at least one item first.'])['ids'];
+        $done = [];
+        $skipped = [];
+        foreach (InventoryItem::whereIn('id', $ids)->orderBy('sku')->get() as $item) {
+            if ($item->movements()->exists()) {
+                $skipped[] = "{$item->sku} has stock history.";
+                continue;
+            }
+            try {
+                \Illuminate\Support\Facades\DB::transaction(function () use ($item) {
+                    $item->balances()->where('on_hand', 0)->delete();
+                    $item->delete();
+                });
+                $done[] = $item->sku;
+            } catch (\Illuminate\Database\QueryException) {
+                $skipped[] = "{$item->sku} is used on a request, purchase or count.";
+            }
+        }
+        if ($done) {
+            ActivityLog::record('catalog.items_deleted', count($done).' item(s) deleted: '.implode(', ', array_slice($done, 0, 50)));
+        }
+        $response = redirect()->route('items.index', $request->only('page'))->with('status', count($done).' item(s) deleted.');
+
+        return $skipped ? $response->withErrors(['items' => 'Skipped '.count($skipped).' (deactivate these instead): '.implode(' ', array_slice($skipped, 0, 30))]) : $response;
     }
 
     private function setupType(string $type): array

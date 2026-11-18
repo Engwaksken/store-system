@@ -60,7 +60,8 @@ class StockReturnController extends Controller
         $return = $service->record($request->user(), $issue, $data['qty'], $data['returned_by_name'], $data['reason'],
             (int) $data['store_id'], $data['idempotency_key'] ?? null);
 
-        return redirect()->route('returns.show', $return)->with('status', "Return {$return->return_no} recorded; {$issue->project->code} credited ".ugx($return->total_value).' '.currency().'.');
+        return redirect()->route('returns.show', $return)->with('status', "Return {$return->return_no} recorded; {$issue->project->code} credited"
+            .(Gate::allows('view-stock-value') ? ' '.ugx($return->total_value).' '.currency() : ' for the returned materials').'.');
     }
 
     public function show(StockReturn $return)

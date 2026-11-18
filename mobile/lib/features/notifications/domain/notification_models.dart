@@ -13,6 +13,10 @@ class NotificationTarget {
     return switch (type) {
       'request' => '/request/$id',
       'claim' => '/claims/$id',
+      'issue' => '/issues/$id',
+      'transfer' => '/transfers/$id',
+      'requisition' => '/purchasing/pr/$id',
+      'order' => '/purchasing/po/$id',
       _ => null,
     };
   }

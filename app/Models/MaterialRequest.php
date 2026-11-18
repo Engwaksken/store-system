@@ -54,6 +54,12 @@ class MaterialRequest extends Model
         return $this->hasMany(MaterialIssue::class);
     }
 
+    /** Restock purchase requisitions raised because the store could not issue this request in full. */
+    public function restockRequisitions(): HasMany
+    {
+        return $this->hasMany(PurchaseRequisition::class)->orderBy('id');
+    }
+
     public function currentApproval(string $step): ?MaterialApproval
     {
         return $this->approvals->first(fn ($a) => $a->version === $this->version && $a->step === $step);

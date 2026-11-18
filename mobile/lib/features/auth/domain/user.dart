@@ -10,6 +10,15 @@ class UserCan {
     this.viewClaims = false,
     this.manageUsers = false,
     this.manageFeedback = false,
+    this.issueStock = false,
+    this.viewIssues = false,
+    this.manageStock = false,
+    this.viewReceipts = false,
+    this.viewTransfers = false,
+    this.createTransfer = false,
+    this.viewReturns = false,
+    this.viewPurchasing = false,
+    this.decidePurchasing = false,
   });
 
   final bool approveRequests;
@@ -25,6 +34,24 @@ class UserCan {
   /// Admin: sees all feedback and replies.
   final bool manageFeedback;
 
+  /// Storekeeper: issues approved requests (Store menu).
+  final bool issueStock;
+  final bool viewIssues;
+
+  /// Records receipts and adjustments in a store they operate.
+  final bool manageStock;
+  final bool viewReceipts;
+  final bool viewTransfers;
+  final bool createTransfer;
+  final bool viewReturns;
+  final bool viewPurchasing;
+
+  /// Owner/Admin and Overall Manager approve requisitions (incl. restock) and orders.
+  final bool decidePurchasing;
+
+  /// Anything for the Store menu.
+  bool get anyStoreOps => issueStock || manageStock || viewReceipts || viewTransfers || viewReturns || viewPurchasing;
+
   factory UserCan.fromJson(Json json) => UserCan(
         approveRequests: asBool(json['approve_requests']),
         createRequest: asBool(json['create_request']),
@@ -34,6 +61,15 @@ class UserCan {
         viewClaims: asBool(json['view_claims']),
         manageUsers: asBool(json['manage_users']),
         manageFeedback: asBool(json['manage_feedback']),
+        issueStock: asBool(json['issue_stock']),
+        viewIssues: asBool(json['view_issues']),
+        manageStock: asBool(json['manage_stock']),
+        viewReceipts: asBool(json['view_receipts']),
+        viewTransfers: asBool(json['view_transfers']),
+        createTransfer: asBool(json['create_transfer']),
+        viewReturns: asBool(json['view_returns']),
+        viewPurchasing: asBool(json['view_purchasing']),
+        decidePurchasing: asBool(json['decide_purchasing']),
       );
 
   Json toJson() => {
@@ -45,6 +81,15 @@ class UserCan {
         'view_claims': viewClaims,
         'manage_users': manageUsers,
         'manage_feedback': manageFeedback,
+        'issue_stock': issueStock,
+        'view_issues': viewIssues,
+        'manage_stock': manageStock,
+        'view_receipts': viewReceipts,
+        'view_transfers': viewTransfers,
+        'create_transfer': createTransfer,
+        'view_returns': viewReturns,
+        'view_purchasing': viewPurchasing,
+        'decide_purchasing': decidePurchasing,
       };
 }
 

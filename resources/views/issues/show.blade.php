@@ -50,7 +50,7 @@
     </x-tab>
     <x-tab title="Returns & acknowledgment" icon="fa-signature" :count="$issue->returns->count()" name="status">
         @if($issue->returns->isNotEmpty())
-            <div class="alert warn">Returned to store: @foreach($issue->returns as $r)<a href="{{ route('returns.show', $r) }}">{{ $r->return_no }}</a> ({{ $r->returned_at->format('d M Y') }}, {{ ugx($r->total_value) }} {{ currency() }})@if(! $loop->last); @endif @endforeach</div>
+            <div class="alert warn">Returned to store: @foreach($issue->returns as $r)<a href="{{ route('returns.show', $r) }}">{{ $r->return_no }}</a> ({{ $r->returned_at->format('d M Y') }}@can('view-stock-value'), {{ ugx($r->total_value) }} {{ currency() }}@endcan)@if(! $loop->last); @endif @endforeach</div>
         @endif
         @if($issue->acknowledgment)
             <div class="alert ok">Received and acknowledged by <strong>{{ $issue->acknowledgment->recipient_name }}</strong> on {{ $issue->acknowledgment->acknowledged_at->format('d M Y H:i') }} (recorded by {{ $issue->acknowledgment->user->name }}).@if($issue->acknowledgment->remarks) "{{ $issue->acknowledgment->remarks }}"@endif</div>

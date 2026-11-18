@@ -45,6 +45,8 @@
     <x-tab title="Details" icon="fa-circle-info" name="details">
         <dl class="meta">
             <dt>Purpose</dt><dd>{{ $pr->purpose }}</dd>
+            @if($pr->materialRequest)<dt>Restock for request</dt><dd>@can('view-request', $pr->materialRequest)<a href="{{ route('requests.show', $pr->materialRequest) }}">{{ $pr->materialRequest->request_no }}</a>@else{{ $pr->materialRequest->request_no }}@endcan
+                <span class="muted">(raised automatically: the store could not issue it in full)</span></dd>@endif
             <dt>Requested by</dt><dd>{{ $pr->requester->name }}@if($pr->submitted_at), submitted {{ $pr->submitted_at->format('d M Y H:i') }}@endif</dd>
             @if($pr->needed_on)<dt>Needed by</dt><dd>{{ $pr->needed_on->format('d M Y') }}</dd>@endif
             @if($pr->decided_at)<dt>Decision</dt><dd>{{ ucfirst($pr->status === 'rejected' ? 'rejected' : 'approved') }} by {{ $pr->decider->name }} on {{ $pr->decided_at->format('d M Y H:i') }}@if($pr->decision_reason): {{ $pr->decision_reason }}@endif</dd>@endif

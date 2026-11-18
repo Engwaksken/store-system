@@ -13,7 +13,7 @@ class StockRepository {
   StockRepository(this._api);
   final ApiClient _api;
 
-  Future<Paginated<Item>> items({int page = 1, String? q, int? storeId, bool low = false, bool outOfStock = false, bool activeOnly = false}) async {
+  Future<Paginated<Item>> items({int page = 1, String? q, int? storeId, bool low = false, bool outOfStock = false, bool activeOnly = false, bool inStock = false}) async {
     Future<Paginated<Item>> fetch(int p) async => Paginated.fromJson(
           await _api.get('/items', query: {
             'page': p,
@@ -23,6 +23,7 @@ class StockRepository {
             if (low) 'low': 1,
             if (outOfStock) 'out': 1,
             if (activeOnly) 'active': 1,
+            if (inStock) 'in_stock': 1,
           }),
           Item.fromJson,
         );

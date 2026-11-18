@@ -2,6 +2,7 @@
  * Construction CMS UI helpers (no build step, served from public/ so the CSP 'self' rule allows it).
  *  - Sidebar:      collapsible groups (state remembered per browser), mobile open/close.
  *  - Modals:       <a data-modal href="/users/create"> loads that page's form into the modal.
+ *                  Clicking outside a dialog that holds a form does nothing (Cancel, X or Esc close it).
  *                  <button data-modal-target="#tpl-id"> copies a <template id="tpl-id"> into the modal.
  *                  Forms submit normally. A hidden _modal field lets the next page reopen the modal
  *                  with the submitted values and errors when validation fails.
@@ -12,6 +13,7 @@
  *  - Messages:     flash messages fade out after 5 seconds (paused while the mouse is over them).
  *  - Placeholders: fields without a placeholder get one from their label.
  *  - Amounts:      money fields show thousands separators while typing (removed again on submit).
+ *  - Live:         [data-live-refresh] regions (e.g. Stock & items) refresh themselves every minute.
  *  - Tabs:         <x-tabs>/<x-tab> panels become a tab bar; the last tab used is remembered.
  *  - Notifications: the bell polls once a minute and pops up new alerts; push on/off per device (sw.js).
  *  - Install app:  registers sw.js on every page and offers "Install app" (Android/desktop prompt, iPhone/iPad
@@ -483,7 +485,8 @@
                 closeModal(e.target.closest('.modal'));
                 return;
             }
-            if (e.target.classList.contains('modal')) { closeModal(e.target); }
+            // Clicking the dimmed backdrop closes only dialogs without a form, so a half-filled form is never lost.
+            if (e.target.classList.contains('modal') && !e.target.querySelector('.modal-body form')) { closeModal(e.target); }
         });
         // A GET form inside the modal (e.g. "source store" picker) reloads the modal instead of leaving the page.
         document.addEventListener('submit', function (e) {
@@ -801,6 +804,43 @@
         });
     }
 
+    /* ---------- Live regions: <div id="x" data-live-refresh="60"> re-fetches this page every N seconds and swaps in the
+       fresh copy of each region (same id). Skipped while the tab is hidden, a dialog is open, rows are ticked or the
+       person is typing inside a region, so nothing they are doing is disturbed. ---------- */
+    function initLiveRefresh() {
+        var regions = Array.prototype.slice.call(document.querySelectorAll('[data-live-refresh][id]'));
+        if (!regions.length || !window.fetch || !window.DOMParser) { return; }
+        var seconds = Math.max(15, parseInt(regions[0].getAttribute('data-live-refresh'), 10) || 60);
+        var busy = false;
+        function idle() {
+            if (document.hidden || busy || document.querySelector('.modal:not([hidden])')) { return false; }
+            if (document.querySelector('[data-row-check]:checked')) { return false; }
+            var a = document.activeElement;
+            return !(a && a !== document.body && regions.some(function (r) { return r.contains(a); }) && a.matches('input, select, textarea'));
+        }
+        function refresh() {
+            if (!idle()) { return; }
+            busy = true;
+            fetch(window.location.href, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' })
+                .then(function (r) { return r.ok && !r.redirected ? r.text() : null; })
+                .then(function (html) {
+                    if (!html || !idle()) { return; }
+                    var doc = new DOMParser().parseFromString(html, 'text/html');
+                    regions.forEach(function (region) {
+                        var fresh = doc.getElementById(region.id);
+                        if (!fresh) { return; }
+                        region.innerHTML = fresh.innerHTML;
+                        enhance(region);
+                        region.dispatchEvent(new CustomEvent('pager:change', { bubbles: true }));
+                    });
+                })
+                .catch(function () { /* offline: try again next time */ })
+                .then(function () { busy = false; });
+        }
+        setInterval(refresh, seconds * 1000);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) { refresh(); } });
+    }
+
     /* ---------- Checkbox picker with a find box (e.g. projects on the user form) ---------- */
     function initPickers() {
         document.addEventListener('input', function (e) {
@@ -904,6 +944,7 @@
         initListFilters();
         initTablePager(document);
         initBulk();
+        initLiveRefresh();
         initPickers();
         initTabs(document);
         enhance(document);

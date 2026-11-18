@@ -18,6 +18,9 @@ import '../../features/more/presentation/edit_profile_screen.dart';
 import '../../features/more/presentation/more_screen.dart';
 import '../../features/more/presentation/profile_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
+import '../../features/operations/presentation/issue_screens.dart';
+import '../../features/operations/presentation/purchasing_screens.dart';
+import '../../features/operations/presentation/stock_ops_screens.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/requests/presentation/approvals_screen.dart';
 import '../../features/requests/presentation/new_request_screen.dart';
@@ -89,6 +92,47 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/request/new', builder: (_, _) => const NewRequestScreen()),
       GoRoute(path: '/request/:id', builder: (_, s) => RequestDetailScreen(id: _intParam(s, 'id'))),
+      GoRoute(path: '/request/:id/issue', builder: (_, s) => IssueFormScreen(requestId: _intParam(s, 'id'))),
+      // Store operations and purchasing
+      GoRoute(path: '/store', builder: (_, _) => const StoreHubScreen()),
+      GoRoute(
+        path: '/issues',
+        builder: (_, _) => const IssuesScreen(),
+        routes: [
+          GoRoute(path: ':id', builder: (_, s) => IssueDetailScreen(id: _intParam(s, 'id'))),
+          GoRoute(path: ':id/return', builder: (_, s) => ReturnFormScreen(issueId: _intParam(s, 'id'))),
+        ],
+      ),
+      GoRoute(
+        path: '/receipts',
+        builder: (_, _) => const ReceiptsScreen(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, _) => const NewReceiptScreen()),
+          GoRoute(path: ':id', builder: (_, s) => ReceiptDetailScreen(id: _intParam(s, 'id'))),
+        ],
+      ),
+      GoRoute(path: '/adjustments/new', builder: (_, _) => const NewAdjustmentScreen()),
+      GoRoute(
+        path: '/transfers',
+        builder: (_, _) => const TransfersScreen(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, _) => const NewTransferScreen()),
+          GoRoute(path: ':id', builder: (_, s) => TransferDetailScreen(id: _intParam(s, 'id'))),
+        ],
+      ),
+      GoRoute(
+        path: '/returns',
+        builder: (_, _) => const ReturnsScreen(),
+        routes: [GoRoute(path: ':id', builder: (_, s) => ReturnDetailScreen(id: _intParam(s, 'id')))],
+      ),
+      GoRoute(
+        path: '/purchasing',
+        builder: (_, _) => const PurchasingScreen(),
+        routes: [
+          GoRoute(path: 'pr/:id', builder: (_, s) => PrDetailScreen(id: _intParam(s, 'id'))),
+          GoRoute(path: 'po/:id', builder: (_, s) => PoDetailScreen(id: _intParam(s, 'id'))),
+        ],
+      ),
       GoRoute(path: '/item/:id', builder: (_, s) => ItemDetailScreen(id: _intParam(s, 'id'))),
       GoRoute(
         path: '/claims',

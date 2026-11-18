@@ -103,7 +103,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-stock', $is(Role::Admin, Role::Storekeeper));
         Gate::define('view-stock', fn (User $u) => true);
         Gate::define('view-stock-ledger', $is(Role::Admin, Role::OverallManager, Role::ProjectManager, Role::Storekeeper, Role::Accountant, Role::Auditor));
-        Gate::define('view-stock-value', $is(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant, Role::Auditor));
+        // Stock prices (item cost, stock value, voucher / receipt / return values) are for the Owner/Admin and Overall Manager only.
+        Gate::define('view-stock-value', $is(Role::Admin, Role::OverallManager));
         // Store-level scoping (which store) is enforced again inside every stock service via Store::assertOperable.
         Gate::define('operate-stores', fn (User $u) => $u->hasRole(Role::Admin, Role::Storekeeper) && Store::operableBy($u)->exists());
         Gate::define('record-return', fn (User $u, MaterialIssue $i) => $u->hasRole(Role::Admin, Role::Storekeeper) && Store::operableBy($u)->exists()
