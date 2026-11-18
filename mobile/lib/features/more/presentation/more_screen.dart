@@ -44,6 +44,16 @@ class MoreScreen extends ConsumerWidget {
                     onTap: () => context.push('/reports'),
                   ),
                   const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.warehouse_outlined),
+                    title: Text((user?.can.anyStoreOps ?? false) ? 'Store' : 'Issue vouchers'),
+                    subtitle: Text((user?.can.anyStoreOps ?? false)
+                        ? 'Issue, receive, transfer, returns and purchasing'
+                        : 'Materials issued to you; acknowledge receipt'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push((user?.can.anyStoreOps ?? false) ? '/store' : '/issues'),
+                  ),
+                  const Divider(height: 1),
                   if (user?.can.viewClaims ?? false) ...[
                     ListTile(
                       leading: const Icon(Icons.receipt_long_outlined),

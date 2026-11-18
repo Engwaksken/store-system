@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/format/formatters.dart';
@@ -109,7 +110,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
           child: _RequestBody(request: r),
         ),
       ),
-      bottomNavigationBar: r == null || (!r.can.decide && !r.can.cancel)
+      bottomNavigationBar: r == null || (!r.can.decide && !r.can.cancel && !r.can.issue)
           ? null
           : _ActionBar(
               request: r,
@@ -156,6 +157,15 @@ class _ActionBar extends StatelessWidget {
                       onPressed: busy ? null : onCancel,
                       icon: const Icon(Icons.block),
                       label: const Text('Cancel'),
+                    ),
+                  ),
+                if (request.can.issue)
+                  Expanded(
+                    child: FilledButton.icon(
+                      key: const Key('request-issue'),
+                      onPressed: busy ? null : () => context.push('/request/${request.id}/issue'),
+                      icon: const Icon(Icons.outbox_outlined),
+                      label: const Text('Issue materials'),
                     ),
                   ),
                 if (request.can.cancel && request.can.decide) const SizedBox(width: 10),

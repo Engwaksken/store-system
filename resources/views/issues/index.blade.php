@@ -5,7 +5,7 @@
 <x-stats :cards="[
     ['Vouchers', number_format($stats['total']), 'fa-file-lines', 'navy'],
     ['Issued this month', $stats['month'], 'fa-dolly'],
-    ['Value this month ('.currency().')', ugx($stats['month_value']), 'fa-sack-dollar', 'gold'],
+    auth()->user()->can('view-stock-value') ? ['Value this month ('.currency().')', ugx($stats['month_value']), 'fa-sack-dollar', 'gold'] : null,
     ['Waiting to issue', $queue->count(), 'fa-hourglass-half', $queue->count() ? 'bad' : ''],
 ]" />
 @can('issue-stock')

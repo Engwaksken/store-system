@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/common.dart';
 import '../../../core/widgets/paged_list_view.dart';
 import '../../auth/data/auth_controller.dart';
 import '../data/stock_repository.dart';
@@ -25,6 +26,9 @@ class _ItemPicker extends ConsumerStatefulWidget {
 class _ItemPickerState extends ConsumerState<_ItemPicker> {
   String _q = '';
 
+  /// null = all, true = available in store, false = out of stock.
+  bool? _available;
+
   @override
   Widget build(BuildContext context) {
     final repo = ref.watch(stockRepositoryProvider);
@@ -45,17 +49,22 @@ class _ItemPickerState extends ConsumerState<_ItemPicker> {
           ),
         ),
         SearchField(hint: 'Search SKU or name', onChanged: (v) => setState(() => _q = v)),
+        FilterChipsBar<bool?>(
+          options: const [(null, 'All'), (true, 'Available in store'), (false, 'Out of stock')],
+          selected: _available,
+          onSelected: (v) => setState(() => _available = v),
+        ),
         Expanded(
           child: PagedListView<Item>(
-            filterKey: _q,
+            filterKey: (_q, _available),
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 24),
             separator: 0,
-            fetch: (page) => repo.items(page: page, q: _q, activeOnly: true),
+            fetch: (page) => repo.items(page: page, q: _q, activeOnly: true, inStock: _available == true, outOfStock: _available == false),
             emptyTitle: 'No items found',
             emptyIcon: Icons.search_off,
             itemBuilder: (context, item) => ListTile(
               title: Text(item.name),
-              subtitle: Text('${item.sku} · ${f.qty(item.onHand)} ${item.unit} on hand'),
+              subtitle: Text(item.outOfStock ? '${item.sku} · out of stock (will need restocking)' : '${item.sku} · ${f.qty(item.onHand)} ${item.unit} on hand'),
               trailing: item.low ? const Icon(Icons.warning_amber, color: Colors.orange, semanticLabel: 'Low stock') : null,
               onTap: () => Navigator.pop(context, item),
             ),

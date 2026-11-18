@@ -182,6 +182,7 @@ class RequestCan {
     this.decisionStep,
     this.maxQtyField,
     this.cancel = false,
+    this.issue = false,
   });
 
   final bool decide;
@@ -191,11 +192,15 @@ class RequestCan {
   final String? maxQtyField;
   final bool cancel;
 
+  /// Storekeeper: both approvals done and something still to issue.
+  final bool issue;
+
   factory RequestCan.fromJson(Json json) => RequestCan(
         decide: asBool(json['decide']),
         decisionStep: asStringOrNull(json['decision_step']),
         maxQtyField: asStringOrNull(json['max_qty_field']),
         cancel: asBool(json['cancel']),
+        issue: asBool(json['issue']),
       );
 }
 

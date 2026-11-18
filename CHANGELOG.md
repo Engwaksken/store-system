@@ -1,5 +1,27 @@
 # Changelog
 
+## User feedback round: restocking, catalogue fixes, stock prices, store operations on mobile (18 Nov 2026)
+- **Short issues go to restocking**: the storekeeper issues what is in stock; the balance stays outstanding and a restock
+  purchase requisition (quantity = larger of the balance not in stock and the minimum stock level) is submitted to the
+  Overall Manager / Owner automatically. "Request restock only" when nothing can be issued. Linked both ways (request
+  page and requisition page). New `RestockService`, migration `purchase_requisitions.material_request_id`.
+- **Stock prices only for Owner/Admin and Overall Manager** (`view-stock-value`): item cost, stock value, voucher,
+  receipt, return and ledger unit costs are hidden from other roles (web, PDFs and API). Procurement and finance
+  documents (POs, invoices, claims) are unchanged.
+- **Catalog setup**: deleting a category or unit that items still use now asks which one to move the items to, instead
+  of a disabled button.
+- **Stock & items**: tick rows and delete in bulk (items with stock history or used on documents are skipped and listed);
+  quantities refresh automatically every minute (paused while rows are ticked, a dialog is open or you are typing).
+- **Forms in dialogs**: clicking outside no longer closes them (Cancel, X or Esc still do).
+- **Stock movement ledger** 500 fixed: lighter query, null-safe rows, the latest 1,000 rows on screen (5,000 in
+  Excel/CSV, 500 in PDF) with a note when cut.
+- **New material request**: the item list is split into "Available in store" and "Out of stock".
+- **Mobile API + Flutter**: Store menu with issuing (queue, issue form with shortfall/restock, vouchers, acknowledge),
+  returns, stock receipts and adjustments, transfers (dispatch, receive, cancel) and purchasing (requisitions incl.
+  restock, purchase orders, approve/reject). Item picker filters Available / Out of stock. Notifications open vouchers,
+  transfers, requisitions and orders. Fake backend supports all of it.
+- Tests: `RestockAndCatalogFeedbackTest` (11), `MobileStoreOpsApiTest` (6), Flutter `store_ops_test` (7).
+
 ## Installable web app (PWA) for Android and iPhone (18 Nov 2026)
 - The web app can be installed on phones and computers until the store apps are published: web manifest with the
   company name and Appearance primary colour, home-screen icons built from the uploaded favicon like the Flutter

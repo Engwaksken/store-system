@@ -24,10 +24,10 @@
     <x-tab title="Stock ledger" icon="fa-book" name="ledger">
         @if($movements)
         <div class="table-wrap"><table>
-            <thead><tr><th>Date</th><th>Store</th><th>Type</th><th class="num">Change</th><th class="num">Store balance</th><th class="num">Unit cost</th><th>Project</th><th>Source</th><th>By</th></tr></thead>
+            <thead><tr><th>Date</th><th>Store</th><th>Type</th><th class="num">Change</th><th class="num">Store balance</th>@can('view-stock-value')<th class="num">Unit cost</th>@endcan<th>Project</th><th>Source</th><th>By</th></tr></thead>
             <tbody>@forelse($movements as $m)
                 <tr><td class="nowrap">{{ $m->created_at->format('Y-m-d H:i') }}</td><td>{{ $m->store->code }}</td><td>{{ str_replace('_', ' ', $m->movement_type) }}</td><td class="num">{{ $m->qty_delta > 0 ? '+' : '' }}{{ qty($m->qty_delta) }}</td><td class="num">{{ qty($m->balance_after) }}</td>
-                    <td class="num">{{ ugx($m->unit_cost) }}</td><td>{{ $m->project?->code }}</td>
+                    @can('view-stock-value')<td class="num">{{ ugx($m->unit_cost) }}</td>@endcan<td>{{ $m->project?->code }}</td>
                     <td>@switch($m->source_type)
                         @case('material_issue')<a href="{{ route('issues.show', $m->source_id) }}">Voucher</a>@break
                         @case('stock_receipt')<a href="{{ route('receipts.show', $m->source_id) }}">Receipt</a>@break

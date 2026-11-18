@@ -32,9 +32,24 @@
                         <td class="num">@if($c->items_count)<a href="{{ route('items.index', ['category_id' => $c->id]) }}">{{ $c->items_count }}</a>@else<span class="muted">0</span>@endif</td>
                         <td><div class="row-actions">
                             <button type="button" class="btn-icon" data-modal-target="#category-edit-{{ $c->id }}" title="Edit {{ $c->name }}" aria-label="Edit {{ $c->name }}"><i class="fas fa-pen"></i></button>
+                            @if($c->items_count)
+                                <button type="button" class="btn-icon danger" data-modal-target="#category-delete-{{ $c->id }}" title="Delete {{ $c->name }} (move its {{ $c->items_count }} item(s) first)" aria-label="Delete {{ $c->name }}"><i class="fas fa-trash-can"></i></button>
+                            @else
                             <form method="POST" action="{{ route('catalog.setup.destroy', ['categories', $c->id]) }}" class="inline-form">@csrf @method('DELETE')
-                                <button class="btn-icon danger" @disabled($c->items_count) title="{{ $c->items_count ? 'In use by '.$c->items_count.' item(s)' : 'Delete '.$c->name }}" aria-label="Delete {{ $c->name }}" data-confirm="Delete category {{ $c->name }}?" data-confirm-ok="Yes, delete"><i class="fas fa-trash-can"></i></button></form>
+                                <button class="btn-icon danger" title="Delete {{ $c->name }}" aria-label="Delete {{ $c->name }}" data-confirm="Delete category {{ $c->name }}?" data-confirm-ok="Yes, delete"><i class="fas fa-trash-can"></i></button></form>
+                            @endif
                         </div>
+                        @if($c->items_count)
+                        <template id="category-delete-{{ $c->id }}" data-title="Delete category {{ $c->name }}">
+                            <form method="POST" action="{{ route('catalog.setup.destroy', ['categories', $c->id]) }}">@csrf @method('DELETE')
+                                <p>{{ $c->name }} is used by <strong>{{ $c->items_count }} item(s)</strong>. Choose the category they move to; then {{ $c->name }} is deleted.</p>
+                                <div class="field"><label for="category_move_{{ $c->id }}">Move items to</label>
+                                    <select id="category_move_{{ $c->id }}" name="move_to" required><option value="">Select a category</option>
+                                        @foreach($categories->where('id', '!=', $c->id) as $o)<option value="{{ $o->id }}">{{ $o->name }}</option>@endforeach</select></div>
+                                <button class="btn danger"><i class="fas fa-trash-can"></i> Move items &amp; delete</button>
+                            </form>
+                        </template>
+                        @endif
                         <template id="category-edit-{{ $c->id }}" data-title="Edit item category">
                             <form method="POST" action="{{ route('catalog.categories.update', $c) }}">@csrf @method('PUT')
                                 <div class="field"><label for="category_name_{{ $c->id }}">Category name</label><input id="category_name_{{ $c->id }}" type="text" name="name" value="{{ $c->name }}" required maxlength="100"></div>
@@ -69,9 +84,24 @@
                         <td class="num">@if($u->items_count){{ $u->items_count }}@else<span class="muted">0</span>@endif</td>
                         <td><div class="row-actions">
                             <button type="button" class="btn-icon" data-modal-target="#unit-edit-{{ $u->id }}" title="Edit {{ $u->name }}" aria-label="Edit {{ $u->name }}"><i class="fas fa-pen"></i></button>
+                            @if($u->items_count)
+                                <button type="button" class="btn-icon danger" data-modal-target="#unit-delete-{{ $u->id }}" title="Delete {{ $u->name }} (move its {{ $u->items_count }} item(s) first)" aria-label="Delete {{ $u->name }}"><i class="fas fa-trash-can"></i></button>
+                            @else
                             <form method="POST" action="{{ route('catalog.setup.destroy', ['units', $u->id]) }}" class="inline-form">@csrf @method('DELETE')
-                                <button class="btn-icon danger" @disabled($u->items_count) title="{{ $u->items_count ? 'In use by '.$u->items_count.' item(s)' : 'Delete '.$u->name }}" aria-label="Delete {{ $u->name }}" data-confirm="Delete unit {{ $u->name }} ({{ $u->abbreviation }})?" data-confirm-ok="Yes, delete"><i class="fas fa-trash-can"></i></button></form>
+                                <button class="btn-icon danger" title="Delete {{ $u->name }}" aria-label="Delete {{ $u->name }}" data-confirm="Delete unit {{ $u->name }} ({{ $u->abbreviation }})?" data-confirm-ok="Yes, delete"><i class="fas fa-trash-can"></i></button></form>
+                            @endif
                         </div>
+                        @if($u->items_count)
+                        <template id="unit-delete-{{ $u->id }}" data-title="Delete unit {{ $u->name }}">
+                            <form method="POST" action="{{ route('catalog.setup.destroy', ['units', $u->id]) }}">@csrf @method('DELETE')
+                                <p>{{ $u->name }} ({{ $u->abbreviation }}) is used by <strong>{{ $u->items_count }} item(s)</strong>. Choose the unit they change to; then {{ $u->name }} is deleted. Quantities are not converted.</p>
+                                <div class="field"><label for="unit_move_{{ $u->id }}">Change items to</label>
+                                    <select id="unit_move_{{ $u->id }}" name="move_to" required><option value="">Select a unit</option>
+                                        @foreach($units->where('id', '!=', $u->id) as $o)<option value="{{ $o->id }}">{{ $o->name }} ({{ $o->abbreviation }})</option>@endforeach</select></div>
+                                <button class="btn danger"><i class="fas fa-trash-can"></i> Change items &amp; delete</button>
+                            </form>
+                        </template>
+                        @endif
                         <template id="unit-edit-{{ $u->id }}" data-title="Edit unit of measure">
                             <form method="POST" action="{{ route('catalog.units.update', $u) }}">@csrf @method('PUT')
                                 <div class="form-grid">

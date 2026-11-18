@@ -95,21 +95,41 @@ class ReportController extends Controller
     public function movements(Request $request)
     {
         Gate::authorize('view-stock-ledger');
-        $q = StockMovement::with('item.unit', 'project', 'actor', 'store')
+        $showCost = Gate::allows('view-stock-value');
+        $format = $request->query('format');
+        // The screen shows the latest movements (the page renders every row); exports go further, PDF least (dompdf is memory-hungry).
+        $limit = match ($format) { 'csv', 'xlsx' => 5000, 'pdf' => 500, default => 1000 };
+        $q = StockMovement::with('item:id,sku,name', 'project:id,code', 'actor:id,name', 'store:id,code')
             ->when($request->filled('store_id'), fn ($q) => $q->where('store_id', $request->integer('store_id')))
             ->when($request->filled('item_id'), fn ($q) => $q->where('item_id', $request->integer('item_id')))
             ->when($request->filled('project_id'), fn ($q) => $q->where('project_id', $request->integer('project_id')))
             ->when($request->filled('type'), fn ($q) => $q->where('movement_type', $request->type))
-            ->tap(fn ($q) => $this->dateRange($q, $request, 'created_at'))
-            ->orderBy('id');
-        $rows = $q->limit(5000)->get()->map(fn ($m) => [
-            $m->created_at->format('Y-m-d H:i'), $m->store->code, $m->item->sku, $m->item->name, $m->movement_type,
-            (string) $m->qty_delta, (string) $m->balance_after, (string) $m->unit_cost,
-            $m->project?->code ?? '', strtoupper(str_replace('_', ' ', $m->source_type)).' #'.$m->source_id, $m->actor->name,
-        ]);
+            ->tap(fn ($q) => $this->dateRange($q, $request, 'created_at'));
+        $total = (clone $q)->count();
+        // Latest $limit movements, listed oldest first so the running balance reads downwards.
+        $rows = $q->orderByDesc('id')->limit($limit)->get()->reverse()->map(function ($m) use ($showCost) {
+            $row = [
+                $m->created_at?->format('Y-m-d H:i') ?? '', $m->store?->code ?? '#'.$m->store_id, $m->item?->sku ?? '#'.$m->item_id, $m->item?->name ?? '(deleted item)',
+                $m->movement_type, (string) $m->qty_delta, (string) $m->balance_after,
+            ];
+            if ($showCost) {
+                $row[] = (string) $m->unit_cost;
+            }
 
-        return $this->respond($request, 'Stock movement ledger', ['Date', 'Store', 'SKU', 'Item', 'Type', 'Qty change', 'Store balance after', 'Unit cost', 'Project', 'Source', 'By'],
-            $rows, numeric: [5, 6, 7], filters: ['store', 'item', 'project', 'type', 'dates'], money: [7]);
+            return [...$row, $m->project?->code ?? '', strtoupper(str_replace('_', ' ', (string) $m->source_type)).' #'.$m->source_id, $m->actor?->name ?? ''];
+        });
+        $headers = ['Date', 'Store', 'SKU', 'Item', 'Type', 'Qty change', 'Store balance after'];
+        if ($showCost) {
+            $headers[] = 'Unit cost';
+        }
+        array_push($headers, 'Project', 'Source', 'By');
+        $note = $total > $limit
+            ? 'Showing the latest '.number_format($limit).' of '.number_format($total).' movements. Narrow the period, store or item'
+                .($format === 'pdf' ? ', or download Excel / CSV for up to 5,000 rows.' : ' to see older ones.')
+            : null;
+
+        return $this->respond($request, 'Stock movement ledger', $headers,
+            $rows, numeric: $showCost ? [5, 6, 7] : [5, 6], filters: ['store', 'item', 'project', 'type', 'dates'], money: $showCost ? [7] : [], note: $note);
     }
 
     public function pending(Request $request)
@@ -311,7 +331,7 @@ class ReportController extends Controller
             'kpis' => $this->kpis($route, $headers, $rows, $sum),
             'projects' => in_array('project', $filters) ? Project::visibleTo($user)
                 ->when($user->role === Role::ProjectManager, fn ($q) => $q->where('manager_id', $user->id))->orderBy('code')->get() : collect(),
-            'items' => in_array('item', $filters) ? InventoryItem::orderBy('name')->get() : collect(),
+            'items' => in_array('item', $filters) ? InventoryItem::orderBy('name')->get(['id', 'name']) : collect(),
             'stores' => in_array('store', $filters) ? \App\Models\Store::orderBy('id')->get() : collect(),
         ]);
     }
@@ -339,7 +359,7 @@ class ReportController extends Controller
                 ]));
             case 'reports.movements':
                 return [
-                    ['Movements', number_format($n).($n >= 5000 ? ' (limit)' : ''), 'fa-right-left', 'navy'],
+                    ['Movements', number_format($n), 'fa-right-left', 'navy'],
                     ['Items moved', number_format($col(2)->unique()->count()), 'fa-cubes', ''],
                     ['Stores', number_format($col(1)->unique()->count()), 'fa-warehouse', 'gold'],
                 ];

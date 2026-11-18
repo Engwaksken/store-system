@@ -26,11 +26,12 @@ use Illuminate\Support\Facades\DB;
  *
  * Inside one transaction: lock the request → lock its lines → lock balances (ascending item_id),
  * re-validate qty ≤ outstanding approved and qty ≤ on hand against the locked rows, then write
- * the voucher, issue lines, stock decrement and ledger movement together.
+ * the voucher, issue lines, stock decrement and ledger movement together. A short issue (less stock than
+ * approved) also raises a restock requisition for the balance (RestockService).
  */
 class IssueService
 {
-    public function __construct(private WorkflowNotifier $notifier)
+    public function __construct(private WorkflowNotifier $notifier, private RestockService $restock)
     {
     }
 
@@ -138,6 +139,10 @@ class IssueService
 
             ActivityLog::record('issue.created', "Voucher {$issue->issue_no} issued for {$req->request_no} to {$recipientName}", $issue, ['value' => $total]);
             $this->notifier->issued($issue);
+            // Anything still outstanding that this store cannot cover goes to the Overall Manager as a restock requisition.
+            if (! $fully) {
+                $issue->setRelation('restock', $this->restock->requestFor($storekeeper, $req, $storeId));
+            }
 
             return $issue;
         }));

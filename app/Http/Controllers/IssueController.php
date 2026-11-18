@@ -9,6 +9,7 @@ use App\Models\MaterialIssue;
 use App\Models\MaterialRequest;
 use App\Models\Store;
 use App\Services\IssueService;
+use App\Services\RestockService;
 use App\Support\ListPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -69,6 +70,8 @@ class IssueController extends Controller
         return view('issues.create', [
             'req' => $materialRequest->load(['project', 'requester', 'lines.item.unit', 'lines.item.balances' => fn ($q) => $q->where('store_id', $storeId)]),
             'stores' => $stores, 'storeId' => $storeId,
+            'shortfall' => app(RestockService::class)->shortfall($materialRequest, $storeId),
+            'openRestock' => $materialRequest->restockRequisitions()->whereIn('status', RestockService::OPEN)->get(),
         ]);
     }
 
@@ -86,9 +89,25 @@ class IssueController extends Controller
         $issue = $service->issue($request->user(), $materialRequest, $data['qty'], $data['recipient_name'], $data['notes'] ?? null,
             (int) ($data['store_id'] ?? \App\Models\Store::DEFAULT_ID), $data['idempotency_key'] ?? null);
 
+        $restock = $issue->relationLoaded('restock') ? $issue->getRelation('restock') : null;
+
         return redirect()->route('issues.show', $issue)->with('status', $issue->wasRecentlyCreated
             ? "Voucher {$issue->issue_no} created. Print it for the recipient's signature."
+                .($restock ? " The balance not in stock was sent to the Overall Manager for restocking ({$restock->pr_no})." : '')
             : "Voucher {$issue->issue_no} was already created; nothing was issued twice.");
+    }
+
+    /** Nothing (or not enough) in stock: send the shortfall to the Overall Manager for restocking without issuing. */
+    public function restock(Request $request, MaterialRequest $materialRequest, RestockService $restock)
+    {
+        Gate::authorize('issue-request', $materialRequest);
+        $data = $request->validate(['store_id' => 'nullable|integer|exists:stores,id']);
+        $store = Store::assertOperable($request->user(), (int) ($data['store_id'] ?? Store::DEFAULT_ID));
+        $pr = $restock->requestFor($request->user(), $materialRequest, $store->id);
+
+        return redirect()->route('requests.show', $materialRequest)->with('status', $pr
+            ? "Restock requisition {$pr->pr_no} sent to the Overall Manager for approval."
+            : 'Nothing to restock: the store has enough, or the shortfall is already on an open restock requisition.');
     }
 
     public function show(MaterialIssue $issue)

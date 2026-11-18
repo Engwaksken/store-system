@@ -3,6 +3,8 @@ import 'dart:math';
 
 import 'package:decimal/decimal.dart';
 
+part 'fake_store_ops.dart';
+
 /// Response produced by [FakeBackend.handle].
 class FakeResponse {
   const FakeResponse(this.status, [this.body, this.contentType = 'application/json', this.bytes]);
@@ -31,6 +33,7 @@ class FakeBackend {
   FakeBackend({DateTime? now, this.baseUrl = 'https://store.kemmytech.com/api/v1'})
       : _now = now ?? DateTime.now() {
     _seed();
+    _ops.seed();
   }
 
   static const password = 'password1';
@@ -62,6 +65,7 @@ class FakeBackend {
   int _nextClaimId = 1;
   int _nextFeedbackId = 1;
   int _tokenSeq = 1;
+  late final _ops = _FakeStoreOps(this);
 
   // ---------------------------------------------------------------- routing
 
@@ -189,6 +193,8 @@ class FakeBackend {
           if (!_can(userId, 'manage_feedback')) return const FakeResponse(403, {'message': 'This action is unauthorized.'});
           return _withFeedback(id, userId, (f) => _respondFeedback(f, userId, json));
       }
+      final ops = _ops.handle(method, segs, userId, query, json);
+      if (ops != null) return ops;
     } on _Validation catch (v) {
       return FakeResponse(422, {'message': v.errors.values.first.first, 'errors': v.errors});
     }
@@ -556,6 +562,7 @@ class FakeBackend {
           _ => null,
         },
         'cancel': _canCancel(r, userId),
+        'issue': _can(userId, 'issue_stock') && ['overall_approved', 'partially_issued'].contains(r['status']),
       },
     };
   }
@@ -786,6 +793,7 @@ class FakeBackend {
       }
       if ('${query['low'] ?? ''}' == '1' && !_isLow(i, storeId)) return false;
       if ('${query['out'] ?? ''}' == '1' && !_isOut(i, storeId)) return false;
+      if ('${query['in_stock'] ?? ''}' == '1' && _isOut(i, storeId)) return false;
       if ('${query['active'] ?? ''}' == '1' && i['is_active'] != true) return false;
       return true;
     }).toList()
@@ -1253,6 +1261,16 @@ class FakeBackend {
       'view_claims': true,
       'manage_users': true,
       'manage_feedback': true,
+      // Store operations: the demo manager can try every Store screen.
+      'issue_stock': true,
+      'view_issues': true,
+      'manage_stock': true,
+      'view_receipts': true,
+      'view_transfers': true,
+      'create_transfer': true,
+      'view_returns': true,
+      'view_purchasing': true,
+      'decide_purchasing': true,
     };
     _users[3] = user(3, 'Brian Okello', 'brian@kemmy.test', 'project_manager', 'Project Manager', pmCan);
     _users[5] = user(5, 'Jane Akello', 'engineer@kemmy.test', 'site_engineer', 'Site Engineer', const {
@@ -1262,6 +1280,7 @@ class FakeBackend {
       'decide_claims': false,
       'view_stock_value': false,
       'view_claims': true,
+      'view_issues': true,
     });
     _users[8] = user(8, 'Peter Ssemwogerere', 'peter@kemmy.test', 'site_engineer', 'Site Engineer', const {});
     _users[9] = user(9, 'Grace Nansubuga', 'new@kemmy.test', 'project_manager', 'Project Manager', pmCan,

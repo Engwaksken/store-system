@@ -53,6 +53,16 @@ final class Present
                 'view_claims' => true,
                 'manage_users' => $as->allows('manage-users'),
                 'manage_feedback' => $as->allows('manage-feedback'),
+                // Store operations and purchasing (mobile Store menu).
+                'issue_stock' => $as->allows('issue-stock'),
+                'view_issues' => true,
+                'manage_stock' => $as->allows('manage-stock') && \App\Models\Store::operableBy($u)->exists(),
+                'view_receipts' => $as->allows('view-stock-ledger'),
+                'view_transfers' => $as->allows('viewAny', \App\Models\StockTransfer::class),
+                'create_transfer' => $as->allows('create', \App\Models\StockTransfer::class),
+                'view_returns' => $as->allows('view-returns'),
+                'view_purchasing' => $as->allows('view-purchasing'),
+                'decide_purchasing' => $u->hasRole(Role::Admin, Role::OverallManager),
             ],
         ];
     }
@@ -102,6 +112,7 @@ final class Present
                 'decide' => $step !== null,
                 'decision_step' => $step,
                 'max_qty_field' => $step === 'pm' ? 'requested_qty' : ($step === 'overall' ? 'pm_approved_qty' : null),
+                'issue' => $as->allows('issue-request', $r),
                 'cancel' => ($viewer->id === $r->requester_id || $viewer->isAdmin())
                     && in_array($r->status, [\App\Enums\RequestStatus::Draft, \App\Enums\RequestStatus::Submitted], true),
             ],
@@ -155,6 +166,10 @@ final class Present
         $target = match (true) {
             (bool) preg_match('#/requests/(\d+)$#', $path, $m) => ['type' => 'request', 'id' => (int) $m[1]],
             (bool) preg_match('#/claims/(\d+)$#', $path, $m) => ['type' => 'claim', 'id' => (int) $m[1]],
+            (bool) preg_match('#/issues/(\d+)$#', $path, $m) => ['type' => 'issue', 'id' => (int) $m[1]],
+            (bool) preg_match('#/transfers/(\d+)$#', $path, $m) => ['type' => 'transfer', 'id' => (int) $m[1]],
+            (bool) preg_match('#/purchase-requisitions/(\d+)$#', $path, $m) => ['type' => 'requisition', 'id' => (int) $m[1]],
+            (bool) preg_match('#/purchase-orders/(\d+)$#', $path, $m) => ['type' => 'order', 'id' => (int) $m[1]],
             default => ['type' => null, 'id' => null],
         };
 

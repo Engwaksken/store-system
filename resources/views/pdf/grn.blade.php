@@ -11,9 +11,9 @@
     @if($receipt->notes)<tr><td class="k">Notes</td><td>{{ $receipt->notes }}</td></tr>@endif
 </table>
 <table class="grid">
-    <thead><tr><th>#</th><th>SKU</th><th>Item</th><th class="num">Qty</th><th>Unit</th><th class="num">Unit cost</th><th class="num">Amount ({{ currency() }})</th></tr></thead>
-    <tbody>@foreach($receipt->lines as $l)<tr><td>{{ $loop->iteration }}</td><td>{{ $l->item->sku }}</td><td>{{ $l->item->name }}</td><td class="num">{{ qty($l->qty) }}</td><td>{{ $l->item->unit->abbreviation }}</td><td class="num">{{ ugx($l->unit_cost) }}</td><td class="num">{{ ugx($l->line_total) }}</td></tr>@endforeach</tbody>
-    <tfoot><tr><td colspan="6">Total</td><td class="num">{{ ugx($receipt->total_value) }}</td></tr></tfoot>
+    <thead><tr><th>#</th><th>SKU</th><th>Item</th><th class="num">Qty</th><th>Unit</th>@if($showValue)<th class="num">Unit cost</th><th class="num">Amount ({{ currency() }})</th>@endif</tr></thead>
+    <tbody>@foreach($receipt->lines as $l)<tr><td>{{ $loop->iteration }}</td><td>{{ $l->item->sku }}</td><td>{{ $l->item->name }}</td><td class="num">{{ qty($l->qty) }}</td><td>{{ $l->item->unit->abbreviation }}</td>@if($showValue)<td class="num">{{ ugx($l->unit_cost) }}</td><td class="num">{{ ugx($l->line_total) }}</td>@endif</tr>@endforeach</tbody>
+    @if($showValue)<tfoot><tr><td colspan="6">Total</td><td class="num">{{ ugx($receipt->total_value) }}</td></tr></tfoot>@endif
 </table>
 <table class="sign"><tr><td>Delivered by (supplier / driver)</td><td>Received by (storekeeper)</td><td>Checked by</td></tr></table>
 @endsection

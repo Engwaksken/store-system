@@ -4,9 +4,10 @@
 <div class="page-head"><div><h1>Return {{ $return->return_no }}</h1><p>{{ $return->returned_at->format('d M Y H:i') }} · into {{ $return->store->label() }}</p></div>
     <button type="button" class="btn secondary no-print" data-print><i class="fas fa-print"></i> Print</button></div>
 <div class="no-print">
+@php($sv = auth()->user()->can('view-stock-value'))
 <x-stats :cards="[
     ['Lines', number_format($return->lines->count()), 'fa-list', 'navy'],
-    ['Project credit ('.currency().')', ugx($return->total_value), 'fa-hand-holding-dollar'],
+    $sv ? ['Project credit ('.currency().')', ugx($return->total_value), 'fa-hand-holding-dollar'] : null,
     ['Project', $return->project->code, 'fa-person-digging', 'gold'],
     ['Voucher', $return->issue->issue_no, 'fa-file-lines', '', route('issues.show', $return->issue)],
 ]" />
@@ -14,9 +15,9 @@
 <x-tabs id="return-show">
     <x-tab title="Lines" icon="fa-list" :count="$return->lines->count()" name="lines">
         <div class="table-wrap"><table>
-            <thead><tr><th>SKU</th><th>Item</th><th class="num">Qty</th><th>Unit</th><th class="num">Unit cost</th><th class="num">Credit ({{ currency() }})</th></tr></thead>
-            <tbody>@foreach($return->lines as $l)<tr><td>{{ $l->item->sku }}</td><td>{{ $l->item->name }}</td><td class="num">{{ qty($l->qty) }}</td><td>{{ $l->item->unit->abbreviation }}</td><td class="num">{{ ugx($l->unit_cost) }}</td><td class="num">{{ ugx($l->line_value) }}</td></tr>@endforeach</tbody>
-            <tfoot><tr><td colspan="5">Project credit</td><td class="num">{{ ugx($return->total_value) }}</td></tr></tfoot>
+            <thead><tr><th>SKU</th><th>Item</th><th class="num">Qty</th><th>Unit</th>@if($sv)<th class="num">Unit cost</th><th class="num">Credit ({{ currency() }})</th>@endif</tr></thead>
+            <tbody>@foreach($return->lines as $l)<tr><td>{{ $l->item->sku }}</td><td>{{ $l->item->name }}</td><td class="num">{{ qty($l->qty) }}</td><td>{{ $l->item->unit->abbreviation }}</td>@if($sv)<td class="num">{{ ugx($l->unit_cost) }}</td><td class="num">{{ ugx($l->line_value) }}</td>@endif</tr>@endforeach</tbody>
+            @if($sv)<tfoot><tr><td colspan="5">Project credit</td><td class="num">{{ ugx($return->total_value) }}</td></tr></tfoot>@endif
         </table></div>
     </x-tab>
     <x-tab title="Details" icon="fa-circle-info" name="details">

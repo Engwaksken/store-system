@@ -261,6 +261,40 @@ Admins are notified of new feedback; the sender is notified of a reply or status
 ### `GET /feedback/{id}` → `{ "data": Feedback }` (sender or admin, else 403)
 ### `POST /feedback/{id}/respond` — admin: `{ "status", "response?" }` → `200 { "data": Feedback }`
 
+## Store operations and purchasing
+
+Same gates and services as the web pages. Stock prices (`unit_cost`, `line_value`, `line_total`, `total_value`) appear
+only when `can.view_stock_value` (Owner/Admin, Overall Manager). New `can` flags on the user: `issue_stock`,
+`view_issues`, `manage_stock`, `view_receipts`, `view_transfers`, `create_transfer`, `view_returns`, `view_purchasing`,
+`decide_purchasing`. Request detail has `can.issue`. `GET /items?in_stock=1` lists items with stock on hand.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/store-ops/options` | `operable_stores` (this user operates), `active_stores` (transfer destinations) |
+| GET | `/issues/queue` | Storekeeper: requests with both approvals, oldest first (request summaries) |
+| GET | `/issues?q=&unacknowledged=1` | Issue vouchers the user may see |
+| GET | `/issues/{id}` | Voucher with lines, acknowledgment, returns, `can.acknowledge`, `can.return` |
+| POST | `/issues/{id}/acknowledge` | `{recipient_name?, remarks?}` |
+| POST | `/issues/{id}/return` | `{store_id, qty: {issue_line_id: qty}, returned_by_name, reason, idempotency_key?}` |
+| GET | `/requests/{id}/issue?store_id=` | Issue form: `lines` (outstanding, on_hand, max_issue), `shortfall` (short_qty, restock_qty), `open_restock` |
+| POST | `/requests/{id}/issue` | `{store_id, qty: {request_line_id: qty}, recipient_name, notes?, idempotency_key?}` → `{data: voucher, restock: {id, pr_no}\|null, replayed}` |
+| POST | `/requests/{id}/restock` | `{store_id}`: send the shortfall to the Overall Manager without issuing → `{data: {id, pr_no}\|null, message}` |
+| GET/POST | `/receipts`, GET `/receipts/{id}` | POST `{store_id, received_on, supplier_name, reference?, notes?, lines: [{item_id, qty, unit_cost}], idempotency_key?}` |
+| POST | `/adjustments` | `{store_id, item_id, qty_delta (negative removes), reason (5+ chars)}` → `{data: {adjustment_no, on_hand}}` |
+| GET/POST | `/transfers?status=`, GET `/transfers/{id}` | POST `{from_store_id, to_store_id, notes?, lines: [{item_id, qty}], idempotency_key?}` |
+| POST | `/transfers/{id}/receive` | `{received: {line_id: qty}, reason: {line_id: text}, receive_notes?}` (destination store, not the dispatcher) |
+| POST | `/transfers/{id}/cancel` | `{reason}` |
+| GET | `/returns`, `/returns/{id}` | |
+| GET | `/purchase-requisitions?status=&restock=1`, `/purchase-requisitions/{id}` | `is_restock`, `material_request` |
+| POST | `/purchase-requisitions/{id}/submit`, `/purchase-requisitions/{id}/decision` | decision `{decision: approved\|rejected, reason (required to reject)}` |
+| GET | `/purchase-orders?status=`, `/purchase-orders/{id}` | detail has `lock_version` |
+| POST | `/purchase-orders/{id}/decision` | `{decision, reason?, lock_version}`; a stale version is refused |
+
+**Restocking.** When an approved request asks for more than the store holds, issue what is in stock. For each line still
+short, a purchase requisition (status `submitted`, raised by the storekeeper, linked by `material_request`) goes to the
+Owner/Admin and Overall Manager with quantity = max(balance not in stock, the item's minimum level). Items already on an
+open restock requisition for the same request are not asked for twice.
+
 ## Deploying the API to store.kemmytech.com
 
 1. Pull the code, then `composer install --no-dev --optimize-autoloader` (adds `laravel/sanctum`).

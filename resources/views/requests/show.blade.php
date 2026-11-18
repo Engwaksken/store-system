@@ -80,6 +80,12 @@
                 <td>@if($i->acknowledgment)<span class="badge approved">Yes</span>@else<span class="badge pending">Pending</span>@endif</td></tr>@endforeach</tbody>
         </table></div>
         @endif
+        @php($restocks = $req->restockRequisitions)
+        @if($restocks->isNotEmpty())
+            <div class="alert warn" style="margin-top:.75rem"><i class="fas fa-truck-ramp-box"></i> Not enough stock to issue in full. Restock requested from the Overall Manager:
+                @foreach($restocks as $pr)@can('view-pr', $pr)<a href="{{ route('prs.show', $pr) }}">{{ $pr->pr_no }}</a>@else{{ $pr->pr_no }}@endcan ({{ $pr->statusLabel() }})@if(! $loop->last), @endif @endforeach.
+                The balance stays outstanding on this request and can be issued once the stock arrives.</div>
+        @endif
     </x-tab>
 </x-tabs>
 @endsection

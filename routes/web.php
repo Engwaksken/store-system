@@ -110,6 +110,7 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::get('items', [CatalogController::class, 'index'])->name('items.index');
     Route::get('items/import-template', [CatalogController::class, 'importTemplate'])->name('items.import-template');
     Route::post('items/import', [CatalogController::class, 'import'])->name('items.import');
+    Route::post('items/bulk-delete', [CatalogController::class, 'bulkDestroyItems'])->middleware('throttle:30,1')->name('items.bulk-delete');
     Route::get('items/create', [CatalogController::class, 'create'])->name('items.create');
     Route::post('items', [CatalogController::class, 'store'])->name('items.store');
     Route::get('items/{item}', [CatalogController::class, 'show'])->name('items.show');
@@ -170,6 +171,7 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::get('issues', [IssueController::class, 'index'])->name('issues.index');
     Route::get('requests/{materialRequest}/issue', [IssueController::class, 'create'])->name('issues.create');
     Route::post('requests/{materialRequest}/issue', [IssueController::class, 'store'])->name('issues.store');
+    Route::post('requests/{materialRequest}/restock', [IssueController::class, 'restock'])->middleware('throttle:30,1')->name('issues.restock');
     Route::get('issues/{issue}', [IssueController::class, 'show'])->name('issues.show');
     Route::get('issues/{issue}/pdf', [IssueController::class, 'pdf'])->name('issues.pdf');
     Route::post('issues/{issue}/acknowledge', [IssueController::class, 'acknowledge'])->name('issues.acknowledge');

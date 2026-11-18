@@ -140,8 +140,11 @@ class MobileApiTest extends TestCase
         $this->receive($this->cement, 50, 30000);
         $this->getJson('/api/v1/items?q=CEM', $this->tokenFor($this->staff))->assertOk()
             ->assertJsonPath('data.0.on_hand', '50.000')->assertJsonMissingPath('data.0.avg_cost');
+        // Stock prices: Owner/Admin and Overall Manager only (the storekeeper sees quantities).
         $this->getJson("/api/v1/items/{$this->cement->id}", $this->tokenFor($this->store))->assertOk()
-            ->assertJsonPath('data.avg_cost', '30000.00')->assertJsonPath('data.balances.0.on_hand', '50.000');
+            ->assertJsonMissingPath('data.avg_cost')->assertJsonPath('data.balances.0.on_hand', '50.000');
+        $this->getJson("/api/v1/items/{$this->cement->id}", $this->tokenFor($this->overall))->assertOk()
+            ->assertJsonPath('data.avg_cost', '30000.00');
         $this->getJson('/api/v1/stores', $this->tokenFor($this->staff))->assertOk()->assertJsonStructure(['data' => [['id', 'code', 'name']]]);
     }
 

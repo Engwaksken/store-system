@@ -16,11 +16,26 @@
                 <td class="num">@if($out > 0)<input type="number" step="0.001" min="0" max="{{ $max }}" name="qty[{{ $l->id }}]" value="{{ old('qty.'.$l->id, $max) }}">@else - @endif</td></tr>
         @endforeach</tbody>
     </table></div>
+    @if($shortfall)
+        <div class="alert warn"><i class="fas fa-truck-ramp-box"></i> <strong>Not enough stock for {{ count($shortfall) }} item(s).</strong>
+            Issue what is in stock now. When you confirm, the balance is sent to the Overall Manager as a restock requisition
+            (quantity = the larger of the balance not in stock and the item's minimum stock level):
+            <ul>@foreach($shortfall as [$l, $balance, $have, $restockQty])<li>{{ $l->item->name }}: {{ qty($have) }} in this store, {{ qty($balance) }} short → restock {{ qty($restockQty) }} {{ $l->item->unit->abbreviation }}</li>@endforeach</ul>
+            @if($openRestock->isNotEmpty())<span class="muted">Already requested: {{ $openRestock->pluck('pr_no')->implode(', ') }} (items on it are not asked for again).</span>@endif
+        </div>
+    @else
     <p class="hint">Highlighted rows have less stock than approved; the remainder stays outstanding for a later issue.</p>
+    @endif
     <div class="form-grid">
         <div class="field"><label>Recipient name (person collecting)</label><input type="text" name="recipient_name" value="{{ old('recipient_name', $req->requester->name) }}" required></div>
         <div class="field"><label>Notes</label><input type="text" name="notes" value="{{ old('notes') }}"></div>
     </div>
     <button class="btn">Confirm issue &amp; create voucher</button>
 </form>
+@if($shortfall)
+<form method="POST" action="{{ route('issues.restock', $req) }}" class="card modal-keep">@csrf <input type="hidden" name="store_id" value="{{ $storeId }}">
+    <p class="muted">Nothing to issue yet? Send the shortfall to the Overall Manager for restocking without creating a voucher.</p>
+    <button class="btn secondary" data-confirm="Send the shortfall to the Overall Manager as a restock requisition?" data-confirm-ok="Yes, send"><i class="fas fa-truck-ramp-box"></i> Request restock only</button>
+</form>
+@endif
 @endsection
