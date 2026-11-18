@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/api/refs.dart';
-import '../../../core/format/formatters.dart';
-import '../../../core/widgets/common.dart';
 import '../../../core/widgets/paged_list_view.dart';
 import '../../auth/data/auth_controller.dart';
 import '../data/stock_repository.dart';
 import '../domain/stock_models.dart';
+import 'item_widgets.dart';
 
 class StockScreen extends ConsumerStatefulWidget {
   const StockScreen({super.key});
@@ -90,76 +88,12 @@ class _StockScreenState extends ConsumerState<StockScreen> {
                 StockFilter.all => 'No items found',
               },
               emptyMessage: _q.isEmpty ? null : 'Try another search.',
-              itemBuilder: (context, item) => _ItemTile(item: item, formatters: f, storeName: storeName),
+              itemBuilder: (context, item) => Card(
+                child: ItemTile(item: item, formatters: f, storeName: storeName),
+              ),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ItemTile extends StatelessWidget {
-  const _ItemTile({required this.item, required this.formatters, this.storeName});
-  final Item item;
-  final Formatters formatters;
-  final String? storeName;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final f = formatters;
-    return Card(
-      child: InkWell(
-        onTap: () => context.push('/item/${item.id}'),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                      [item.sku, if ((item.category ?? '').isNotEmpty) item.category!].join(' · '),
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                    if (item.low || item.outOfStock || !item.isActive) ...[
-                      const SizedBox(height: 6),
-                      Wrap(spacing: 6, children: [
-                        if (item.outOfStock)
-                          StatusBadge.status(label: 'Out of stock', statusTone: 'rejected', dense: true)
-                        else if (item.low)
-                          StatusBadge.status(label: 'Low stock', statusTone: 'pending', dense: true),
-                        if (!item.isActive) StatusBadge.status(label: 'Inactive', statusTone: 'muted', dense: true),
-                      ]),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Semantics(
-                label: 'On hand ${f.qty(item.onHand)} ${item.unit}${storeName == null ? '' : ' in $storeName'}',
-                excludeSemantics: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      f.qty(item.onHand),
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: item.outOfStock || item.low ? theme.colorScheme.error : null,
-                      ),
-                    ),
-                    Text(item.unit, style: theme.textTheme.bodySmall),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

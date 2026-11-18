@@ -1,5 +1,21 @@
 # Changelog
 
+## Mobile reports, charts, profile editing and a refreshed look (18 Nov 2026)
+- Mobile API: `GET /reports?days=` returns KPIs and chart series (stock status, value or items by category, requests by
+  status and over time, most issued items, issued value by project, expense claims by status), each limited to what
+  the user may see; `PUT /me` lets users update their own name, e-mail (with current password) and phone (docs/API.md).
+- Flutter app, Home: header band with the headline cards, an **Out of stock** list (first five, "See all" opens Stock
+  filtered) and an Overview with the stock-status and requests-by-status charts.
+- New **Reports** screen (More, and Home quick actions) with a 7 days / 30 days / 90 days / 12 months switch, KPI tiles
+  and donut, bar and column charts drawn without extra packages, using a colour-blind-checked palette.
+- **Profile**: redesigned page and a new Edit profile screen.
+- Items: list rows and the item page now show a stock-state icon, a stock-level bar against the minimum, badges
+  (including Out of stock on the item page), fact tiles, and each store's share of the balance.
+- Look: tinted page background, cards with soft shadows and borders, white navigation bar, and darker page versus card
+  in dark mode, so content stands out.
+- Tests: `MobileReportsAndProfileTest` (5), Flutter `reports_profile_test` (3) and
+  `dashboard_reports_profile_test` (4).
+
 ## Users & feedback on mobile, feedback module (17 Nov 2026)
 - **Feedback** (web and mobile): anyone, including read-only auditors, can report a problem, ask a question or suggest
   something, with an optional 1-5 rating. Admins see all feedback (sidebar count of new items), set the status

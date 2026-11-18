@@ -114,8 +114,12 @@ class FakeBackend {
           return const FakeResponse(204);
         case ('POST', ['auth', 'change-password']):
           return _changePassword(userId, json);
+        case ('PUT', ['me']):
+          return _updateProfile(userId, json);
         case ('GET', ['dashboard']):
           return FakeResponse(200, _dashboard(userId));
+        case ('GET', ['reports']):
+          return FakeResponse(200, _reports(userId, query));
         case ('GET', ['approvals']):
           return _approvals(userId, query);
         case ('GET', ['requests']):
@@ -299,6 +303,203 @@ class FakeBackend {
       'cards': cards,
       'awaiting_me': awaiting.take(5).map(_requestSummary).toList(),
       'unread_notifications': _notifications.where((n) => n['user_id'] == userId && n['read'] != true).length,
+    };
+  }
+
+  // ---------------------------------------------------------------- profile
+
+  FakeResponse _updateProfile(int userId, Map<String, dynamic> json) {
+    final user = _users[userId]!;
+    final name = '${json['name'] ?? ''}'.trim();
+    final email = '${json['email'] ?? ''}'.trim().toLowerCase();
+    final phone = '${json['phone'] ?? ''}'.trim();
+    final errors = <String, List<String>>{};
+    if (name.isEmpty) errors['name'] = ['The name field is required.'];
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      errors['email'] = ['The email field must be a valid email address.'];
+    } else if (_users.entries.any((e) => e.key != userId && '${e.value['email']}'.toLowerCase() == email)) {
+      errors['email'] = ['The email has already been taken.'];
+    } else if (email != '${user['email']}'.toLowerCase()) {
+      final current = '${json['current_password'] ?? ''}';
+      if (current.isEmpty) {
+        errors['current_password'] = ['Enter your current password to change your e-mail.'];
+      } else if (current != _passwords[userId]) {
+        errors['current_password'] = ['The password is incorrect.'];
+      }
+    }
+    if (errors.isNotEmpty) throw _Validation(errors);
+    user
+      ..['name'] = name
+      ..['email'] = email
+      ..['phone'] = phone.isEmpty ? null : phone;
+    return FakeResponse(200, {'user': _userJson(userId)});
+  }
+
+  // ---------------------------------------------------------------- reports
+
+  /// Same shape as the server's `GET /reports`: KPIs and chart series for the period.
+  Map<String, dynamic> _reports(int userId, Map<String, dynamic> query) {
+    final asked = int.tryParse('${query['days'] ?? ''}') ?? 30;
+    final days = const [7, 30, 90, 365].contains(asked) ? asked : 30;
+    final to = _now;
+    final from = DateTime(to.year, to.month, to.day).subtract(Duration(days: days - 1));
+    final label = days == 365 ? 'Last 12 months' : 'Last $days days';
+    final value = _can(userId, 'view_stock_value');
+
+    final active = _items.where((i) => i['is_active'] == true).toList();
+    final out = active.where((i) => _isOut(i, null)).length;
+    final low = active
+        .where((i) => !_isOut(i, null) && Decimal.parse(i['min_level'] as String) > Decimal.zero && _isLow(i, null))
+        .length;
+
+    final byCat = <String, double>{};
+    for (final i in active) {
+      final v = value ? (_totalOnHand(i['id'] as int) * Decimal.parse(i['avg_cost'] as String)).toDouble() : 1.0;
+      byCat.update(i['category'] as String, (x) => x + v, ifAbsent: () => v);
+    }
+    final cats = byCat.entries.where((e) => e.value > 0).toList()..sort((a, b) => b.value.compareTo(a.value));
+
+    final visible = _requests.where((r) {
+      final created = DateTime.parse(r['created_at'] as String);
+      if (created.isBefore(from)) return false;
+      return _can(userId, 'approve_requests') || r['requester']['id'] == userId;
+    }).toList();
+    final statusCounts = <String, int>{};
+    for (final r in visible) {
+      statusCounts.update(r['status'] as String, (x) => x + 1, ifAbsent: () => 1);
+    }
+
+    final buckets = <(String, DateTime, DateTime)>[];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    if (days <= 7) {
+      for (var d = from; !d.isAfter(to); d = d.add(const Duration(days: 1))) {
+        buckets.add((weekdays[d.weekday - 1], d, d.add(const Duration(days: 1))));
+      }
+    } else if (days <= 31) {
+      for (var d = from; !d.isAfter(to); d = d.add(const Duration(days: 7))) {
+        buckets.add(('${d.day} ${months[d.month - 1]}', d, d.add(const Duration(days: 7))));
+      }
+    } else {
+      for (var d = DateTime(from.year, from.month); !d.isAfter(to); d = DateTime(d.year, d.month + 1)) {
+        buckets.add(('${months[d.month - 1]} ${d.year % 100}', d, DateTime(d.year, d.month + 1)));
+      }
+    }
+
+    final issued = <String, Decimal>{};
+    for (final r in visible.where((r) => ['partially_issued', 'fully_issued'].contains(r['status']))) {
+      for (final l in (r['lines'] as List).cast<Map<String, dynamic>>()) {
+        final q = Decimal.parse(l['issued_qty'] as String);
+        if (q <= Decimal.zero) continue;
+        final key = '${l['item']['name']} (${l['item']['unit']})';
+        issued.update(key, (x) => x + q, ifAbsent: () => q);
+      }
+    }
+    final topIssued = issued.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+
+    final claims = _claims.where((c) {
+      final on = DateTime.parse(c['incurred_on'] as String);
+      if (on.isBefore(from)) return false;
+      return _can(userId, 'decide_claims') || c['claimant']['id'] == userId;
+    }).toList();
+    String claimSum(String? status) => claims
+        .where((c) => status == null || c['status'] == status)
+        .fold(Decimal.zero, (s, c) => s + Decimal.parse(c['amount'] as String))
+        .toStringAsFixed(2);
+
+    return {
+      'period': {'days': days, 'from': _ymd(from), 'to': _ymd(to), 'label': label},
+      'kpis': [
+        {'key': 'active_items', 'label': 'Active items', 'value': active.length, 'format': 'count', 'tone': 'navy'},
+        {'key': 'out_of_stock', 'label': 'Out of stock', 'value': out, 'format': 'count', 'tone': out > 0 ? 'bad' : 'ok'},
+        {'key': 'low_stock', 'label': 'Low stock', 'value': low, 'format': 'count', 'tone': low > 0 ? 'gold' : 'ok'},
+        if (value)
+          {
+            'key': 'stock_value',
+            'label': 'Stock value',
+            'value': byCat.values.fold(0.0, (a, b) => a + b).toStringAsFixed(2),
+            'format': 'money',
+            'tone': 'navy',
+          },
+        {'key': 'requests', 'label': 'Requests raised', 'value': visible.length, 'format': 'count', 'tone': 'navy'},
+        if (_can(userId, 'view_claims'))
+          {'key': 'claims_amount', 'label': 'Claims submitted', 'value': claimSum(null), 'format': 'money', 'tone': 'gold'},
+      ],
+      'charts': [
+        {
+          'key': 'stock_status',
+          'title': 'Stock status',
+          'subtitle': 'Active items by stock level, all stores',
+          'type': 'donut',
+          'format': 'count',
+          'series': [
+            {'label': 'In stock', 'value': active.length - out - low, 'tone': 'ok'},
+            {'label': 'Low stock', 'value': low, 'tone': 'gold'},
+            {'label': 'Out of stock', 'value': out, 'tone': 'bad'},
+          ],
+        },
+        {
+          'key': value ? 'stock_value_by_category' : 'items_by_category',
+          'title': value ? 'Stock value by category' : 'Items by category',
+          'subtitle': value ? 'On hand × average cost' : 'Active items in the catalogue',
+          'type': 'bar',
+          'format': value ? 'money' : 'count',
+          'series': [
+            for (final e in cats.take(8)) {'label': e.key, 'value': value ? e.value.toStringAsFixed(2) : e.value.round()},
+          ],
+        },
+        {
+          'key': 'requests_by_status',
+          'title': 'Requests by status',
+          'subtitle': label,
+          'type': 'bar',
+          'format': 'count',
+          'series': [
+            for (final e in _statusMeta.entries)
+              if ((statusCounts[e.key] ?? 0) > 0) {'label': e.value.$1, 'value': statusCounts[e.key], 'tone': e.value.$2},
+          ],
+        },
+        {
+          'key': 'requests_over_time',
+          'title': 'Requests over time',
+          'subtitle': label,
+          'type': 'column',
+          'format': 'count',
+          'series': [
+            for (final (l, a, b) in buckets)
+              {
+                'label': l,
+                'value': visible.where((r) {
+                  final t = DateTime.parse(r['created_at'] as String);
+                  return !t.isBefore(a) && t.isBefore(b);
+                }).length,
+              },
+          ],
+        },
+        if (_can(userId, 'approve_requests'))
+          {
+            'key': 'top_issued_items',
+            'title': 'Most issued items',
+            'subtitle': 'Quantity issued, ${label.toLowerCase()}',
+            'type': 'bar',
+            'format': 'qty',
+            'series': [for (final e in topIssued.take(8)) {'label': e.key, 'value': _fmtQty(e.value)}],
+          },
+        if (_can(userId, 'view_claims'))
+          {
+            'key': 'claims_by_status',
+            'title': 'Expense claims',
+            'subtitle': 'Amount by status, ${label.toLowerCase()}',
+            'type': 'donut',
+            'format': 'money',
+            'series': [
+              {'label': 'Awaiting approval', 'value': claimSum('submitted'), 'tone': 'pending'},
+              {'label': 'Approved - awaiting payment', 'value': claimSum('approved'), 'tone': 'partial'},
+              {'label': 'Rejected', 'value': claimSum('rejected'), 'tone': 'rejected'},
+              {'label': 'Paid', 'value': claimSum('paid'), 'tone': 'approved'},
+            ],
+          },
+      ],
     };
   }
 

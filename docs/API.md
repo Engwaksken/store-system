@@ -48,6 +48,11 @@ from the current one. → `200 { "user": {...User} }` (clears `must_change_passw
 
 ### `GET /me` → `200 { "user": {...User} }`
 
+### `PUT /me` (throttle 10/min)
+The signed-in user updates their own profile. Body: `{"name", "email", "phone?", "current_password?"}`.
+`current_password` is required only when the e-mail changes; the e-mail must not belong to another user. Role, projects
+and status cannot be changed here. → `200 { "user": {...User} }`; logged as `auth.profile_updated`.
+
 **User**
 ```json
 {
@@ -85,6 +90,26 @@ The system name and tagline set in the web app (Settings). The app shows `compan
 ```
 `tone`: `navy | gold | bad | ok | ""`. `key` is one of `awaiting_me`, `my_open_requests`, `ready_to_issue`, `low_stock`, `claims_awaiting`, `claims_unpaid`; cards depend on role (requests waiting for me, my open requests, low-stock items,
 claims awaiting approval, approved claims unpaid).
+
+## Reports
+
+### `GET /reports?days=30` (throttle 30/min)
+Chart-ready summaries for the app's Home and Reports screens. `days`: `7 | 30 | 90 | 365` (anything else → 30).
+```json
+{
+  "period": { "days": 30, "from": "2026-10-20", "to": "2026-11-18", "label": "Last 30 days" },
+  "kpis": [ { "key": "out_of_stock", "label": "Out of stock", "value": 3, "format": "count", "tone": "bad" }, ... ],
+  "charts": [
+    { "key": "stock_status", "title": "Stock status", "subtitle": "...", "type": "donut", "format": "count",
+      "series": [ { "label": "In stock", "value": 16, "tone": "ok" }, ... ] }, ...
+  ]
+}
+```
+`type`: `donut | bar | column`; `format`: `count` (integer values) `| money | qty` (decimal strings). Only what the user
+may see is included, with the same rules as the web lists: stock status and items/value by category for everyone
+(value only with `view-stock-value`); requests by status and over time from requests visible to the user; most issued
+items for report users (`view-reports`), issued value by project for finance report users; expense claims by status from
+claims visible to the user. Project managers' issue charts cover their managed projects only.
 
 ## Material requests
 

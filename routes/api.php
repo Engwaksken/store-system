@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\MaterialRequestController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\StockController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
@@ -21,10 +22,12 @@ Route::prefix('v1')->name('api.')->group(function () {
 
     Route::middleware(['auth:sanctum', 'api.usable', 'throttle:120,1'])->group(function () {
         Route::get('me', [AuthController::class, 'me'])->name('me');
+        Route::put('me', [AuthController::class, 'updateProfile'])->middleware('throttle:10,1')->name('me.update');
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('logout');
         Route::post('auth/change-password', [AuthController::class, 'changePassword'])->middleware('throttle:10,1')->name('change-password');
 
         Route::get('dashboard', DashboardController::class)->name('dashboard');
+        Route::get('reports', ReportController::class)->middleware('throttle:30,1')->name('reports');
 
         Route::get('approvals', [MaterialRequestController::class, 'approvals'])->name('approvals');
         Route::get('requests/options', [MaterialRequestController::class, 'options'])->name('requests.options');

@@ -35,6 +35,22 @@ class AuthRepository {
     return User.fromJson(asMap(json['user']));
   }
 
+  /// `PUT /me`. [currentPassword] is only needed when the e-mail changes.
+  Future<User> updateProfile({
+    required String name,
+    required String email,
+    String? phone,
+    String? currentPassword,
+  }) async {
+    final json = await _api.put('/me', body: {
+      'name': name,
+      'email': email,
+      'phone': phone,
+      if ((currentPassword ?? '').isNotEmpty) 'current_password': currentPassword,
+    });
+    return User.fromJson(asMap(json['user']));
+  }
+
   Future<User> changePassword({
     required String current,
     required String password,

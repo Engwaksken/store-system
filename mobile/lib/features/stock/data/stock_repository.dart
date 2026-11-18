@@ -5,6 +5,7 @@ import '../../../core/api/json.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/api/providers.dart';
 import '../../../core/api/refs.dart';
+import '../../../core/util/data_revision.dart';
 import '../../auth/data/auth_controller.dart';
 import '../domain/stock_models.dart';
 
@@ -71,6 +72,13 @@ final storesProvider = FutureProvider<List<CodedRef>>((ref) {
 final itemDetailProvider = FutureProvider.autoDispose.family<ItemDetail, int>(
   (ref, id) => ref.watch(stockRepositoryProvider).item(id),
 );
+
+/// First page of out-of-stock items for the Home screen. Reloads whenever data changes.
+final outOfStockPreviewProvider = FutureProvider<Paginated<Item>>((ref) {
+  ref.watch(currentUserProvider.select((u) => u?.id));
+  ref.watch(dataRevisionProvider);
+  return ref.watch(stockRepositoryProvider).items(outOfStock: true);
+});
 
 /// Which stock list the Stock tab shows. Set by the Home cards before switching tabs.
 enum StockFilter { all, low, out }

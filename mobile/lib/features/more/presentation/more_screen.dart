@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/widgets/common.dart';
 import '../../auth/data/auth_controller.dart';
 import '../../dashboard/data/dashboard_repository.dart';
+import 'edit_profile_screen.dart';
 
 class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
@@ -22,7 +23,7 @@ class MoreScreen extends ConsumerWidget {
             child: Card(
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                leading: CircleAvatar(child: Text(user?.initials ?? '?')),
+                leading: ProfileAvatar(initials: user?.initials ?? '?', radius: 24),
                 title: Text(user?.name ?? ''),
                 subtitle: Text(user?.roleLabel ?? ''),
                 trailing: const Icon(Icons.chevron_right),
@@ -35,6 +36,14 @@ class MoreScreen extends ConsumerWidget {
             child: Card(
               child: Column(
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.insights_outlined),
+                    title: const Text('Reports'),
+                    subtitle: const Text('Charts for stock, requests and claims'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/reports'),
+                  ),
+                  const Divider(height: 1),
                   if (user?.can.viewClaims ?? false) ...[
                     ListTile(
                       leading: const Icon(Icons.receipt_long_outlined),
@@ -68,7 +77,8 @@ class MoreScreen extends ConsumerWidget {
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.person_outline),
-                    title: const Text('Profile'),
+                    title: const Text('My profile'),
+                    subtitle: const Text('Update your name, e-mail and phone'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push('/profile'),
                   ),
@@ -76,9 +86,11 @@ class MoreScreen extends ConsumerWidget {
                   ListTile(
                     leading: const Icon(Icons.rate_review_outlined),
                     title: const Text('Feedback'),
-                    subtitle: Text((user?.can.manageFeedback ?? false)
-                        ? 'Read and reply to feedback from everyone'
-                        : 'Report a problem or suggest an improvement'),
+                    subtitle: Text(
+                      (user?.can.manageFeedback ?? false)
+                          ? 'Read and reply to feedback from everyone'
+                          : 'Report a problem or suggest an improvement',
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push('/feedback'),
                   ),

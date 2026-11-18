@@ -52,6 +52,37 @@ class ResponsiveCenter extends StatelessWidget {
       );
 }
 
+/// Coloured band that continues the app bar down behind the top of a screen, with rounded
+/// bottom corners, so headline content sits on the brand colour and cards below stand out.
+class BrandHeader extends StatelessWidget {
+  const BrandHeader({super.key, required this.child, this.padding = const EdgeInsets.fromLTRB(16, 8, 16, 24)});
+  final Widget child;
+  final EdgeInsets padding;
+
+  static bool _light(BuildContext context) => Theme.of(context).brightness == Brightness.light;
+
+  /// Text colour on the band.
+  static Color foreground(BuildContext context) =>
+      _light(context) ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final light = _light(context);
+    final top = light ? scheme.primary : scheme.surface;
+    final bottom = light ? Color.lerp(scheme.primary, Colors.white, 0.12)! : scheme.surfaceContainerHigh;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [top, bottom]),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+      ),
+      padding: padding,
+      child: ResponsiveCenter(child: child),
+    );
+  }
+}
+
 /// Full-area message with an icon; scrollable so pull-to-refresh works.
 class MessageView extends StatelessWidget {
   const MessageView({

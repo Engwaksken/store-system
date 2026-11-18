@@ -122,8 +122,9 @@ class AppTheme {
       onTertiary: BrandColors.onColor(brand.accent),
       surface: Colors.white,
     );
+    // A cool grey page tinted with the brand colour, so white cards clearly stand out from it.
     return _base(scheme, brand).copyWith(
-      scaffoldBackgroundColor: const Color(0xFFF5F7FA),
+      scaffoldBackgroundColor: Color.alphaBlend(brand.primary.withValues(alpha: 0.05), const Color(0xFFEEF1F5)),
     );
   }
 
@@ -135,7 +136,8 @@ class AppTheme {
     ).copyWith(
       tertiary: ColorScheme.fromSeed(seedColor: brand.accent, brightness: Brightness.dark).primary,
     );
-    return _base(scheme, brand);
+    // Page darker than the cards, which use surfaceContainer (see _base).
+    return _base(scheme, brand).copyWith(scaffoldBackgroundColor: scheme.surfaceContainerLowest);
   }
 
   static ThemeData _base(ColorScheme scheme, BrandColors brand) {
@@ -156,13 +158,16 @@ class AppTheme {
         centerTitle: false,
       ),
       cardTheme: CardThemeData(
-        elevation: 0,
+        // A soft shadow plus a hairline border lifts cards off the page in both themes.
+        elevation: isLight ? 1.5 : 0,
+        shadowColor: const Color(0x2912243E),
+        surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: radius,
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: isLight ? 0.5 : 0.8)),
         ),
-        color: scheme.surface,
+        color: isLight ? scheme.surface : scheme.surfaceContainer,
         clipBehavior: Clip.antiAlias,
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -201,6 +206,10 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       ),
       navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: isLight ? Colors.white : scheme.surfaceContainer,
+        surfaceTintColor: Colors.transparent,
+        elevation: 3,
+        shadowColor: const Color(0x3312243E),
         indicatorColor: scheme.primaryContainer,
         labelTextStyle: WidgetStateProperty.all(
           const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),

@@ -14,9 +14,11 @@ import '../../features/feedback/presentation/feedback_detail_screen.dart';
 import '../../features/feedback/presentation/feedback_list_screen.dart';
 import '../../features/feedback/presentation/new_feedback_screen.dart';
 import '../../features/more/presentation/about_screen.dart';
+import '../../features/more/presentation/edit_profile_screen.dart';
 import '../../features/more/presentation/more_screen.dart';
 import '../../features/more/presentation/profile_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
+import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/requests/presentation/approvals_screen.dart';
 import '../../features/requests/presentation/new_request_screen.dart';
 import '../../features/requests/presentation/request_detail_screen.dart';
@@ -113,7 +115,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: '/notifications', builder: (_, _) => const NotificationsScreen()),
-      GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+      GoRoute(
+        path: '/profile',
+        builder: (_, _) => const ProfileScreen(),
+        routes: [GoRoute(path: 'edit', builder: (_, _) => const EditProfileScreen())],
+      ),
+      GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
       GoRoute(path: '/about', builder: (_, _) => const AboutScreen()),
     ],
   );

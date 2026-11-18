@@ -82,6 +82,11 @@ class AuthController extends Notifier<AuthState> {
     state = AuthSignedIn(user);
   }
 
+  Future<void> updateProfile({required String name, required String email, String? phone, String? currentPassword}) async {
+    final user = await _repo.updateProfile(name: name, email: email, phone: phone, currentPassword: currentPassword);
+    state = AuthSignedIn(user);
+  }
+
   /// Re-reads `/me` (e.g. after the app resumes) without disturbing the UI on failure.
   Future<void> refreshUser() async {
     if (state is! AuthSignedIn) return;

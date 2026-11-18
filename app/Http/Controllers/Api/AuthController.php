@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
@@ -47,6 +48,31 @@ class AuthController extends ApiController
     public function me(Request $request): JsonResponse
     {
         return response()->json(['user' => Present::user($request->user())]);
+    }
+
+    /** The signed-in user updates their own name, e-mail and phone. Changing the e-mail needs the current password. */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => 'nullable|string|max:30',
+        ]);
+        $data['email'] = Str::lower(trim($data['email']));
+        if ($data['email'] !== Str::lower($user->email)) {
+            $request->validate(['current_password' => 'required|current_password:sanctum'], [
+                'current_password.required' => 'Enter your current password to change your e-mail.',
+            ]);
+        }
+        $user->fill(['name' => trim($data['name']), 'email' => $data['email'], 'phone' => trim($data['phone'] ?? '') ?: null]);
+        if ($user->isDirty()) {
+            $changed = implode(', ', array_keys($user->getDirty()));
+            $user->save();
+            ActivityLog::record('auth.profile_updated', "{$user->name} updated their profile ({$changed}) on the mobile app", $user);
+        }
+
+        return response()->json(['user' => Present::user($user->fresh())]);
     }
 
     public function changePassword(Request $request): JsonResponse

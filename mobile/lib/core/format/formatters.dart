@@ -76,6 +76,9 @@ class Formatters {
   /// Integer counts (dashboard values etc.).
   String count(num value) => _int.format(value);
 
+  /// Short form for chart labels: `1250000` -> `"1.3M"`, `950` -> `"950"`.
+  String compact(num value) => NumberFormat.compact().format(value);
+
   /// `"2026-11-20"` -> `"20 Nov 2026"`.
   String date(String? ymd) {
     if (ymd == null || ymd.isEmpty) return dash;
