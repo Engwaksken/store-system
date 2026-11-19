@@ -80,7 +80,7 @@
                 <div class="field"><label for="valid_until">Valid until</label><input id="valid_until" type="date" name="valid_until"></div>
             </div>
             <div class="table-wrap"><table><thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit price ({{ currency() }})</th></tr></thead>
-                <tbody>@foreach($pr->lines as $l)<tr><td>{{ $l->item->name }}</td><td class="num">{{ qty($l->qty) }}</td><td><input type="number" step="0.01" min="0" name="price[{{ $l->id }}]" required aria-label="Price {{ $l->item->sku }}"></td></tr>@endforeach</tbody></table></div>
+                <tbody>@foreach($pr->lines as $l)<tr><td>{{ $l->item->name }}</td><td class="num">{{ qty($l->qty) }}</td><td class="num"><input type="number" step="0.01" min="0" name="price[{{ $l->id }}]" required aria-label="Price {{ $l->item->sku }}"></td></tr>@endforeach</tbody></table></div>
             <button class="btn secondary">Save quote</button>
         </form>
         @endif

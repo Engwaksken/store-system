@@ -111,6 +111,13 @@ input.money { text-align: right; font-variant-numeric: tabular-nums; }
 .field { max-width: 100%; }
 table select { min-width: 200px; }
 table input[type=number], table input.money { width: 8.5rem; min-width: 0; }
+/* Inputs in numeric cells line up with their right-aligned header and figures. */
+td.num input[type=number], td.num input.money { text-align: right; font-variant-numeric: tabular-nums; margin-left: auto; display: block; }
+/* Line-item tables on forms: the item column takes the free width; numeric columns stay compact. */
+.line-table { table-layout: auto; }
+.line-table select { width: 100%; min-width: 14rem; }
+.line-table th.num, .line-table td.num { width: 1%; }
+.line-table td { vertical-align: middle; }
 table input[type=text] { min-width: 10rem; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--gold); outline-offset: 0; border-color: var(--gold); }
 textarea { min-height: 80px; }

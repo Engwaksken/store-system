@@ -10,12 +10,12 @@
         @endif
         <div class="field"><label>Notes</label><input type="text" name="notes" value="{{ old('notes') }}"></div>
     </div>
-    <div class="table-wrap"><table id="lines">
+    <div class="table-wrap"><table id="lines" class="line-table">
         <thead><tr><th>Item</th><th class="num">Quantity</th><th class="num">Unit cost ({{ currency() }})</th></tr></thead>
         <tbody>@for($n = 0; $n < max(4, count(old('lines', []))); $n++)
             <tr><td><select name="lines[{{ $n }}][item_id]"><option value="">None</option>@foreach($items as $i)<option value="{{ $i->id }}" @selected(old("lines.$n.item_id") == $i->id)>{{ $i->sku }} - {{ $i->name }} ({{ $i->unit->abbreviation }})</option>@endforeach</select></td>
-                <td><input type="number" step="0.001" min="0" name="lines[{{ $n }}][qty]" value="{{ old("lines.$n.qty") }}"></td>
-                <td><input type="number" step="0.01" min="0" name="lines[{{ $n }}][unit_cost]" value="{{ old("lines.$n.unit_cost") }}"></td></tr>
+                <td class="num"><input type="number" step="0.001" min="0" name="lines[{{ $n }}][qty]" value="{{ old("lines.$n.qty") }}"></td>
+                <td class="num"><input type="number" step="0.01" min="0" name="lines[{{ $n }}][unit_cost]" placeholder="0.00" value="{{ old("lines.$n.unit_cost") }}"></td></tr>
         @endfor</tbody>
     </table></div>
     <p><button type="button" class="btn secondary small" data-add-line="#lines"><i class="fas fa-plus"></i> Add line</button></p>

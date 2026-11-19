@@ -22,12 +22,12 @@
         <div class="field"><label for="terms">Terms</label><input id="terms" type="text" name="terms" value="{{ old('terms') }}" placeholder="e.g. Delivery to site, 30 days credit"></div>
     </div>
     @php($rows = old('lines', $prefill))
-    <div class="table-wrap"><table id="lines">
+    <div class="table-wrap"><table id="lines" class="line-table">
         <thead><tr><th>Item</th><th class="num">Quantity</th><th class="num">Unit price ({{ currency() }})</th></tr></thead>
         <tbody>@for($n = 0; $n < max(3, count($rows)); $n++)
             <tr><td><select name="lines[{{ $n }}][item_id]" aria-label="Item"><option value="">None</option>@foreach($items as $i)<option value="{{ $i->id }}" @selected(($rows[$n]['item_id'] ?? null) == $i->id)>{{ $i->sku }} - {{ $i->name }} ({{ $i->unit->abbreviation }})</option>@endforeach</select></td>
-                <td><input type="number" step="0.001" min="0" name="lines[{{ $n }}][qty]" value="{{ $rows[$n]['qty'] ?? '' }}" aria-label="Quantity"></td>
-                <td><input type="number" step="0.01" min="0" name="lines[{{ $n }}][unit_price]" value="{{ $rows[$n]['unit_price'] ?? '' }}" aria-label="Unit price"></td></tr>
+                <td class="num"><input type="number" step="0.001" min="0" name="lines[{{ $n }}][qty]" value="{{ $rows[$n]['qty'] ?? '' }}" aria-label="Quantity"></td>
+                <td class="num"><input type="number" step="0.01" min="0" name="lines[{{ $n }}][unit_price]" placeholder="0.00" value="{{ $rows[$n]['unit_price'] ?? '' }}" aria-label="Unit price"></td></tr>
         @endfor</tbody>
     </table></div>
     <p><button type="button" class="btn secondary small" data-add-line="#lines"><i class="fas fa-plus"></i> Add line</button></p>

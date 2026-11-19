@@ -14,7 +14,7 @@
 <meta name="application-name" content="{{ $companyName ?? config('app.name') }}">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ route('pwa.apple', ['v' => $pwaV]) }}">
 <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}?v=6.7.2">
-<link rel="stylesheet" href="{{ asset('css/app.css') }}?v=8">
+<link rel="stylesheet" href="{{ asset('css/app.css') }}?v=9">
 @if($fontCssUrl ?? null)<link rel="stylesheet" href="{{ $fontCssUrl }}">@endif
 @if($themeCss ?? '')<style id="theme">{!! $themeCss !!}</style>@endif
 <script src="{{ asset('js/app.js') }}?v=8" defer></script>
