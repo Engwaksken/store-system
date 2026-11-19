@@ -283,11 +283,13 @@ class _FakeStoreOps {
     final lines = <Map<String, dynamic>>[];
     var total = Decimal.zero;
     for (final l in (r['lines'] as List).cast<Map<String, dynamic>>()) {
-      final q = _d(qty['${l['id']}']);
+      var q = _d(qty['${l['id']}']);
       if (q <= Decimal.zero) continue;
       final itemId = l['item']['id'] as int;
       if (q > _outstanding(l)) return FakeResponse(422, {'message': '${l['item']['name']}: only ${_outstanding(l)} approved quantity remains.'});
-      if (q > _onHand(itemId, storeId)) return FakeResponse(422, {'message': '${l['item']['name']}: only ${_onHand(itemId, storeId)} in stock at this store.'});
+      // More than the store holds: issue what is in stock; the rest stays outstanding.
+      if (q > _onHand(itemId, storeId)) q = _onHand(itemId, storeId);
+      if (q <= Decimal.zero) continue;
       final cost = _d(_item(itemId)['avg_cost']);
       total += q * cost;
       lines.add({
@@ -309,6 +311,8 @@ class _FakeStoreOps {
       final l = x.remove('_line') as Map<String, dynamic>;
       _move(l['item']['id'] as int, storeId, -_d(x['qty']));
       l['issued_qty'] = FakeBackend._fmtQty(_d(l['issued_qty']) + _d(x['qty']));
+      x['approved_qty'] = FakeBackend._fmtQty(_d(l['final_approved_qty']));
+      x['balance_qty'] = FakeBackend._fmtQty(_outstanding(l));
     }
     final fully = (r['lines'] as List).cast<Map<String, dynamic>>().every((l) => _outstanding(l) <= Decimal.zero);
     b._setStatus(r, fully ? 'fully_issued' : 'partially_issued');
@@ -391,7 +395,7 @@ class _FakeStoreOps {
       'lines': [
         for (final l in (i['lines'] as List).cast<Map<String, dynamic>>())
           {
-            for (final k in const ['id', 'item', 'qty', 'returned_qty']) k: l[k],
+            for (final k in const ['id', 'item', 'qty', 'returned_qty', 'approved_qty', 'balance_qty']) k: l[k],
             if (values) 'unit_cost': l['unit_cost'],
             if (values) 'line_value': l['line_value'],
           },

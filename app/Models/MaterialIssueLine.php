@@ -32,6 +32,34 @@ class MaterialIssueLine extends Model
         return $this->hasMany(StockReturnLine::class);
     }
 
+    public function requestLine(): BelongsTo
+    {
+        return $this->belongsTo(MaterialRequestLine::class, 'material_request_line_id');
+    }
+
+    /** Final approved quantity on the request line. */
+    public function approvedQty(): string
+    {
+        return bcadd((string) ($this->requestLine?->final_approved_qty ?? 0), '0', 3);
+    }
+
+    /** Issued on this request line up to and including this voucher. */
+    public function issuedToDate(): string
+    {
+        $sum = static::where('material_request_line_id', $this->material_request_line_id)
+            ->where('material_issue_id', '<=', $this->material_issue_id)->sum('qty');
+
+        return bcadd((string) $sum, '0', 3);
+    }
+
+    /** Balance still to issue on the request line right after this voucher (stays outstanding on the request). */
+    public function balanceAfter(): string
+    {
+        $left = bcsub($this->approvedQty(), $this->issuedToDate(), 3);
+
+        return bccomp($left, '0', 3) < 0 ? '0.000' : $left;
+    }
+
     /** Quantity already returned to store (derived; issue lines themselves are immutable). */
     public function returnedQty(): string
     {

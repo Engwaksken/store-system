@@ -96,7 +96,9 @@ class IssueService
             $balances = InventoryBalance::lockRows($storeId, $itemIds);
 
             // Validate everything and price the voucher before writing anything.
+            // More than the store holds: issue what is in stock; the rest stays outstanding on the request.
             $total = '0';
+            $short = [];
             foreach ($wanted as $lineId => $qty) {
                 $line = $lines[$lineId];
                 $item = $items[$line->item_id];
@@ -106,9 +108,20 @@ class IssueService
                 }
                 $onHand = (string) $balances[$line->item_id]->on_hand;
                 if (Decimal::cmp($qty, $onHand) > 0) {
-                    throw new WorkflowException("{$item->name}: cannot issue {$qty}; only {$onHand} in stock at this store.");
+                    $short[] = $item->name;
+                    $qty = Decimal::cmp($onHand, '0') > 0 ? Decimal::of($onHand) : null;
                 }
+                if ($qty === null) {
+                    unset($wanted[$lineId]);
+
+                    continue;
+                }
+                $wanted[$lineId] = $qty;
                 $total = bcadd($total, bcmul($qty, Decimal::of($item->avg_cost, 4), 2), 2);
+            }
+            if (! $wanted) {
+                throw new WorkflowException('Nothing to issue: '.implode(', ', $short).' '.(count($short) === 1 ? 'is' : 'are')
+                    .' out of stock at this store. Use "Request restock only" to ask for more.');
             }
 
             $issue = MaterialIssue::create([

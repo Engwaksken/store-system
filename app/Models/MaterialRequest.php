@@ -60,6 +60,15 @@ class MaterialRequest extends Model
         return $this->hasMany(PurchaseRequisition::class)->orderBy('id');
     }
 
+    /** Lines with an approved balance still to issue, e.g. "Cement 4 bag, Steel 2 pcs"; empty when fully issued. */
+    public function remainingSummary(): string
+    {
+        return $this->lines()->with('item.unit')->get()
+            ->filter(fn ($l) => bccomp($l->outstanding(), '0', 3) > 0)
+            ->map(fn ($l) => $l->item->name.' '.qty($l->outstanding()).' '.$l->item->unit->abbreviation)
+            ->implode(', ');
+    }
+
     /** Fully approved requests still to issue that this storekeeper may issue (their projects). Empty for other roles. */
     public function scopeReadyToIssueBy(Builder $q, User $user): Builder
     {

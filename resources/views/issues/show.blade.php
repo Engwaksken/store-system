@@ -23,6 +23,8 @@
 </form>
 @endcan
 
+@include('issues.partials.balance-note')
+
 <x-tabs id="issue-show">
     <x-tab title="Voucher" icon="fa-file-lines" name="voucher">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">
@@ -42,10 +44,11 @@
     </x-tab>
     <x-tab title="Lines" icon="fa-list" :count="$issue->lines->count()" name="lines">
         <div class="table-wrap"><table>
-            <thead><tr><th>#</th><th>SKU</th><th>Item</th><th class="num">Qty</th><th>Unit</th>@can('view-stock-value')<th class="num">Unit cost</th><th class="num">Value ({{ currency() }})</th>@endcan</tr></thead>
-            <tbody>@foreach($issue->lines as $l)<tr><td>{{ $loop->iteration }}</td><td>{{ $l->item->sku }}</td><td>{{ $l->item->name }}</td><td class="num">{{ qty($l->qty) }}</td><td>{{ $l->item->unit->abbreviation }}</td>
+            <thead><tr><th>#</th><th>SKU</th><th>Item</th><th class="num">Approved</th><th class="num">Issued now</th><th class="num">Balance remaining</th><th>Unit</th>@can('view-stock-value')<th class="num">Unit cost</th><th class="num">Value ({{ currency() }})</th>@endcan</tr></thead>
+            <tbody>@foreach($issue->lines as $l)@php($left = $l->balanceAfter())<tr @class(['low' => (float) $left > 0])><td>{{ $loop->iteration }}</td><td>{{ $l->item->sku }}</td><td>{{ $l->item->name }}</td>
+                <td class="num">{{ qty($l->approvedQty()) }}</td><td class="num">{{ qty($l->qty) }}</td><td class="num">@if((float) $left > 0)<strong>{{ qty($left) }}</strong>@else 0 @endif</td><td>{{ $l->item->unit->abbreviation }}</td>
                 @can('view-stock-value')<td class="num">{{ ugx($l->unit_cost_snapshot) }}</td><td class="num">{{ ugx($l->line_value) }}</td>@endcan</tr>@endforeach</tbody>
-            @can('view-stock-value')<tfoot><tr><td colspan="6">Total</td><td class="num">{{ ugx($issue->total_value) }}</td></tr></tfoot>@endcan
+            @can('view-stock-value')<tfoot><tr><td colspan="8">Total</td><td class="num">{{ ugx($issue->total_value) }}</td></tr></tfoot>@endcan
         </table></div>
     </x-tab>
     <x-tab title="Returns & acknowledgment" icon="fa-signature" :count="$issue->returns->count()" name="status">

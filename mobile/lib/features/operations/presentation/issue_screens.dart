@@ -235,6 +235,7 @@ class _IssueFormScreenState extends ConsumerState<IssueFormScreen> {
         res.replayed
             ? 'Voucher ${res.issue.summary.issueNo} was already created; nothing was issued twice.'
             : 'Voucher ${res.issue.summary.issueNo} created.'
+                  '${res.issue.lines.any((l) => l.hasBalance) ? ' A balance remains outstanding on ${form.request.requestNo}.' : ''}'
                   '${res.restock != null ? ' Restock ${res.restock!.no} sent to the Overall Manager.' : ''}',
       );
       context.pushReplacement('/issues/${res.issue.summary.id}');
@@ -499,6 +500,22 @@ class _IssueDetailScreenState extends ConsumerState<IssueDetailScreen> {
                       label: Text('Open request ${s.request!.no}'),
                     ),
                   ),
+                if (d.lines.any((l) => l.hasBalance))
+                  ResponsiveCenter(
+                    child: Card(
+                      key: const Key('issue-balance-note'),
+                      color: Theme.of(context).colorScheme.tertiaryContainer,
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Text(
+                          'Partial issue. Balance remaining on ${s.request?.no ?? 'the request'}: '
+                          '${d.lines.where((l) => l.hasBalance).map((l) => '${l.item.name} ${f.qty(l.balanceQty)} ${l.item.unit}').join(', ')}. '
+                          'It stays outstanding and is issued when stock is available.',
+                          style: TextStyle(color: Theme.of(context).colorScheme.onTertiaryContainer),
+                        ),
+                      ),
+                    ),
+                  ),
                 const ResponsiveCenter(child: SectionTitle('Items issued')),
                 ResponsiveCenter(
                   child: LinesCard(
@@ -508,7 +525,9 @@ class _IssueDetailScreenState extends ConsumerState<IssueDetailScreen> {
                           name: l.item.name,
                           subtitle: '${l.item.sku} · ${l.item.unit}',
                           figures: [
-                            ('Qty', f.qty(l.qty)),
+                            if (l.approvedQty != null) ('Approved', f.qty(l.approvedQty)),
+                            ('Issued', f.qty(l.qty)),
+                            if (l.balanceQty != null) ('Balance', f.qty(l.balanceQty)),
                             if (l.returnedQty != null && Decimal.parse(l.returnedQty!) > Decimal.zero) ('Returned', f.qty(l.returnedQty)),
                             if (l.lineValue != null) ('Value', f.money(l.lineValue)),
                           ],

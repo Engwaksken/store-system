@@ -86,9 +86,11 @@ class IssueController extends Controller
             (int) ($data['store_id'] ?? \App\Models\Store::DEFAULT_ID), $data['idempotency_key'] ?? null);
 
         $restock = $issue->relationLoaded('restock') ? $issue->getRelation('restock') : null;
+        $remaining = $materialRequest->fresh()->remainingSummary();
 
         return redirect()->route('issues.show', $issue)->with('status', $issue->wasRecentlyCreated
             ? "Voucher {$issue->issue_no} created. Print it for the recipient's signature."
+                .($remaining ? " Remaining balance on {$materialRequest->request_no}: {$remaining}." : " {$materialRequest->request_no} is now fully issued.")
                 .($restock ? " The balance not in stock was sent to the Overall Manager for restocking ({$restock->pr_no})." : '')
             : "Voucher {$issue->issue_no} was already created; nothing was issued twice.");
     }

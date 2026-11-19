@@ -51,6 +51,12 @@
 
 <x-tabs id="request-show">
     <x-tab title="Items" icon="fa-list" :count="$req->lines->count()" name="items">
+        @if($req->status === \App\Enums\RequestStatus::PartiallyIssued)
+            @php($left = $req->lines->filter(fn ($l) => (float) $l->outstanding() > 0))
+            <div class="alert warn"><i class="fas fa-hourglass-half"></i> <strong>Partly issued.</strong> Remaining balance to issue:
+                @foreach($left as $l){{ $l->item->name }} <strong>{{ qty($l->outstanding()) }}</strong> {{ $l->item->unit->abbreviation }}@if(! $loop->last), @endif @endforeach.
+                It is issued when stock is available.</div>
+        @endif
         @unless($deciding)
             @include('requests.partials.lines')
         @endunless

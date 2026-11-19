@@ -289,11 +289,11 @@ only when `can.view_stock_value` (Owner/Admin, Overall Manager). New `can` flags
 | GET | `/store-ops/options` | `operable_stores` (this user operates), `active_stores` (transfer destinations) |
 | GET | `/issues/queue` | Storekeeper: requests with both approvals, oldest first (request summaries) |
 | GET | `/issues?q=&unacknowledged=1` | Issue vouchers the user may see |
-| GET | `/issues/{id}` | Voucher with lines, acknowledgment, returns, `can.acknowledge`, `can.return` |
+| GET | `/issues/{id}` | Voucher with lines (`qty` issued, `approved_qty`, `balance_qty` still to issue after this voucher), acknowledgment, returns, `can.acknowledge`, `can.return` |
 | POST | `/issues/{id}/acknowledge` | `{recipient_name?, remarks?}` |
 | POST | `/issues/{id}/return` | `{store_id, qty: {issue_line_id: qty}, returned_by_name, reason, idempotency_key?}` |
 | GET | `/requests/{id}/issue?store_id=` | Issue form: `lines` (outstanding, on_hand, max_issue), `shortfall` (short_qty, restock_qty), `open_restock` |
-| POST | `/requests/{id}/issue` | `{store_id, qty: {request_line_id: qty}, recipient_name, notes?, idempotency_key?}` → `{data: voucher, restock: {id, pr_no}\|null, replayed}` |
+| POST | `/requests/{id}/issue` | `{store_id, qty: {request_line_id: qty}, recipient_name, notes?, idempotency_key?}` → `{data: voucher, restock: {id, pr_no}\|null, replayed}`. A quantity above the store's stock issues what is in stock (the rest stays outstanding); 422 only when nothing asked for is in stock or a quantity exceeds the approved balance. |
 | POST | `/requests/{id}/restock` | `{store_id}`: send the shortfall to the Overall Manager without issuing → `{data: {id, pr_no}\|null, message}` |
 | GET/POST | `/receipts`, GET `/receipts/{id}` | POST `{store_id, received_on, supplier_name, reference?, notes?, lines: [{item_id, qty, unit_cost}], idempotency_key?}` |
 | POST | `/adjustments` | `{store_id, item_id, qty_delta (negative removes), reason (5+ chars)}` → `{data: {adjustment_no, on_hand}}` |

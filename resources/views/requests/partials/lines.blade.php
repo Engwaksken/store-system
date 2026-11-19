@@ -7,7 +7,7 @@
             <td class="num">{{ $l->pm_approved_qty !== null ? qty($l->pm_approved_qty) : '-' }}</td>
             <td class="num">{{ $l->final_approved_qty !== null ? qty($l->final_approved_qty) : '-' }}</td>
             <td class="num">{{ qty($l->issued_qty) }}</td>
-            <td class="num">{{ qty($l->outstanding()) }}</td>
+            <td class="num">@if((float) $l->outstanding() > 0 && (float) $l->issued_qty > 0)<strong>{{ qty($l->outstanding()) }}</strong>@else{{ qty($l->outstanding()) }}@endif</td>
             <td class="num">{{ qty($l->item->onHand()) }}</td>
             @if($deciding)
                 @php($max = $canPm ? $l->requested_qty : $l->pm_approved_qty)

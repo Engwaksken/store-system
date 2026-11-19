@@ -61,14 +61,12 @@ class IssuanceAndStockTest extends TestCase
         $this->receive($this->cement, 6);
         $req = $this->approvedRequest(10);
 
-        try {
-            $this->issue($req, 7);
-            $this->fail('Issued more than on hand');
-        } catch (WorkflowException $e) {
-            $this->assertStringContainsString('in stock', $e->getMessage());
-        }
-
-        $this->issue($req, 6);
+        // Asking for more than the store holds issues what is in stock; the rest stays outstanding.
+        $voucher = $this->issue($req, 7);
+        $line = $voucher->lines()->sole();
+        $this->assertSame('6.000', (string) $line->qty);
+        $this->assertSame('10.000', $line->approvedQty());
+        $this->assertSame('4.000', $line->balanceAfter());
         $this->assertSame('0.000', $this->onHand($this->cement));
         $this->assertSame(RequestStatus::PartiallyIssued, $req->fresh()->status);
         $this->assertSame('4.000', $req->lines()->first()->outstanding());
@@ -118,7 +116,8 @@ class IssuanceAndStockTest extends TestCase
         $lines = $req->lines()->orderBy('id')->get();
 
         try {
-            app(IssueService::class)->issue($this->store, $req, [$lines[0]->id => 5, $lines[1]->id => 5], 'X');
+            // Steel asks for more than was approved: the whole voucher is refused.
+            app(IssueService::class)->issue($this->store, $req, [$lines[0]->id => 5, $lines[1]->id => 6], 'X');
             $this->fail('Should fail on steel');
         } catch (WorkflowException) {
         }

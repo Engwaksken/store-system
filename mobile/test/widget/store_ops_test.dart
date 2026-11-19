@@ -122,6 +122,33 @@ void main() {
     expect((vouchers.first as Map)['acknowledged'], isFalse);
   });
 
+  testWidgets('asking for more than the store holds issues what is in stock and the voucher shows the balance', (tester) async {
+    final (container, backend, auth) = await _signedIn(tester);
+    addTearDown(container.dispose);
+    final reqId = ((_call(backend, auth, 'GET', 'issues/queue')['data'] as List).first as Map)['id'] as int;
+    final form = _call(backend, auth, 'GET', 'requests/$reqId/issue')['data'] as Map;
+    final line = (form['lines'] as List).first as Map;
+    final itemId = (line['item'] as Map)['id'];
+    // Leave half the outstanding quantity in the store, then ask for all of it.
+    final onHand = double.parse(line['on_hand'] as String);
+    final outstanding = double.parse(line['outstanding'] as String);
+    final leave = outstanding / 2;
+    _call(backend, auth, 'POST', 'adjustments', body: {'store_id': 1, 'item_id': itemId, 'qty_delta': (leave - onHand).toStringAsFixed(3), 'reason': 'Test: leave half'});
+    final issue = _call(backend, auth, 'POST', 'requests/$reqId/issue', body: {
+      'store_id': 1,
+      'qty': {'${line['id']}': outstanding.toStringAsFixed(3)},
+      'recipient_name': 'Foreman',
+      'idempotency_key': 'short',
+    })['data'] as Map;
+    final issued = (issue['lines'] as List).single as Map;
+    expect(double.parse(issued['qty'] as String), leave);
+    expect(double.parse(issued['balance_qty'] as String), greaterThan(0));
+
+    await _pump(tester, container, IssueDetailScreen(id: issue['id'] as int));
+    expect(find.byKey(const Key('issue-balance-note')), findsOneWidget);
+    expect(find.textContaining('Balance ', findRichText: true), findsWidgets);
+  });
+
   testWidgets('voucher detail lets the storekeeper acknowledge for the recipient', (tester) async {
     final (container, backend, auth) = await _signedIn(tester);
     addTearDown(container.dispose);

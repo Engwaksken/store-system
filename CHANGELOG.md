@@ -1,5 +1,15 @@
 # Changelog
 
+## Partial issues show the remaining balance (20 Nov 2026)
+- When more is asked for than the store holds, the storekeeper's issue now goes ahead with what is in stock (web and
+  mobile) instead of being refused; the rest stays outstanding on the request. Refused only when none of it is in stock
+  ("Request restock only" is offered) or above the approved balance.
+- The voucher (screen, print, PDF and mobile) shows Approved, Issued now and **Balance remaining** per item, with a
+  "Partial issue" note; the confirmation message lists the remaining balance; the request page shows "Partly issued"
+  with the balance to issue.
+- API: voucher lines carry `approved_qty` and `balance_qty`.
+- Tests: `PartialIssueBalanceTest` (4), Flutter `store_ops_test` (+1); two issuance tests updated to the new rule.
+
 ## Roles and permissions revised (20 Nov 2026)
 - **Storekeepers see and issue only for their assigned projects**: projects ticked on their user record or on the
   project's team list, plus the project of any site store they run. Applies to the projects list, requests, the issue

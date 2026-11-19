@@ -56,7 +56,7 @@ final class PresentOps
 
     public static function issueDetail(MaterialIssue $i, User $viewer): array
     {
-        $i->loadMissing('project', 'store', 'request', 'issuer', 'lines.item.unit', 'lines.returnLines', 'acknowledgment.user', 'returns');
+        $i->loadMissing('project', 'store', 'request', 'issuer', 'lines.item.unit', 'lines.returnLines', 'lines.requestLine', 'acknowledgment.user', 'returns');
         $values = self::values($viewer);
         $as = Gate::forUser($viewer);
 
@@ -64,6 +64,8 @@ final class PresentOps
             'notes' => $i->notes,
             'lines' => $i->lines->map(fn ($l) => array_filter([
                 'id' => $l->id, 'item' => self::item($l->item), 'qty' => Present::qty($l->qty), 'returned_qty' => Present::qty($l->returnedQty()),
+                // Partial issue: approved on the request line and still to issue after this voucher.
+                'approved_qty' => Present::qty($l->approvedQty()), 'balance_qty' => Present::qty($l->balanceAfter()),
                 'unit_cost' => $values ? Present::money($l->unit_cost_snapshot) : null, 'line_value' => $values ? Present::money($l->line_value) : null,
             ], fn ($v) => $v !== null))->values()->all(),
             'acknowledgment' => $i->acknowledgment ? [

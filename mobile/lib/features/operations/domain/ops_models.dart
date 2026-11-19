@@ -1,3 +1,5 @@
+import 'package:decimal/decimal.dart';
+
 import '../../../core/api/json.dart';
 import '../../../core/api/refs.dart';
 import '../../requests/domain/request_models.dart';
@@ -73,11 +75,28 @@ class IssueSummary {
 }
 
 class IssueLine {
-  const IssueLine({required this.id, required this.item, required this.qty, this.returnedQty, this.unitCost, this.lineValue});
+  const IssueLine({
+    required this.id,
+    required this.item,
+    required this.qty,
+    this.returnedQty,
+    this.approvedQty,
+    this.balanceQty,
+    this.unitCost,
+    this.lineValue,
+  });
   final int id;
   final ItemRef item;
   final String qty;
   final String? returnedQty;
+
+  /// Final approved quantity on the request line.
+  final String? approvedQty;
+
+  /// Still to issue on the request line after this voucher (partial issue).
+  final String? balanceQty;
+
+  bool get hasBalance => balanceQty != null && (Decimal.tryParse(balanceQty!) ?? Decimal.zero) > Decimal.zero;
   final String? unitCost;
   final String? lineValue;
 
@@ -86,6 +105,8 @@ class IssueLine {
     item: _item(j['item']),
     qty: asDecimalString(j['qty']) ?? '0',
     returnedQty: asDecimalString(j['returned_qty']),
+    approvedQty: asDecimalString(j['approved_qty']),
+    balanceQty: asDecimalString(j['balance_qty']),
     unitCost: asDecimalString(j['unit_cost']),
     lineValue: asDecimalString(j['line_value']),
   );
