@@ -61,4 +61,13 @@ class CostCodeController extends Controller
 
         return back()->with('status', "Cost code {$costCode->code} updated.");
     }
+
+    /** Delete the ticked cost codes that no budget, expense, claim or order uses. */
+    public function bulk(\Illuminate\Http\Request $request)
+    {
+        \Illuminate\Support\Facades\Gate::authorize('manage-cost-codes');
+        $codes = \App\Models\CostCode::whereIn('id', $this->bulkIds($request))->orderBy('code')->get();
+
+        return $this->bulkApply($codes, fn ($c) => $c->code, fn ($c) => $this->deleteUnused($c, $c->code), 'cost code', 'deleted');
+    }
 }

@@ -36,7 +36,8 @@ class AuditorAccessTest extends TestCase
     private const PERSONAL = ['logout', 'password.change.update', 'notifications.read-all',
         'notifications.settings.update', 'notifications.test', 'push.subscribe', 'push.unsubscribe',
         'feedback.store', // sending feedback is a personal action, open to read-only users too
-        'passkeys.options', 'passkeys.store', 'passkeys.destroy', 'devices.destroy']; // own sign-in methods
+        'passkeys.options', 'passkeys.store', 'passkeys.destroy', 'devices.destroy', // own sign-in methods
+        'notifications.bulk-delete']; // own notifications
 
     public function test_auditor_reads_everything_and_writes_nothing(): void
     {

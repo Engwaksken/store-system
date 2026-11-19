@@ -65,4 +65,13 @@ class FeedbackController extends Controller
 
         return redirect()->route('feedback.show', $feedback)->with('status', 'Feedback updated.');
     }
+
+    /** Owner/Admin: delete the ticked feedback. */
+    public function bulk(Request $request)
+    {
+        \Illuminate\Support\Facades\Gate::authorize('manage-feedback');
+        $items = \App\Models\Feedback::whereIn('id', $this->bulkIds($request))->orderBy('id')->get();
+
+        return $this->bulkApply($items, fn ($f) => $f->reference(), fn ($f) => $this->deleteUnused($f, $f->reference()), 'feedback item', 'deleted');
+    }
 }

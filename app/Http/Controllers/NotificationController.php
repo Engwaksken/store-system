@@ -141,4 +141,13 @@ class NotificationController extends Controller
 
         return "{$browser} on {$os}";
     }
+
+    /** Delete the ticked notifications (your own only). */
+    public function bulkDestroy(Request $request)
+    {
+        $ids = $this->bulkIds($request, 'uuid');
+        $n = $request->user()->notifications()->whereIn('id', $ids)->delete();
+
+        return back()->with('status', "{$n} notification(s) deleted.");
+    }
 }

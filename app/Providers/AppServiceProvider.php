@@ -87,6 +87,7 @@ class AppServiceProvider extends ServiceProvider
         // Administration
         Gate::define('manage-users', $is(Role::Admin));
         Gate::define('manage-settings', $is(Role::Admin));
+        Gate::define('delete-stores', $is(Role::Admin));
         Gate::define('view-activity', $is(Role::Admin, Role::OverallManager, Role::Auditor));
         Gate::define('manage-feedback', $is(Role::Admin));
         Gate::define('view-feedback', fn (User $u, \App\Models\Feedback $f) => $f->user_id === $u->id || $u->hasRole(Role::Admin));

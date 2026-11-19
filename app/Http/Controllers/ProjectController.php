@@ -136,4 +136,21 @@ class ProjectController extends Controller
             'member_ids.*' => ['integer', Rule::exists('users', 'id')->where('is_active', true)],
         ]);
     }
+
+    /** Delete the ticked projects that were never used (no requests, stock, money, purchasing, plans or site store). */
+    public function bulk(\Illuminate\Http\Request $request)
+    {
+        \Illuminate\Support\Facades\Gate::authorize('manage-projects');
+        $projects = Project::whereIn('id', $this->bulkIds($request))->orderBy('code')->get();
+
+        return $this->bulkApply($projects, fn ($p) => $p->code, fn (Project $p) => $this->deleteUnused($p, $p->code, fn () => match (true) {
+            $p->requests()->exists() => 'has material requests; set it to Cancelled or Completed instead',
+            $p->issues()->exists() => 'has issue vouchers',
+            $p->expenses()->exists() || $p->claims()->exists() => 'has expenses or claims',
+            $p->purchaseOrders()->exists() || \App\Models\PurchaseRequisition::where('project_id', $p->id)->exists() => 'has purchasing documents',
+            $p->budgets()->exists() || $p->boqItems()->exists() || $p->milestones()->exists() => 'has budgets, BOQ lines or milestones',
+            \App\Models\Store::where('project_id', $p->id)->exists() => 'has a site store',
+            default => null,
+        }), 'project', 'deleted');
+    }
 }

@@ -76,6 +76,24 @@ Full policy: `docs/PROCUREMENT.md`.
 ## Auditor (Phase 5)
 Read-only: dashboard, projects (all), budget/BOQ pages (no edit), requests, issues/vouchers, stock, stores, transfers, returns, counts, receipts, requisitions, POs, suppliers, supplier invoices, claims, expenses, cost codes, every report and export (CSV / Excel / PDF), and the activity log with export. **No** create, edit, approve, post or pay action anywhere — `AuditorAccessTest` calls every mutating route and expects 403.
 
+## Deleting records (list pages, multiple selection)
+Only master data that was never used, drafts and personal items can be deleted; a record in use is skipped and listed
+(restrict foreign keys refuse it even if a check were missed). Posted documents and the audit log are never deleted.
+
+| Records | Who | Deletable when |
+|---|---|---|
+| Projects | Admin, Overall Manager | no requests, vouchers, expenses, claims, purchasing, budgets/BOQ/milestones or site store |
+| Stores | Admin | not the main store; no stock history and no stock |
+| Suppliers | Admin, Procurement | no quotes, orders, invoices or payments |
+| Cost codes | Admin, Accountant | not used by budgets, expenses, claims or orders |
+| Catalogue items, categories, units | Admin | see Catalog setup |
+| Purchase requisitions | requester or Admin | draft, rejected or cancelled, no quotes or orders |
+| Material requests, expense claims | as before (drafts / own) | existing rules |
+| Stock counts | the counter or Admin | draft |
+| Feedback | Admin | always |
+| Notifications | the recipient | always |
+| Users | — | never; Admin bulk-deactivates (not self, not the last active Admin) |
+
 ## Separation-of-duty rules (server-checked)
 1. PM-step approver ≠ requester.
 2. Overall approver ≠ requester **and** ≠ PM-step approver of the same version.

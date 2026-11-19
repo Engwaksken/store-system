@@ -105,4 +105,18 @@ class StoreController extends Controller
             'storekeepers' => User::where('role', Role::Storekeeper)->where('is_active', true)->orderBy('name')->get(),
         ];
     }
+
+    /** Owner/Admin: delete the ticked stores that never held stock. The main store is never deleted. */
+    public function bulk(\Illuminate\Http\Request $request)
+    {
+        \Illuminate\Support\Facades\Gate::authorize('delete-stores');
+        $stores = \App\Models\Store::whereIn('id', $this->bulkIds($request))->orderBy('code')->get();
+
+        return $this->bulkApply($stores, fn ($s) => $s->code, fn (\App\Models\Store $s) => $this->deleteUnused($s, $s->code, fn () => match (true) {
+            $s->id === \App\Models\Store::DEFAULT_ID => 'the main store cannot be deleted',
+            $s->stockMovements()->exists() => 'has stock history; deactivate it instead',
+            $s->balances()->where('on_hand', '!=', 0)->exists() => 'still holds stock',
+            default => null,
+        }, fn () => $s->balances()->delete()), 'store', 'deleted');
+    }
 }

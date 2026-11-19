@@ -12,12 +12,16 @@
 <x-list-filters :list="$list">
     <div><label for="f_status">Status</label><select id="f_status" name="status"><option value="">All statuses</option>@foreach(\App\Models\StockCount::STATUSES as $k => $v)<option value="{{ $k }}" @selected(request('status') === $k)>{{ $v }}</option>@endforeach</select></div>
 </x-list-filters>
+@php($bulk = auth()->user()->can('start-count') || auth()->user()->isAdmin())
+<div data-bulk-scope="counts">
+@if($bulk)<x-bulk-bar :action="route('counts.bulk')" scope="counts"><button class="btn small danger" name="action" value="delete" data-confirm="Delete the selected counts? Only draft counts can be deleted; others are skipped and listed." data-confirm-ok="Yes, delete"><i class="fas fa-trash-can"></i> Delete</button></x-bulk-bar>@endif
 <div class="card table-wrap"><table>
-    <thead><tr><th>Count</th><th>Store</th><th>Counted by</th><th>Created</th><th class="num">Lines</th><th>Status</th><th>Decided by</th></tr></thead>
+    <thead><tr>@if($bulk)<th class="check-col"><input type="checkbox" data-check-all aria-label="Select all on this page"></th>@endif<th>Count</th><th>Store</th><th>Counted by</th><th>Created</th><th class="num">Lines</th><th>Status</th><th>Decided by</th></tr></thead>
     <tbody>@forelse($counts as $c)
-        <tr><td><a href="{{ route('counts.show', $c) }}">{{ $c->count_no }}</a></td><td>{{ $c->store->code }}</td><td>{{ $c->counter->name }}</td><td class="nowrap">{{ $c->created_at->format('d M Y') }}</td>
+        <tr>@if($bulk)<td class="check-col"><input type="checkbox" value="{{ $c->id }}" data-row-check aria-label="Select {{ $c->count_no }}"></td>@endif<td><a href="{{ route('counts.show', $c) }}">{{ $c->count_no }}</a></td><td>{{ $c->store->code }}</td><td>{{ $c->counter->name }}</td><td class="nowrap">{{ $c->created_at->format('d M Y') }}</td>
             <td class="num">{{ $c->lines_count }}</td><td><span class="badge {{ $c->tone() }}">{{ $c->statusLabel() }}</span></td><td>{{ $c->decider?->name }}</td></tr>
-    @empty <tr><td colspan="7" class="empty">No counts{{ $list->isFiltered() ? ' match these filters' : ' yet' }}.</td></tr> @endforelse</tbody>
+    @empty <tr><td colspan="{{ 7 + ($bulk ? 1 : 0) }}">No counts{{ $list->isFiltered() ? ' match these filters' : ' yet' }}.</td></tr> @endforelse</tbody>
 </table></div>
 <div class="pagination">{{ $counts->links() }}</div>
+</div>
 @endsection

@@ -165,6 +165,15 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::get('requests/create', [MaterialRequestController::class, 'create'])->name('requests.create');
     Route::post('requests', [MaterialRequestController::class, 'store'])->name('requests.store');
     Route::post('requests/bulk', [MaterialRequestController::class, 'bulk'])->middleware('throttle:30,1')->name('requests.bulk');
+    // Multiple selection on list pages (each record re-checked on the server; used records are skipped).
+    Route::post('projects/bulk', [ProjectController::class, 'bulk'])->middleware('throttle:30,1')->name('projects.bulk');
+    Route::post('stores/bulk', [StoreController::class, 'bulk'])->middleware('throttle:30,1')->name('stores.bulk');
+    Route::post('suppliers/bulk', [SupplierController::class, 'bulk'])->middleware('throttle:30,1')->name('suppliers.bulk');
+    Route::post('cost-codes/bulk', [CostCodeController::class, 'bulk'])->middleware('throttle:30,1')->name('cost-codes.bulk');
+    Route::post('counts/bulk', [StockCountController::class, 'bulk'])->middleware('throttle:30,1')->name('counts.bulk');
+    Route::post('feedback/bulk', [FeedbackController::class, 'bulk'])->middleware('throttle:30,1')->name('feedback.bulk');
+    Route::post('notifications/bulk-delete', [NotificationController::class, 'bulkDestroy'])->middleware('throttle:30,1')->name('notifications.bulk-delete');
+    Route::post('users/bulk', [UserController::class, 'bulk'])->middleware('throttle:30,1')->name('users.bulk');
     Route::get('requests/{materialRequest}', [MaterialRequestController::class, 'show'])->name('requests.show');
     Route::get('requests/{materialRequest}/edit', [MaterialRequestController::class, 'edit'])->name('requests.edit');
     Route::put('requests/{materialRequest}', [MaterialRequestController::class, 'update'])->name('requests.update');

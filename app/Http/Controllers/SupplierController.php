@@ -95,4 +95,13 @@ class SupplierController extends Controller
 
         return $data;
     }
+
+    /** Delete the ticked suppliers that have no quotes, orders, invoices or payments. */
+    public function bulk(\Illuminate\Http\Request $request)
+    {
+        \Illuminate\Support\Facades\Gate::authorize('manage-suppliers');
+        $suppliers = \App\Models\Supplier::whereIn('id', $this->bulkIds($request))->orderBy('code')->get();
+
+        return $this->bulkApply($suppliers, fn ($s) => $s->code, fn ($s) => $this->deleteUnused($s, $s->code), 'supplier', 'deleted');
+    }
 }

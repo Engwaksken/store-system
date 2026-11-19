@@ -21,6 +21,7 @@
             <button type="button" class="btn small danger" data-modal-target="#prs-bulk-reject"><i class="fas fa-ban"></i> Reject</button>
         @endif
         <button class="btn small secondary" name="action" value="cancel" data-confirm="Cancel the selected requisitions? Only drafts, submitted and approved ones can be cancelled, by the requester or procurement." data-confirm-ok="Yes, cancel"><i class="fas fa-xmark"></i> Cancel</button>
+        <button class="btn small danger" name="action" value="delete" data-confirm="Delete the selected requisitions? Only draft, rejected or cancelled ones without quotes or orders can be deleted, by the requester or the Owner/Admin." data-confirm-ok="Yes, delete"><i class="fas fa-trash-can"></i> Delete</button>
     </x-bulk-bar>
     <table class="data-table">
     <thead><tr><th class="check-col"><input type="checkbox" data-check-all aria-label="Select all requisitions on this page"></th><th>PR</th><th>Project</th><th>Deliver to</th><th>Purpose</th><th>Requested by</th><th class="num">Est. total</th><th>Status</th><th class="right">Actions</th></tr></thead>

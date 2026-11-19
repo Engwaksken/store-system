@@ -106,7 +106,7 @@ class PurchaseRequisitionController extends Controller
         // Refuse read-only roles up front; each requisition is still checked on its own.
         abort_unless($request->user()->hasRole(\App\Enums\Role::Admin, \App\Enums\Role::OverallManager) || Gate::any(['create-pr', 'buy']), 403);
         $data = $request->validate([
-            'action' => 'required|in:approve,reject,cancel',
+            'action' => 'required|in:approve,reject,cancel,delete',
             'ids' => 'required|array|min:1|max:200',
             'ids.*' => 'integer',
             'reason' => 'nullable|required_if:action,reject|string|max:1000',
@@ -119,7 +119,8 @@ class PurchaseRequisitionController extends Controller
                 ? $service->decideRequisition($user, $pr, $data['action'] === 'approve' ? 'approved' : 'rejected', $data['reason'] ?? null)
                 : throw new \App\Exceptions\WorkflowException('it is not waiting for your approval'),
             'cancel' => $service->cancelRequisition($user, $pr),
-        }, 'requisition', ['approve' => 'approved', 'reject' => 'rejected', 'cancel' => 'cancelled'][$data['action']]);
+            'delete' => $this->deleteRequisition($user, $pr),
+        }, 'requisition', ['approve' => 'approved', 'reject' => 'rejected', 'cancel' => 'cancelled', 'delete' => 'deleted'][$data['action']]);
     }
 
     public function cancel(Request $request, PurchaseRequisition $pr, PurchasingService $service)
@@ -153,5 +154,17 @@ class PurchaseRequisitionController extends Controller
         $service->selectQuote($request->user(), $quote, $data['selection_reason'] ?? null);
 
         return back()->with('status', "{$quote->supplier->name} selected.");
+    }
+
+    /** Drafts, rejected and cancelled requisitions without quotes or orders; by the requester or the Owner/Admin. */
+    private function deleteRequisition(\App\Models\User $user, PurchaseRequisition $pr): void
+    {
+        if (! in_array($pr->status, ['draft', 'rejected', 'cancelled'], true)) {
+            throw new \App\Exceptions\WorkflowException('only draft, rejected or cancelled requisitions can be deleted');
+        }
+        if ($user->id !== $pr->requested_by && ! $user->isAdmin()) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('only the requester or the Owner/Admin can delete it');
+        }
+        $this->deleteUnused($pr, $pr->pr_no, fn () => $pr->quotes()->exists() ? 'has supplier quotes' : null);
     }
 }

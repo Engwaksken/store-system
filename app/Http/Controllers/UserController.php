@@ -89,4 +89,34 @@ class UserController extends Controller
 
         return $redirect->with('status', $done)->with('credentials', ['email' => $user->email, 'password' => $temporary]);
     }
+
+    /**
+     * Owner/Admin: activate or deactivate the ticked accounts. Accounts are never deleted (their names stay on
+     * approvals, vouchers and the audit log). You cannot deactivate yourself or the last active Owner/Admin.
+     */
+    public function bulk(\Illuminate\Http\Request $request)
+    {
+        \Illuminate\Support\Facades\Gate::authorize('manage-users');
+        $action = $request->validate(['action' => 'required|in:activate,deactivate'])['action'];
+        $users = User::whereIn('id', $this->bulkIds($request))->orderBy('name')->get();
+        $me = $request->user();
+
+        return $this->bulkApply($users, fn ($u) => $u->name, function (User $u) use ($action, $me) {
+            $active = $action === 'activate';
+            if ($u->is_active === $active) {
+                throw new \App\Exceptions\WorkflowException($active ? 'already active' : 'already inactive');
+            }
+            if (! $active && $u->id === $me->id) {
+                throw new \App\Exceptions\WorkflowException('you cannot deactivate your own account');
+            }
+            if (! $active && $u->isAdmin() && User::where('role', Role::Admin->value)->where('is_active', true)->count() <= 1) {
+                throw new \App\Exceptions\WorkflowException('the last active Owner/Admin cannot be deactivated');
+            }
+            $u->forceFill(['is_active' => $active])->save();
+            if (! $active) {
+                $u->tokens()->delete(); // signs the mobile app out
+            }
+            \App\Models\ActivityLog::record($active ? 'user.activated' : 'user.deactivated', "{$u->name} ".($active ? 'activated' : 'deactivated').' (bulk)', $u);
+        }, 'user', $action === 'activate' ? 'activated' : 'deactivated');
+    }
 }

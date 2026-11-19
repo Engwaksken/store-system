@@ -13,10 +13,13 @@
     <div><label for="f_category">Category</label><select id="f_category" name="category"><option value="">All categories</option>@foreach(\App\Models\CostCode::CATEGORIES as $k => $v)<option value="{{ $k }}" @selected(request('category') === $k)>{{ $v }}</option>@endforeach</select></div>
     <div><label for="f_status">Status</label><select id="f_status" name="status"><option value="">All</option><option value="active" @selected(request('status') === 'active')>Active</option><option value="inactive" @selected(request('status') === 'inactive')>Inactive</option></select></div>
 </x-list-filters>
+@php($bulk = auth()->user()->can('manage-cost-codes'))
+<div data-bulk-scope="cost-codes">
+@if($bulk)<x-bulk-bar :action="route('cost-codes.bulk')" scope="cost-codes"><button class="btn small danger" name="action" value="delete" data-confirm="Delete the selected cost codes? Codes used by a budget, expense, claim or order are skipped and listed." data-confirm-ok="Yes, delete"><i class="fas fa-trash-can"></i> Delete</button></x-bulk-bar>@endif
 <div class="card table-wrap"><table>
-    <thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Status</th>@can('manage-cost-codes')<th></th>@endcan</tr></thead>
+    <thead><tr>@if($bulk)<th class="check-col"><input type="checkbox" data-check-all aria-label="Select all on this page"></th>@endif<th>Code</th><th>Name</th><th>Category</th><th>Status</th>@can('manage-cost-codes')<th></th>@endcan</tr></thead>
     <tbody>@forelse($codes as $c)
-        <tr><td>{{ $c->code }}</td><td>{{ $c->name }}</td><td>{{ \App\Models\CostCode::CATEGORIES[$c->category] ?? $c->category }}</td>
+        <tr>@if($bulk)<td class="check-col"><input type="checkbox" value="{{ $c->id }}" data-row-check aria-label="Select {{ $c->code }}"></td>@endif<td>{{ $c->code }}</td><td>{{ $c->name }}</td><td>{{ \App\Models\CostCode::CATEGORIES[$c->category] ?? $c->category }}</td>
             <td>@if($c->is_active)<span class="badge approved">Active</span>@else<span class="badge muted">Inactive</span>@endif</td>
             @can('manage-cost-codes')<td class="right"><button type="button" class="btn-icon" data-modal-target="#cc-edit-{{ $c->id }}" title="Edit {{ $c->code }}" aria-label="Edit {{ $c->code }}"><i class="fas fa-pen"></i></button>
                 <template id="cc-edit-{{ $c->id }}" data-title="Edit cost code {{ $c->code }}">
@@ -28,9 +31,10 @@
                         <button class="btn">Save</button>
                     </form>
                 </template></td>@endcan</tr>
-    @empty <tr><td colspan="5" class="empty">{{ $list->isFiltered() ? 'No cost codes match these filters.' : 'No cost codes yet.' }}</td></tr> @endforelse</tbody>
+    @empty <tr><td colspan="{{ 5 + ($bulk ? 1 : 0) }}">{{ $list->isFiltered() ? 'No cost codes match these filters.' : 'No cost codes yet.' }}</td></tr> @endforelse</tbody>
 </table></div>
 <div class="pagination">{{ $codes->links() }}</div>
+</div>
 @can('manage-cost-codes')
 <template id="cc-create" data-title="Add cost code">
     <form method="POST" action="{{ route('cost-codes.store') }}">@csrf

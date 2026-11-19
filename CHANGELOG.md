@@ -1,5 +1,21 @@
 # Changelog
 
+## Multiple selection on list pages (20 Nov 2026)
+- Tick rows (or "select all on this page") and act on them together, shown only to people allowed to act; every row is
+  re-checked on the server and rows that cannot be changed are skipped with the reason:
+  - **Projects** (Admin / Overall Manager), **suppliers** (Admin / Procurement), **cost codes** (Admin / Accountant),
+    **stores** (Admin; never the main store): delete only records never used. Anything with requests, stock history,
+    money, purchasing, plans or documents is kept; deactivate or close those instead.
+  - **Purchase requisitions**: Delete added next to Approve / Reject / Cancel, for draft, rejected or cancelled
+    requisitions without quotes or orders (requester or Admin).
+  - **Stock counts**: delete drafts (the counter or Admin). **Feedback**: delete (Admin). **Notifications**: delete
+    your own.
+  - **Users**: Activate / Deactivate (Admin). Accounts are never deleted; you cannot deactivate yourself or the last
+    active Owner/Admin; deactivating signs the mobile app out.
+- Posted documents (issue vouchers, receipts, returns, transfers, supplier invoices, expenses, purchase orders) and the
+  audit log stay undeletable by design; orders, requests and claims keep their existing bulk cancel / decide actions.
+- Tests: `BulkSelectionTest` (9).
+
 ## Partial issues show the remaining balance (20 Nov 2026)
 - When more is asked for than the store holds, the storekeeper's issue now goes ahead with what is in stock (web and
   mobile) instead of being refused; the rest stays outstanding on the request. Refused only when none of it is in stock

@@ -83,4 +83,21 @@ class StockCountController extends Controller
         return redirect()->route('counts.show', $count)->with('status', $data['decision'] === 'approved'
             ? 'Count approved; variances posted to the stock ledger.' : 'Count rejected; nothing was posted.');
     }
+
+    /** Delete the ticked draft counts (the counter or the Owner/Admin); submitted and posted counts stay. */
+    public function bulk(\Illuminate\Http\Request $request)
+    {
+        abort_unless($request->user()->isAdmin() || \Illuminate\Support\Facades\Gate::allows('start-count'), 403);
+        $counts = \App\Models\StockCount::whereIn('id', $this->bulkIds($request))->orderBy('id')->get();
+
+        return $this->bulkApply($counts, fn ($c) => $c->count_no, function (\App\Models\StockCount $c) use ($request) {
+            if ($c->status !== 'draft') {
+                throw new \App\Exceptions\WorkflowException('only draft counts can be deleted');
+            }
+            if (! \Illuminate\Support\Facades\Gate::forUser($request->user())->allows('edit-count', $c)) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('only the person counting or the Owner/Admin can delete it');
+            }
+            $this->deleteUnused($c, $c->count_no);
+        }, 'count', 'deleted');
+    }
 }
