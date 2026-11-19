@@ -21,6 +21,8 @@ use Illuminate\Support\Facades\Route;
 */
 Route::prefix('v1')->name('api.')->group(function () {
     Route::post('auth/login', [AuthController::class, 'login'])->name('login');
+    Route::post('auth/biometric-login', [AuthController::class, 'biometricLogin'])->name('biometric-login');
+    Route::post('auth/biometric-key/revoke', [AuthController::class, 'revokeBiometricKey'])->middleware('throttle:20,1')->name('biometric-key.revoke');
     Route::get('branding', BrandingController::class)->name('branding');
 
     Route::middleware(['auth:sanctum', 'api.usable', 'throttle:120,1'])->group(function () {
@@ -29,6 +31,7 @@ Route::prefix('v1')->name('api.')->group(function () {
         Route::post('me/avatar', [AuthController::class, 'uploadAvatar'])->middleware('throttle:10,1')->name('me.avatar');
         Route::delete('me/avatar', [AuthController::class, 'deleteAvatar'])->middleware('throttle:10,1')->name('me.avatar.delete');
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('logout');
+        Route::post('me/biometric-key', [AuthController::class, 'createBiometricKey'])->middleware('throttle:10,1')->name('me.biometric-key');
         Route::post('auth/change-password', [AuthController::class, 'changePassword'])->middleware('throttle:10,1')->name('change-password');
 
         Route::get('dashboard', DashboardController::class)->name('dashboard');

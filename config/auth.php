@@ -114,4 +114,15 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    | Passkeys (fingerprint / face sign-in on the web). The relying-party id is the site's host name and must not
+    | change after people register passkeys. Both default to APP_URL; set them when the site is reached on another
+    | host. PASSKEY_ORIGINS is comma-separated, e.g. https://store.example.com. Browsers allow passkeys only on
+    | https:// sites (and http://localhost).
+    */
+    'passkeys' => [
+        'rp_id' => env('PASSKEY_RP_ID'),
+        'origins' => env('PASSKEY_ORIGINS'),
+    ],
+
 ];

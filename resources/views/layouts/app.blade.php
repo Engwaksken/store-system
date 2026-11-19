@@ -98,7 +98,7 @@
             <span class="topbar-actions">
                 @php($unread = $u->unreadNotifications()->count())
                 <a href="{{ route('notifications.index') }}" class="btn secondary small" title="Notifications" aria-label="Notifications, {{ $unread }} unread" data-bell data-poll-url="{{ route('notifications.poll') }}" data-since="{{ now()->toIso8601String() }}"><i class="fas fa-bell"></i>@if($unread) <span class="count">{{ $unread }}</span>@endif</a>
-                <a href="{{ route('password.change') }}" class="btn secondary small" title="Change password" aria-label="Change password"><i class="fas fa-key"></i><span class="btn-text"> Password</span></a>
+                <a href="{{ route('password.change') }}" class="btn secondary small" title="Sign-in &amp; security" aria-label="Sign-in and security"><i class="fas fa-key"></i><span class="btn-text"> Security</span></a>
                 <form method="POST" action="{{ route('logout') }}" class="inline-form">@csrf<button class="btn secondary small" title="Sign out" aria-label="Sign out"><i class="fas fa-right-from-bracket"></i><span class="btn-text"> Sign out</span></button></form>
             </span>
         </header>

@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
 import '../../features/auth/data/auth_controller.dart';
+import '../../features/auth/data/auth_repository.dart';
+import '../api/api_exception.dart';
+import 'biometric_store.dart';
 
-/// Fingerprint / face unlock for the app (device biometrics, with the phone PIN as fallback).
-/// The setting lives on this device only and is cleared when the user signs out.
+export 'biometric_store.dart';
+
+/// Fingerprint / face sign-in for the app (device biometrics, with the phone PIN as fallback).
+///
+/// Turning it on asks the server for a device key (`POST /me/biometric-key`) and keeps it in the
+/// keystore. While it is on:
+/// * the sign-in screen offers "Sign in with fingerprint or face", even after signing out;
+/// * the app locks when it opens and after [BiometricController.relockAfter] in the background.
+///
+/// It is turned off (and the key revoked) when someone else signs in on this phone, when the
+/// server no longer accepts the key (password changed elsewhere, removed on the web), or from the
+/// switch in Edit profile.
 abstract class BiometricAuth {
   /// The device can verify the owner (biometrics or screen lock).
   Future<bool> available();
@@ -42,82 +54,101 @@ class LocalBiometricAuth implements BiometricAuth {
   }
 }
 
-/// Where the on/off choice is kept.
-abstract class BiometricPrefs {
-  Future<bool> load();
-  Future<void> save(bool enabled);
-}
-
-class SecureBiometricPrefs implements BiometricPrefs {
-  static const _key = 'biometric_lock';
-  final _storage = const FlutterSecureStorage();
-
-  @override
-  Future<bool> load() async => (await _storage.read(key: _key)) == '1';
-
-  @override
-  Future<void> save(bool enabled) => enabled ? _storage.write(key: _key, value: '1') : _storage.delete(key: _key);
-}
-
-class MemoryBiometricPrefs implements BiometricPrefs {
-  MemoryBiometricPrefs([this.value = false]);
-  bool value;
-
-  @override
-  Future<bool> load() async => value;
-
-  @override
-  Future<void> save(bool enabled) async => value = enabled;
-}
-
 final biometricAuthProvider = Provider<BiometricAuth>((ref) => LocalBiometricAuth());
-final biometricPrefsProvider = Provider<BiometricPrefs>((ref) => MemoryBiometricPrefs());
 
-/// Value read before the first frame (main.dart), so a locked app never flashes its content.
-final initialBiometricEnabledProvider = Provider<bool>((ref) => false);
+class BiometricState {
+  const BiometricState({this.credential, this.locked = false});
 
-class BiometricLockState {
-  const BiometricLockState({required this.enabled, required this.locked});
-  final bool enabled;
+  /// Present while fingerprint sign-in is on for this phone.
+  final BiometricCredential? credential;
+
+  /// The signed-in app is covered by the unlock screen.
   final bool locked;
+
+  bool get enabled => credential != null;
 }
 
-class BiometricLockController extends Notifier<BiometricLockState> {
+class BiometricController extends Notifier<BiometricState> {
   /// Locks again after the app has been in the background this long.
   static const relockAfter = Duration(seconds: 30);
   DateTime? _backgroundSince;
 
   @override
-  BiometricLockState build() {
+  BiometricState build() {
     ref.listen(authControllerProvider, (prev, next) {
-      // Signing out turns the lock off: the next person signs in with their password.
-      if (prev is AuthSignedIn && next is AuthSignedOut && state.enabled) _set(false);
+      if (next is! AuthSignedIn) return;
+      final cred = state.credential;
+      if (cred != null && cred.userId != next.user.id) {
+        // Someone else signed in on this phone: the previous person's fingerprint sign-in goes.
+        _forget(revoke: true);
+      } else if (prev is AuthSignedOut && state.locked) {
+        // Just signed in (password or fingerprint): nothing to unlock.
+        state = BiometricState(credential: cred);
+      }
     });
-    final enabled = ref.read(initialBiometricEnabledProvider);
-    return BiometricLockState(enabled: enabled, locked: enabled);
+    final cred = ref.read(initialBiometricCredentialProvider);
+    return BiometricState(credential: cred, locked: cred != null);
   }
 
-  Future<void> _set(bool enabled) async {
-    await ref.read(biometricPrefsProvider).save(enabled);
-    state = BiometricLockState(enabled: enabled, locked: false);
+  BiometricAuth get _auth => ref.read(biometricAuthProvider);
+  AuthRepository get _repo => ref.read(authRepositoryProvider);
+
+  Future<void> _forget({bool revoke = false}) async {
+    final cred = state.credential;
+    state = const BiometricState();
+    await ref.read(biometricStoreProvider).save(null);
+    if (revoke && cred != null) await _repo.revokeBiometricKey(cred.key);
   }
 
   /// Turning it on asks for the fingerprint first, so it is known to work. Returns an error message, or null.
   Future<String?> setEnabled(bool enabled) async {
     if (!enabled) {
-      await _set(false);
+      await _forget(revoke: true);
       return null;
     }
-    final auth = ref.read(biometricAuthProvider);
-    if (!await auth.available()) return 'This phone has no fingerprint, face unlock or screen lock set up.';
-    if (!await auth.authenticate('Confirm it is you to turn on biometric unlock')) return 'Not confirmed; biometric unlock stays off.';
-    await _set(true);
-    return null;
+    final user = ref.read(currentUserProvider);
+    if (user == null) return 'Sign in first.';
+    if (!await _auth.available()) return 'This phone has no fingerprint, face unlock or screen lock set up.';
+    if (!await _auth.authenticate('Confirm it is you to turn on fingerprint sign-in')) {
+      return 'Not confirmed; fingerprint sign-in stays off.';
+    }
+    try {
+      final deviceName = await ref.read(deviceNameProvider.future);
+      final key = await _repo.createBiometricKey(deviceName: deviceName, replaceKey: state.credential?.key);
+      final cred = BiometricCredential(key: key, userId: user.id, name: user.name, email: user.email);
+      await ref.read(biometricStoreProvider).save(cred);
+      state = BiometricState(credential: cred);
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    }
+  }
+
+  /// "Sign in with fingerprint or face" on the sign-in screen. Returns an error message, or null when signed in.
+  Future<String?> signIn() async {
+    final cred = state.credential;
+    if (cred == null) return 'Fingerprint sign-in is not set up on this phone.';
+    if (!await _auth.authenticate('Sign in as ${cred.name}')) return 'Not confirmed. Try again or use your password.';
+    try {
+      final deviceName = await ref.read(deviceNameProvider.future);
+      await ref.read(authControllerProvider.notifier).loginWithBiometricKey(cred.key, deviceName);
+      state = BiometricState(credential: state.credential);
+      return null;
+    } on ApiException catch (e) {
+      if (e.kind == ApiErrorKind.unauthorized || e.kind == ApiErrorKind.deactivated) {
+        await _forget();
+        return e.kind == ApiErrorKind.deactivated
+            ? e.message
+            : 'Fingerprint sign-in is no longer set up for this phone (for example, the password was changed). '
+                'Sign in with your password, then turn it on again in Edit profile.';
+      }
+      return e.message;
+    }
   }
 
   Future<bool> unlock() async {
-    final ok = await ref.read(biometricAuthProvider).authenticate('Unlock the app');
-    if (ok) state = BiometricLockState(enabled: state.enabled, locked: false);
+    final ok = await _auth.authenticate('Unlock the app');
+    if (ok) state = BiometricState(credential: state.credential);
     return ok;
   }
 
@@ -129,15 +160,15 @@ class BiometricLockController extends Notifier<BiometricLockState> {
       final since = _backgroundSince;
       _backgroundSince = null;
       if (since != null && DateTime.now().difference(since) >= relockAfter && !state.locked) {
-        state = BiometricLockState(enabled: true, locked: true);
+        state = BiometricState(credential: state.credential, locked: true);
       }
     }
   }
 }
 
-final biometricLockProvider = NotifierProvider<BiometricLockController, BiometricLockState>(BiometricLockController.new);
+final biometricProvider = NotifierProvider<BiometricController, BiometricState>(BiometricController.new);
 
-/// Covers the app with an unlock screen while the biometric lock is on and locked (signed-in users only).
+/// Covers the app with an unlock screen while fingerprint sign-in is on and the app is locked (signed-in users only).
 class BiometricGate extends ConsumerStatefulWidget {
   const BiometricGate({super.key, required this.child});
   final Widget child;
@@ -164,16 +195,16 @@ class _BiometricGateState extends ConsumerState<BiometricGate> with WidgetsBindi
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    ref.read(biometricLockProvider.notifier).onLifecycle(state);
+    ref.read(biometricProvider.notifier).onLifecycle(state);
     if (state == AppLifecycleState.resumed) _maybePrompt();
   }
 
   Future<void> _maybePrompt() async {
-    final lock = ref.read(biometricLockProvider);
+    final lock = ref.read(biometricProvider);
     if (!lock.locked || _prompting || ref.read(currentUserProvider) == null) return;
     _prompting = true;
     try {
-      await ref.read(biometricLockProvider.notifier).unlock();
+      await ref.read(biometricProvider.notifier).unlock();
     } finally {
       _prompting = false;
     }
@@ -181,10 +212,11 @@ class _BiometricGateState extends ConsumerState<BiometricGate> with WidgetsBindi
 
   @override
   Widget build(BuildContext context) {
-    final lock = ref.watch(biometricLockProvider);
+    final lock = ref.watch(biometricProvider);
     final signedIn = ref.watch(currentUserProvider) != null;
-    ref.listen(currentUserProvider, (prev, next) {
-      if (prev == null && next != null) _maybePrompt();
+    // The session restored at start-up (splash) -> ask for the fingerprint straight away.
+    ref.listen(authControllerProvider, (prev, next) {
+      if (prev is AuthUnknown && next is AuthSignedIn) _maybePrompt();
     });
     if (!lock.locked || !signedIn) return widget.child;
     final theme = Theme.of(context);

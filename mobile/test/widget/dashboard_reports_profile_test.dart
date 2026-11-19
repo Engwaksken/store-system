@@ -71,6 +71,7 @@ void main() {
     await tester.enterText(find.widgetWithText(TextFormField, 'E-mail'), 'brian@kemmy.test');
     await tester.pump();
 
+    await tester.ensureVisible(find.text('Save changes'));
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
     expect(find.text('Profile updated'), findsOneWidget);

@@ -303,7 +303,7 @@ class _AvatarEditorState extends ConsumerState<_AvatarEditor> {
   }
 }
 
-/// Turn fingerprint / face unlock on or off for this phone.
+/// Turn fingerprint / face sign-in on or off for this phone.
 class BiometricToggle extends ConsumerStatefulWidget {
   const BiometricToggle({super.key});
 
@@ -316,21 +316,25 @@ class _BiometricToggleState extends ConsumerState<BiometricToggle> {
 
   @override
   Widget build(BuildContext context) {
-    final on = ref.watch(biometricLockProvider).enabled;
+    final on = ref.watch(biometricProvider).enabled;
     return SwitchListTile(
       key: const Key('biometric-toggle'),
       secondary: const Icon(Icons.fingerprint),
-      title: const Text('Unlock with fingerprint or face'),
-      subtitle: const Text('Asks for it when the app opens and after 30 seconds in the background'),
+      title: const Text('Sign in with fingerprint or face'),
+      subtitle: const Text('No password needed on this phone. Also locks the app after 30 s in the background.'),
       value: on,
       onChanged: _busy
           ? null
           : (v) async {
               setState(() => _busy = true);
-              final error = await ref.read(biometricLockProvider.notifier).setEnabled(v);
+              final error = await ref.read(biometricProvider.notifier).setEnabled(v);
               if (!mounted) return;
               setState(() => _busy = false);
-              showSnack(this.context, error ?? (v ? 'Biometric unlock is on' : 'Biometric unlock is off'), error: error != null);
+              showSnack(
+                this.context,
+                error ?? (v ? 'Fingerprint sign-in is on' : 'Fingerprint sign-in is off'),
+                error: error != null,
+              );
             },
     );
   }

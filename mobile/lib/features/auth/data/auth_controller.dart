@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/providers.dart';
 import '../../../core/format/formatters.dart';
+import '../../../core/security/biometric_store.dart';
 import '../domain/user.dart';
 import 'auth_repository.dart';
 
@@ -77,8 +78,16 @@ class AuthController extends Notifier<AuthState> {
     state = AuthSignedIn(user);
   }
 
+  /// Fingerprint / face sign-in with this phone's device key. Throws [ApiException] on failure.
+  Future<void> loginWithBiometricKey(String key, String deviceName) async {
+    final user = await _repo.biometricLogin(key: key, deviceName: deviceName);
+    state = AuthSignedIn(user);
+  }
+
+  /// Other devices are signed out by the server; this phone keeps its fingerprint sign-in.
   Future<void> changePassword(String current, String password, String confirmation) async {
-    final user = await _repo.changePassword(current: current, password: password, confirmation: confirmation);
+    final keep = (await ref.read(biometricStoreProvider).load())?.key;
+    final user = await _repo.changePassword(current: current, password: password, confirmation: confirmation, keepBiometricKey: keep);
     state = AuthSignedIn(user);
   }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\ActivityLog;
+use App\Models\DeviceSignInKey;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,6 +37,61 @@ class AuthController extends ApiController
         ActivityLog::record('auth.api_login', "{$user->name} signed in on the mobile app ({$data['device_name']})", $user);
 
         return response()->json(['token' => $token, 'user' => Present::user($user)]);
+    }
+
+    /**
+     * Fingerprint / face sign-in: the app sends the device key it unlocked with the phone's biometrics and gets a new
+     * token. 10 attempts per minute per IP. A wrong, removed or revoked key → 401 `biometric_key_invalid`.
+     */
+    public function biometricLogin(Request $request): JsonResponse
+    {
+        $data = $request->validate(['key' => 'required|string|max:200', 'device_name' => 'required|string|max:100']);
+        $limit = 'api-biometric-login:'.$request->ip();
+        if (RateLimiter::tooManyAttempts($limit, 10)) {
+            return response()->json(['message' => 'Too many sign-in attempts. Try again in '.RateLimiter::availableIn($limit).' seconds.'], 429);
+        }
+        $key = DeviceSignInKey::findByPlain($data['key']);
+        if (! $key) {
+            RateLimiter::hit($limit, 60);
+
+            return response()->json([
+                'message' => 'Fingerprint sign-in is no longer set up for this phone. Sign in with your password.',
+                'code' => 'biometric_key_invalid',
+            ], 401);
+        }
+        $user = $key->user;
+        if (! $user->is_active) {
+            return response()->json(['message' => 'Your account is deactivated.', 'code' => 'deactivated'], 403);
+        }
+        $key->forceFill(['last_used_at' => now()])->save();
+        $token = $user->createToken($data['device_name'])->plainTextToken;
+        ActivityLog::record('auth.api_login', "{$user->name} signed in on the mobile app with fingerprint / face ({$data['device_name']})", $user);
+
+        return response()->json(['token' => $token, 'user' => Present::user($user)]);
+    }
+
+    /** Turns on fingerprint sign-in for this phone. Returns the device key once; the app stores it in its keystore. */
+    public function createBiometricKey(Request $request): JsonResponse
+    {
+        $data = $request->validate(['device_name' => 'required|string|max:100', 'replace_key' => 'nullable|string|max:200']);
+        $user = $request->user();
+        $old = DeviceSignInKey::findByPlain($data['replace_key'] ?? null);
+        if ($old && $old->user_id === $user->id) {
+            $old->delete();
+        }
+        [, $plain] = DeviceSignInKey::issue($user, $data['device_name']);
+        ActivityLog::record('auth.device_key_added', "{$user->name} turned on fingerprint sign-in on {$data['device_name']}", $user);
+
+        return response()->json(['key' => $plain], 201);
+    }
+
+    /** Turns fingerprint sign-in off for a phone. Holding the key is the proof, so no token is needed. Always 204. */
+    public function revokeBiometricKey(Request $request)
+    {
+        $request->validate(['key' => 'required|string|max:200']);
+        DeviceSignInKey::findByPlain($request->input('key'))?->delete();
+
+        return response()->noContent();
     }
 
     public function logout(Request $request)
@@ -106,11 +162,14 @@ class AuthController extends ApiController
         $request->validate([
             'current_password' => 'required|current_password:sanctum',
             'password' => ['required', 'confirmed', 'different:current_password', Password::min(8)->letters()->numbers()],
+            'keep_biometric_key' => 'nullable|string|max:200',
         ]);
         $user = $request->user();
         $user->forceFill(['password' => Hash::make($request->password), 'must_change_password' => false])->save();
-        // Sign out every other device; this one keeps its token.
+        // Sign out every other device; this one keeps its token and, if sent, its fingerprint sign-in key.
         $user->tokens()->where('id', '!=', $user->currentAccessToken()?->id)->delete();
+        $keep = DeviceSignInKey::findByPlain($request->input('keep_biometric_key'));
+        $user->deviceSignInKeys()->when($keep && $keep->user_id === $user->id, fn ($q) => $q->whereKeyNot($keep->id))->delete();
         ActivityLog::record('auth.password_changed', $user->name.' changed password (mobile app)', $user);
 
         return response()->json(['user' => Present::user($user->fresh())]);

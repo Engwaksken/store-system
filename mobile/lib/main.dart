@@ -19,11 +19,11 @@ Future<void> main() async {
     cachedBranding = await brandingCache.load().timeout(const Duration(seconds: 2));
   } catch (_) {}
 
-  // Biometric unlock choice, read before the first frame so a locked app never shows its content.
-  final BiometricPrefs biometricPrefs = config.useFakeApi ? MemoryBiometricPrefs() : SecureBiometricPrefs();
-  var biometricOn = false;
+  // Fingerprint sign-in, read before the first frame so a locked app never shows its content.
+  final BiometricStore biometricStore = config.useFakeApi ? MemoryBiometricStore() : SecureBiometricStore();
+  BiometricCredential? biometric;
   try {
-    biometricOn = await biometricPrefs.load().timeout(const Duration(seconds: 2));
+    biometric = await biometricStore.load().timeout(const Duration(seconds: 2));
   } catch (_) {}
 
   runApp(
@@ -36,8 +36,8 @@ Future<void> main() async {
         if (config.useFakeApi) tokenStorageProvider.overrideWithValue(MemoryTokenStorage()),
         brandingCacheProvider.overrideWithValue(brandingCache),
         cachedBrandingProvider.overrideWithValue(cachedBranding),
-        biometricPrefsProvider.overrideWithValue(biometricPrefs),
-        initialBiometricEnabledProvider.overrideWithValue(biometricOn),
+        biometricStoreProvider.overrideWithValue(biometricStore),
+        initialBiometricCredentialProvider.overrideWithValue(biometric),
       ],
       child: const StoreSystemApp(),
     ),

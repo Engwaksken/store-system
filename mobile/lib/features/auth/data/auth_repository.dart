@@ -30,6 +30,35 @@ class AuthRepository {
     return User.fromJson(asMap(json['user']));
   }
 
+  /// Fingerprint / face sign-in: trades the device key for a new token (`POST /auth/biometric-login`).
+  Future<User> biometricLogin({required String key, required String deviceName}) async {
+    final json = await _api.post(
+      '/auth/biometric-login',
+      body: {'key': key, 'device_name': deviceName},
+      skipSession: true,
+    );
+    await _tokens.write(asString(json['token']));
+    return User.fromJson(asMap(json['user']));
+  }
+
+  /// Turns on fingerprint sign-in for this phone; returns the device key (`POST /me/biometric-key`).
+  Future<String> createBiometricKey({required String deviceName, String? replaceKey}) async {
+    final json = await _api.post('/me/biometric-key', body: {
+      'device_name': deviceName,
+      'replace_key': ?replaceKey,
+    });
+    return asString(json['key']);
+  }
+
+  /// Turns fingerprint sign-in off on the server (best effort; works signed out too).
+  Future<void> revokeBiometricKey(String key) async {
+    try {
+      await _api.post('/auth/biometric-key/revoke', body: {'key': key}, skipSession: true);
+    } catch (_) {
+      // Offline: the key stays listed on the web Sign-in & security page, where it can be removed.
+    }
+  }
+
   /// Restores the session; 401 is handled by the caller (no session event).
   Future<User> me() async {
     final json = await _api.get('/me', skipSession: true);
@@ -68,11 +97,13 @@ class AuthRepository {
     required String current,
     required String password,
     required String confirmation,
+    String? keepBiometricKey,
   }) async {
     final json = await _api.post('/auth/change-password', body: {
       'current_password': current,
       'password': password,
       'password_confirmation': confirmation,
+      'keep_biometric_key': ?keepBiometricKey,
     });
     return User.fromJson(asMap(json['user']));
   }

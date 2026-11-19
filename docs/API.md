@@ -40,10 +40,26 @@ Body: `{"email": "...", "password": "...", "device_name": "Pixel 8"}` → `200`
 ```
 Wrong credentials → 422 on `email`. Deactivated → 403 `deactivated`. Rate-limited (10/min per email+IP).
 
+### `POST /auth/biometric-login`
+Fingerprint / face sign-in. Body: `{"key": "12|...", "device_name": "Pixel 8"}` → `200 { "token", "user" }` (same as
+`/auth/login`). The app sends the device key only after the phone's biometrics (or PIN) succeed. Unknown, removed or
+revoked key → `401` with `code: biometric_key_invalid` (forget the key, sign in with the password). Deactivated → 403
+`deactivated`. Rate-limited (10 failures/min per IP).
+
+### `POST /me/biometric-key` (signed in, throttle 10/min)
+Turns on fingerprint sign-in for this phone. Body: `{"device_name", "replace_key?"}` → `201 { "key": "12|..." }`.
+The key is returned once; keep it in the keystore. `replace_key` (this phone's previous key) is deleted.
+
+### `POST /auth/biometric-key/revoke` (no token needed)
+Body: `{"key"}` → `204` always. Turns fingerprint sign-in off for the phone holding the key.
+
+Keys are also removed when the password is changed or reset (except `keep_biometric_key` on
+`/auth/change-password`), and from the web Sign-in & security page.
+
 ### `POST /auth/logout` → `204` (revokes the current token)
 
 ### `POST /auth/change-password`
-Body: `{"current_password", "password", "password_confirmation"}`. New password: min 8, letters and numbers, different
+Body: `{"current_password", "password", "password_confirmation", "keep_biometric_key?"}`. New password: min 8, letters and numbers, different
 from the current one. → `200 { "user": {...User} }` (clears `must_change_password`).
 
 ### `GET /me` → `200 { "user": {...User} }`

@@ -6,6 +6,7 @@ This lists every control the application enforces and where it is tested. Run `p
 | Control | How | Evidence |
 |---|---|---|
 | Authentication | Session login, rate-limited; password reset by e-mail token; forced change after admin reset; no self-registration; deactivated users are logged out on their next request. | `AccessControlTest` |
+| Biometric sign-in | Web: passkeys (WebAuthn): user verification required, origin and RP-id checked, one-time challenges in the session (5 min), signature counter checked; adding one needs the current password. Mobile: per-phone device key, stored hashed (SHA-256) on the server and in the phone keystore behind the device biometrics; rate-limited; revoked on password change / reset and when another person signs in on the phone; deactivated users are refused. | `BiometricSignInTest` |
 | Authorization on every route | Gates/policies (`AppServiceProvider`, `app/Policies`) checked in every controller action, re-checked in the service layer for stock, approvals and money. | `AccessControlTest`, `AuditorAccessTest` (all ~70 mutating routes) |
 | Row-level scoping | `visibleTo` scopes on projects, requests, expenses, claims, requisitions, POs, transfers; PM reports/exports limited to managed projects. | `test_project_visibility_is_role_scoped`, `test_exports_obey_row_level_permissions` |
 | Store scoping | Storekeepers move stock only in assigned stores (`Store::assertOperable` inside every stock service). | `MultiStoreStockTest` |

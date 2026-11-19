@@ -55,6 +55,18 @@ class User extends Authenticatable
         return $this->belongsToMany(Store::class)->withTimestamps();
     }
 
+    /** WebAuthn passkeys for fingerprint / face sign-in on the web. */
+    public function passkeys(): HasMany
+    {
+        return $this->hasMany(Passkey::class);
+    }
+
+    /** Phones with fingerprint / face sign-in turned on in the mobile app. */
+    public function deviceSignInKeys(): HasMany
+    {
+        return $this->hasMany(DeviceSignInKey::class);
+    }
+
     public function managedProjects(): HasMany
     {
         return $this->hasMany(Project::class, 'manager_id');

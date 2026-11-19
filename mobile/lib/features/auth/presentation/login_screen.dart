@@ -5,6 +5,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/api/providers.dart';
 import '../../../core/config/branding.dart';
 import '../../../core/fake/fake_backend.dart';
+import '../../../core/security/biometric_lock.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/auth_controller.dart';
 import '../data/auth_repository.dart';
@@ -23,6 +24,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _password = TextEditingController();
   bool _obscure = true;
   bool _busy = false;
+  bool _bioBusy = false;
   String? _error;
   Map<String, String> _fieldErrors = const {};
 
@@ -65,9 +67,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _biometricSignIn() async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _error = null;
+      _fieldErrors = const {};
+      _bioBusy = true;
+    });
+    final error = await ref.read(biometricProvider.notifier).signIn();
+    // On success the router redirects.
+    if (!mounted) return;
+    setState(() {
+      _bioBusy = false;
+      _error = error;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final biometric = ref.watch(biometricProvider).credential;
     final config = ref.watch(appConfigProvider);
     final appName = ref.watch(appNameProvider);
     final subtitle = ref.watch(appSubtitleProvider);
@@ -201,7 +220,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(height: 20),
                               FilledButton(
                                 key: const Key('login-submit'),
-                                onPressed: _busy ? null : _submit,
+                                onPressed: _busy || _bioBusy ? null : _submit,
                                 child: _busy
                                     ? const SizedBox(
                                         width: 22,
@@ -213,6 +232,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       )
                                     : const Text('Sign in'),
                               ),
+                              if (biometric != null) ...[
+                                const SizedBox(height: 12),
+                                OutlinedButton.icon(
+                                  key: const Key('login-biometric'),
+                                  onPressed: _busy || _bioBusy ? null : _biometricSignIn,
+                                  icon: _bioBusy
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                                        )
+                                      : const Icon(Icons.fingerprint),
+                                  label: const Text('Sign in with fingerprint or face'),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'as ${biometric.name.isEmpty ? biometric.email : biometric.name}',
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 12),
                               Text(
                                 'Forgot your password? Ask your administrator to reset it.',

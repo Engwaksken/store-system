@@ -83,6 +83,8 @@ class AuthController extends Controller
 
         $status = Password::reset($request->only('email', 'password', 'password_confirmation', 'token'), function (User $user, string $password) {
             $user->forceFill(['password' => $password, 'must_change_password' => false, 'remember_token' => Str::random(60)])->save();
+            // Phones signed in with the old password must sign in again; passkeys are not tied to the password.
+            $user->deviceSignInKeys()->delete();
             event(new PasswordReset($user));
         });
 
@@ -91,9 +93,15 @@ class AuthController extends Controller
             : back()->withErrors(['email' => __($status)]);
     }
 
-    public function showChange()
+    /** Sign-in & security: password, passkeys (web) and phones with fingerprint sign-in (mobile app). */
+    public function showChange(Request $request)
     {
-        return view('auth.change-password');
+        $user = $request->user();
+
+        return view('auth.change-password', [
+            'passkeys' => $user->passkeys()->latest()->get(),
+            'devices' => $user->deviceSignInKeys()->latest()->get(),
+        ]);
     }
 
     public function change(Request $request)
@@ -104,6 +112,8 @@ class AuthController extends Controller
         ]);
         $user = $request->user();
         $user->forceFill(['password' => Hash::make($request->password), 'must_change_password' => false])->save();
+        // Fingerprint sign-in on phones stops working until it is turned on again with the new password.
+        $user->deviceSignInKeys()->delete();
         ActivityLog::record('auth.password_changed', $user->name.' changed password', $user);
 
         return redirect()->route('dashboard')->with('status', 'Password updated.');

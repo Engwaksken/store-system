@@ -43,6 +43,7 @@ class FakeBackend {
 
   final DateTime _now;
   final _tokens = <String, int>{}; // token -> user id
+  final _biometricKeys = <String, int>{}; // device key -> user id
   final _users = <int, Map<String, dynamic>>{};
   final _passwords = <int, String>{};
   final _projects = <Map<String, dynamic>>[];
@@ -92,6 +93,11 @@ class FakeBackend {
       });
     }
     if (method == 'POST' && p == 'auth/login') return _login(json);
+    if (method == 'POST' && p == 'auth/biometric-login') return _biometricLogin(json);
+    if (method == 'POST' && p == 'auth/biometric-key/revoke') {
+      _biometricKeys.remove('${json['key'] ?? ''}');
+      return const FakeResponse(204);
+    }
 
     final userId = _authUserId(authorization);
     if (userId == null) return const FakeResponse(401, {'message': 'Unauthenticated.'});
@@ -120,6 +126,12 @@ class FakeBackend {
           return _changePassword(userId, json);
         case ('PUT', ['me']):
           return _updateProfile(userId, json);
+        case ('POST', ['me', 'biometric-key']):
+          if ('${json['device_name'] ?? ''}'.isEmpty) throw _Validation({'device_name': ['The device name field is required.']});
+          if (_biometricKeys[json['replace_key']] == userId) _biometricKeys.remove(json['replace_key']);
+          final key = '${_tokenSeq++}|bio${Random().nextInt(1 << 30)}';
+          _biometricKeys[key] = userId;
+          return FakeResponse(201, {'key': key});
         case ('POST', ['me', 'avatar']):
           if (!files.containsKey('avatar')) throw _Validation({'avatar': ['Choose a photo.']});
           _users[userId]!['avatar_url'] = '$baseUrl/fake-avatars/$userId-${_tokenSeq++}.jpg';
@@ -249,6 +261,25 @@ class FakeBackend {
     return FakeResponse(200, {'token': token, 'user': _userJson(userId)});
   }
 
+  FakeResponse _biometricLogin(Map<String, dynamic> json) {
+    final userId = _biometricKeys['${json['key'] ?? ''}'];
+    if (userId == null) {
+      return const FakeResponse(401, {
+        'message': 'Fingerprint sign-in is no longer set up for this phone. Sign in with your password.',
+        'code': 'biometric_key_invalid',
+      });
+    }
+    if (_users[userId]!['is_active'] == false) {
+      return const FakeResponse(403, {'message': 'Your account has been deactivated.', 'code': 'deactivated'});
+    }
+    final token = '${_tokenSeq++}|fake${Random().nextInt(1 << 30)}';
+    _tokens[token] = userId;
+    return FakeResponse(200, {'token': token, 'user': _userJson(userId)});
+  }
+
+  /// Device keys currently accepted for [userId] (tests).
+  int biometricKeyCount(int userId) => _biometricKeys.values.where((id) => id == userId).length;
+
   FakeResponse _changePassword(int userId, Map<String, dynamic> json) {
     final current = '${json['current_password'] ?? ''}';
     final next = '${json['password'] ?? ''}';
@@ -269,6 +300,8 @@ class FakeBackend {
     if (errors.isNotEmpty) throw _Validation(errors);
     _passwords[userId] = next;
     _users[userId]!['must_change_password'] = false;
+    final keep = json['keep_biometric_key'];
+    _biometricKeys.removeWhere((key, id) => id == userId && key != keep);
     return FakeResponse(200, {'user': _userJson(userId)});
   }
 

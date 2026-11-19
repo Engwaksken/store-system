@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\PasskeyController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CustomRoleController;
 use App\Http\Controllers\CostCodeController;
@@ -39,6 +40,9 @@ Route::get('apple-touch-icon-precomposed.png', [PwaController::class, 'appleTouc
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:20,1');
+    // Fingerprint / face sign-in with a passkey (WebAuthn)
+    Route::post('login/passkey/options', [PasskeyController::class, 'loginOptions'])->middleware('throttle:30,1')->name('passkey.login.options');
+    Route::post('login/passkey', [PasskeyController::class, 'login'])->middleware('throttle:20,1')->name('passkey.login');
     Route::get('forgot-password', [AuthController::class, 'showForgot'])->name('password.request');
     Route::post('forgot-password', [AuthController::class, 'sendResetLink'])->middleware('throttle:5,1')->name('password.email');
     Route::get('reset-password/{token}', [AuthController::class, 'showReset'])->name('password.reset');
@@ -50,6 +54,10 @@ Route::middleware(['auth', 'usable', 'throttle:300,1'])->group(function () {
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('password/change', [AuthController::class, 'showChange'])->name('password.change');
     Route::put('password/change', [AuthController::class, 'change'])->name('password.change.update');
+    Route::post('account/passkeys/options', [PasskeyController::class, 'registerOptions'])->middleware('throttle:10,1')->name('passkeys.options');
+    Route::post('account/passkeys', [PasskeyController::class, 'store'])->middleware('throttle:10,1')->name('passkeys.store');
+    Route::delete('account/passkeys/{passkey}', [PasskeyController::class, 'destroy'])->whereNumber('passkey')->name('passkeys.destroy');
+    Route::delete('account/devices/{key}', [PasskeyController::class, 'destroyDevice'])->whereNumber('key')->name('devices.destroy');
 
     Route::get('/', DashboardController::class)->name('dashboard');
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');

@@ -1,5 +1,22 @@
 # Changelog
 
+## Fingerprint / face sign-in on the web and mobile (20 Nov 2026)
+- **Web: passkeys.** "Sign in with fingerprint or face" on the sign-in page (Windows Hello, Touch ID, Android and iPhone
+  screen lock, or a security key). Added from the new **Sign-in & security** page (top bar, formerly "Password") after
+  entering the current password; listed there with last use and a Remove button. WebAuthn with user verification
+  required, ES256 / RS256, no attestation; verified in `App\Support\WebAuthn` (no new Composer packages).
+  Configure `PASSKEY_RP_ID` / `PASSKEY_ORIGINS` when the site is not reached at `APP_URL`; passkeys need https.
+- **Mobile: biometric sign-in.** The Edit profile switch (formerly unlock only) now also signs you back in after
+  signing out: the phone keeps a device key in its keystore and releases it after the fingerprint / face / phone PIN.
+  The app still locks when it opens and after 30 seconds in the background. Turned off when another person signs in on
+  the phone or when the server rejects the key.
+  API: `POST /auth/biometric-login`, `POST /me/biometric-key`, `POST /auth/biometric-key/revoke`;
+  `POST /auth/change-password` takes `keep_biometric_key`.
+- Phones with fingerprint sign-in are listed (and removable) on the web Sign-in & security page. Changing or resetting
+  the password turns it off on every other phone.
+- Migration: `passkeys`, `device_sign_in_keys`.
+- Tests: `BiometricSignInTest` (7), Flutter `profile_security_test` (rewritten, 8).
+
 ## Feedback round 2: restock tracking, issue statistics, profile photo, biometric unlock (19 Nov 2026)
 - **Requesters track restocking**: the request page (web and mobile) shows each restock requisition with a plain-language
   step (waiting for approval, approved, ordered, delivered). Stock-shortage wording is now shown only to the
