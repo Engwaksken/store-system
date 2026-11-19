@@ -13,6 +13,7 @@ use App\Models\IssueAcknowledgment;
 use App\Models\MaterialIssue;
 use App\Models\MaterialIssueLine;
 use App\Models\MaterialRequest;
+use App\Models\Project;
 use App\Models\StockMovement;
 use App\Models\Store;
 use App\Models\User;
@@ -45,6 +46,9 @@ class IssueService
     {
         if ($storekeeper->role !== Role::Storekeeper || ! $storekeeper->is_active) {
             throw new AuthorizationException('Only the storekeeper can issue materials.');
+        }
+        if (! Project::visibleTo($storekeeper)->whereKey($req->project_id)->exists()) {
+            throw new AuthorizationException('You are not assigned to this project. Ask the administrator to add the project to your account.');
         }
         $storeId ??= Store::DEFAULT_ID;
         $store = Store::assertOperable($storekeeper, $storeId);
@@ -152,7 +156,8 @@ class IssueService
     public function acknowledge(User $user, MaterialIssue $issue, string $recipientName, ?string $remarks = null): IssueAcknowledgment
     {
         $req = $issue->request;
-        if ($user->id !== $req->requester_id && $user->role !== Role::Storekeeper) {
+        if ($user->id !== $req->requester_id
+            && ($user->role !== Role::Storekeeper || ! MaterialIssue::visibleTo($user)->whereKey($issue->id)->exists())) {
             throw new AuthorizationException('Only the requester or storekeeper can acknowledge this voucher.');
         }
 

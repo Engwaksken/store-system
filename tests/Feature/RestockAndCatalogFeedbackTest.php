@@ -125,8 +125,10 @@ class RestockAndCatalogFeedbackTest extends TestCase
         $this->receive($this->cement, 5);
         $this->approvedRequest(1, $this->steel); // on a request, no stock history
 
-        $this->actingAs($this->store)->get(route('items.index'))->assertOk()->assertSee('data-bulk-scope="items"', false)->assertSee('data-live-refresh', false);
-        $this->actingAs($this->store)->post(route('items.bulk-delete'), ['ids' => [$unused->id, $this->cement->id, $this->steel->id]])
+        // Deleting items is the Owner/Admin's; storekeepers add and edit items only.
+        $this->actingAs($this->store)->post(route('items.bulk-delete'), ['ids' => [$unused->id]])->assertForbidden();
+        $this->actingAs($this->admin)->get(route('items.index'))->assertOk()->assertSee('data-bulk-scope="items"', false)->assertSee('data-live-refresh', false);
+        $this->actingAs($this->admin)->post(route('items.bulk-delete'), ['ids' => [$unused->id, $this->cement->id, $this->steel->id]])
             ->assertSessionHasErrors('items');
 
         $this->assertNull(InventoryItem::find($unused->id));

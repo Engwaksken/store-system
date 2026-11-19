@@ -16,7 +16,8 @@
         <div class="field"><label>Project Manager</label><select name="manager_id"><option value="">None</option>
             @foreach($managers as $m)<option value="{{ $m->id }}" @selected(old('manager_id', $project->manager_id) == $m->id)>{{ $m->name }}</option>@endforeach</select>
             <div class="hint">Material requests route to this person for the first approval.</div></div>
-        <div class="field"><label>Assigned staff</label>
+        <div class="field"><label>Project team</label>
+            <div class="hint">Staff and Project Managers request materials for this project; storekeepers ticked here can issue to it.</div>
             @php($selected = collect(old('member_ids', $project->exists ? $project->members->pluck('id')->all() : [])))
             <div style="max-height:180px;overflow:auto;border:1px solid #CBD5E1;border-radius:6px;padding:.4rem">
             @foreach($staff as $s)<label class="check"><input type="checkbox" name="member_ids[]" value="{{ $s->id }}" @checked($selected->contains($s->id))> {{ $s->name }} <small class="muted">({{ $s->role->label() }})</small></label>@endforeach

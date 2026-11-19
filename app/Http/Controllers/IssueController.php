@@ -19,17 +19,13 @@ class IssueController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = MaterialIssue::with('project', 'request', 'issuer', 'acknowledgment', 'store')
-            ->when(! $user->hasRole(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant, Role::Auditor),
-                fn ($q) => $q->whereHas('request', fn ($r) => $r->visibleTo($user)))
-            ->latest('issued_at');
+        $query = MaterialIssue::with('project', 'request', 'issuer', 'acknowledgment', 'store')->visibleTo($user)->latest('issued_at');
 
         $queue = Gate::allows('issue-stock')
-            ? MaterialRequest::with('project', 'requester')->whereIn('status', [RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value])->oldest('submitted_at')->get()
+            ? MaterialRequest::with('project', 'requester')->readyToIssueBy($user)->oldest('submitted_at')->get()
             : collect();
 
-        $visible = MaterialIssue::query()->when(! $user->hasRole(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant, Role::Auditor),
-            fn ($q) => $q->whereHas('request', fn ($r) => $r->visibleTo($user)));
+        $visible = MaterialIssue::query()->visibleTo($user);
         $stats = [
             'total' => (clone $visible)->count(),
             'month' => (clone $visible)->where('issued_at', '>=', now()->startOfMonth())->count(),

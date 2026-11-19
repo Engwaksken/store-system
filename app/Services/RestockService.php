@@ -148,6 +148,7 @@ class RestockService
     /** Who may raise a restock requisition from a request (the storekeeper who issues it). */
     public static function allowed(User $user, MaterialRequest $req): bool
     {
-        return $user->role === Role::Storekeeper && $user->is_active && $req->status->isIssuable();
+        return $user->role === Role::Storekeeper && $user->is_active && $req->status->isIssuable()
+            && \App\Models\Project::visibleTo($user)->whereKey($req->project_id)->exists();
     }
 }

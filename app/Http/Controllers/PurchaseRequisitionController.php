@@ -43,7 +43,8 @@ class PurchaseRequisitionController extends Controller
 
         return view('prs.create', [
             'projects' => Project::visibleTo($request->user())->whereIn('status', ['planned', 'active'])->orderBy('code')->get(),
-            'stores' => Store::where('is_active', true)->orderBy('id')->get(),
+            // Storekeepers order for the stores they run; buyers and managers for any store.
+            'stores' => ($request->user()->role === \App\Enums\Role::Storekeeper ? Store::operableBy($request->user()) : Store::where('is_active', true))->orderBy('id')->get(),
             'items' => InventoryItem::with('unit')->where('is_active', true)->orderBy('name')->get(),
         ]);
     }

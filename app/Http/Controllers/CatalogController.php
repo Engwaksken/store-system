@@ -274,14 +274,14 @@ class CatalogController extends Controller
 
     public function create()
     {
-        Gate::authorize('manage-catalog');
+        Gate::authorize('manage-items');
 
         return view('items.form', ['item' => new InventoryItem(['is_active' => true]), ...$this->options()]);
     }
 
     public function store(Request $request)
     {
-        Gate::authorize('manage-catalog');
+        Gate::authorize('manage-items');
         $item = InventoryItem::create($this->validated($request));
         ActivityLog::record('catalog.item_created', "Item {$item->sku} created", $item);
 
@@ -290,14 +290,14 @@ class CatalogController extends Controller
 
     public function edit(InventoryItem $item)
     {
-        Gate::authorize('manage-catalog');
+        Gate::authorize('manage-items');
 
         return view('items.form', ['item' => $item, ...$this->options()]);
     }
 
     public function update(Request $request, InventoryItem $item)
     {
-        Gate::authorize('manage-catalog');
+        Gate::authorize('manage-items');
         $item->update($this->validated($request, $item));
         ActivityLog::record('catalog.item_updated', "Item {$item->sku} updated", $item);
 
@@ -306,7 +306,7 @@ class CatalogController extends Controller
 
     public function importTemplate()
     {
-        Gate::authorize('manage-catalog');
+        Gate::authorize('manage-items');
 
         return \App\Support\CsvImport::template('items-template.csv', ['sku', 'name', 'category', 'unit', 'min_level'],
             [['CEM-425', 'Cement 42.5R (50kg)', InventoryCategory::orderBy('name')->value('name') ?? 'Cement & aggregates', InventoryUnit::orderBy('name')->value('abbreviation') ?? 'bag', '20']]);
@@ -315,7 +315,7 @@ class CatalogController extends Controller
     /** All-or-nothing import of new catalogue items. Category by name, unit by abbreviation (both must exist). */
     public function import(Request $request)
     {
-        Gate::authorize('manage-catalog');
+        Gate::authorize('manage-items');
         $request->validate(['file' => 'required|file|mimes:csv,txt|max:2048']);
         [$rows, $error] = \App\Support\CsvImport::read($request->file('file'), ['sku', 'name', 'category', 'unit', 'min_level']);
         if ($error) {

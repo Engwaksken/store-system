@@ -3,7 +3,7 @@
 @section('content')
 <div class="page-head"><div><h1>Stock &amp; items</h1><p>@if($storeId)On hand is the quantity in the selected store only.@else On hand is the total across all stores; open an item for the per-store split.@endif Highlighted rows are at or below minimum level.</p></div>
     <div class="actions">
-        @can('manage-catalog')<a class="btn" data-modal href="{{ route('items.create') }}"><i class="fas fa-plus"></i> New item</a>@endcan
+        @can('manage-items')<a class="btn" data-modal href="{{ route('items.create') }}"><i class="fas fa-plus"></i> New item</a>@endcan
         @can('manage-stock')<a class="btn secondary" data-modal href="{{ route('receipts.create', ['type' => 'opening']) }}"><i class="fas fa-door-open"></i> Opening balances</a><a class="btn secondary" data-modal href="{{ route('adjustments.create') }}">Adjustment</a>@endcan
     </div></div>
 <div id="items-stats" data-live-refresh="60">
@@ -14,7 +14,7 @@
     ['Categories', $stats['categories'], 'fa-tags', 'gold'],
 ]" />
 </div>
-@can('manage-catalog')
+@can('manage-items')
 <details class="card"><summary><strong>Import items from a spreadsheet (CSV)</strong></summary>
     <form method="POST" action="{{ route('items.import') }}" enctype="multipart/form-data" style="margin-top:.75rem">@csrf
         <p class="muted">1. <a href="{{ route('items.import-template') }}">Download the template</a>. 2. One row per new item: sku, name, category (exact name), unit (abbreviation), min_level. 3. Save as CSV and upload. If any row is wrong nothing is imported and the errors are listed.</p>
@@ -42,7 +42,7 @@
             <td class="num"><strong>{{ qty($i->onHand($storeId)) }}</strong></td><td>{{ $i->unit->abbreviation }}</td><td class="num">{{ qty($i->min_level) }}</td>
             @can('view-stock-value')<td class="num">{{ ugx($i->avg_cost) }}</td>@endcan
             <td><div class="row-actions">@if($i->isLowStock())<span class="badge pending">Low</span>@endif
-                @can('manage-catalog')<a class="btn-icon" data-modal href="{{ route('items.edit', $i) }}" title="Edit {{ $i->sku }}" aria-label="Edit {{ $i->sku }}"><i class="fas fa-pen"></i></a>@endcan</div></td></tr>
+                @can('manage-items')<a class="btn-icon" data-modal href="{{ route('items.edit', $i) }}" title="Edit {{ $i->sku }}" aria-label="Edit {{ $i->sku }}"><i class="fas fa-pen"></i></a>@endcan</div></td></tr>
     @empty <tr><td colspan="9" class="empty">No items{{ $list->isFiltered() ? ' match these filters' : '' }}.</td></tr> @endforelse</tbody>
 </table></div>
 <div class="pagination">{{ $items->links() }}</div>

@@ -2,7 +2,7 @@
 @section('title', $item->name)
 @section('content')
 <div class="page-head"><div><h1>{{ $item->name }}</h1><p>{{ $item->sku }} · {{ $item->category->name }}</p></div>
-    @can('manage-catalog')<a class="btn secondary" data-modal href="{{ route('items.edit', $item) }}"><i class="fas fa-pen"></i> Edit item</a>@endcan</div>
+    @can('manage-items')<a class="btn secondary" data-modal href="{{ route('items.edit', $item) }}"><i class="fas fa-pen"></i> Edit item</a>@endcan</div>
 @php($stocked = $item->balances->where('on_hand', '!=', 0))
 <x-stats :cards="[
     ['On hand', qty($item->onHand()).' '.$item->unit->abbreviation, 'fa-box', $item->isLowStock() ? 'bad' : ''],

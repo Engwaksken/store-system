@@ -55,6 +55,11 @@ class PurchaseRequisition extends Model
             return $q->where(fn ($w) => $w->where('requested_by', $user->id)
                 ->orWhereIn('project_id', Project::where('manager_id', $user->id)->select('id')));
         }
+        if ($user->role === Role::Storekeeper) {
+            // Requisitions delivering to the stores they run (incl. automatic restocks), plus their own.
+            return $q->where(fn ($w) => $w->where('requested_by', $user->id)
+                ->orWhereIn('store_id', Store::operableBy($user)->select('id')));
+        }
 
         return $q->where('requested_by', $user->id);
     }

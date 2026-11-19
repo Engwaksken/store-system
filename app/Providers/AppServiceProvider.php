@@ -61,8 +61,7 @@ class AppServiceProvider extends ServiceProvider
                 $approvalCount = MaterialRequest::with('approvals')->whereIn('status', [RequestStatus::Submitted->value, RequestStatus::PmApproved->value])
                     ->get()->filter(fn ($r) => Gate::allows('pm-decide', $r) || Gate::allows('overall-decide', $r))->count();
             }
-            $issueQueueCount = $user && Gate::allows('issue-stock')
-                ? MaterialRequest::whereIn('status', [RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value])->count() : 0;
+            $issueQueueCount = $user && Gate::allows('issue-stock') ? MaterialRequest::readyToIssueBy($user)->count() : 0;
             $transferInboxCount = $user && $user->hasRole(Role::Admin, Role::Storekeeper)
                 ? \App\Models\StockTransfer::where('status', 'in_transit')->where('dispatched_by', '!=', $user->id)
                     ->whereIn('to_store_id', Store::operableBy($user)->select('id'))->count() : 0;
@@ -99,7 +98,9 @@ class AppServiceProvider extends ServiceProvider
             || ($u->role === Role::ProjectManager && $p->manager_id === $u->id));
 
         // Inventory
-        Gate::define('manage-catalog', $is(Role::Admin, Role::Storekeeper));
+        // Catalog: storekeepers and buyers add / edit items; categories, units and deleting are the Owner/Admin's.
+        Gate::define('manage-items', $is(Role::Admin, Role::Storekeeper, Role::Procurement));
+        Gate::define('manage-catalog', $is(Role::Admin));
         Gate::define('manage-stock', $is(Role::Admin, Role::Storekeeper));
         Gate::define('view-stock', fn (User $u) => true);
         Gate::define('view-stock-ledger', $is(Role::Admin, Role::OverallManager, Role::ProjectManager, Role::Storekeeper, Role::Accountant, Role::Auditor));
@@ -128,11 +129,12 @@ class AppServiceProvider extends ServiceProvider
 
         // Issuance
         Gate::define('issue-stock', $is(Role::Storekeeper));
-        Gate::define('issue-request', fn (User $u, MaterialRequest $r) => $u->role === Role::Storekeeper && $r->status->isIssuable());
-        Gate::define('view-issue', fn (User $u, MaterialIssue $i) => $u->hasRole(Role::Admin, Role::OverallManager, Role::Storekeeper, Role::Accountant, Role::Auditor)
-            || Gate::forUser($u)->allows('view-request', $i->request));
-        Gate::define('acknowledge-issue', fn (User $u, MaterialIssue $i) => ($u->id === $i->request->requester_id || $u->role === Role::Storekeeper)
-            && ! $i->acknowledgment()->exists());
+        // Storekeepers issue only for the projects they serve (assigned, or a site store they run).
+        Gate::define('issue-request', fn (User $u, MaterialRequest $r) => $u->role === Role::Storekeeper && $r->status->isIssuable()
+            && Project::visibleTo($u)->whereKey($r->project_id)->exists());
+        Gate::define('view-issue', fn (User $u, MaterialIssue $i) => MaterialIssue::visibleTo($u)->whereKey($i->id)->exists());
+        Gate::define('acknowledge-issue', fn (User $u, MaterialIssue $i) => ! $i->acknowledgment()->exists()
+            && ($u->id === $i->request->requester_id || ($u->role === Role::Storekeeper && MaterialIssue::visibleTo($u)->whereKey($i->id)->exists())));
 
         // Expenses
         Gate::define('record-expense', $is(Role::Admin, Role::Accountant));

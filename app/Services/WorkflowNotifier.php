@@ -64,7 +64,7 @@ class WorkflowNotifier
 
     public function overallApproved(MaterialRequest $req): void
     {
-        $this->send($this->role(Role::Storekeeper), "Ready to issue: {$req->request_no}", "Material request {$req->request_no} for project {$req->project->code} is fully approved and ready to issue from the store.", route('requests.show', $req), 'Open request');
+        $this->send($this->storekeepersFor($req), "Ready to issue: {$req->request_no}", "Material request {$req->request_no} for project {$req->project->code} is fully approved and ready to issue from the store.", route('requests.show', $req), 'Open request');
         $this->send(User::whereKey($req->requester_id)->get(), "Approved: {$req->request_no}", "Your material request {$req->request_no} is fully approved. The storekeeper will issue the materials.", route('requests.show', $req), 'Open request', 'ok');
     }
 
@@ -186,6 +186,12 @@ class WorkflowNotifier
                 report($e); // the decision is already saved; never fail the user's action because mail is down
             }
         });
+    }
+
+    /** Active storekeepers who serve the request's project (Project::visibleTo). */
+    public function storekeepersFor(MaterialRequest $req): Collection
+    {
+        return $this->role(Role::Storekeeper)->filter(fn (User $u) => \App\Models\Project::visibleTo($u)->whereKey($req->project_id)->exists())->values();
     }
 
     public function role(Role ...$roles): Collection

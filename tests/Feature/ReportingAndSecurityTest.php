@@ -75,7 +75,7 @@ class ReportingAndSecurityTest extends TestCase
         $this->receive($this->cement, 20, 1000);
         $this->issue($this->approvedRequest(5), 5); // P-1, managed by $this->pm
         $other = Project::where('code', 'P-2')->sole();
-        $other->members()->attach($this->staff->id);
+        $other->members()->attach([$this->staff->id, $this->store->id]);
         $r2 = $this->wf()->createDraft($this->staff, $other, 'x', null, [['item_id' => $this->cement->id, 'requested_qty' => 3]]);
         $this->wf()->submit($this->staff, $r2);
         $this->wf()->pmDecide($this->otherPm, $r2, 'approved', null);

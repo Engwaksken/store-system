@@ -32,7 +32,8 @@ trait BuildsFixtures
         $this->outsider = User::factory()->role(Role::Staff)->create();
 
         $this->project = Project::create(['code' => 'P-1', 'name' => 'Test project', 'status' => 'active', 'budget' => 1000000, 'manager_id' => $this->pm->id]);
-        $this->project->members()->attach($this->staff->id);
+        // The storekeeper serves the project (storekeepers issue only to their assigned projects).
+        $this->project->members()->attach([$this->staff->id, $this->store->id]);
         Project::create(['code' => 'P-2', 'name' => 'Other project', 'status' => 'active', 'budget' => 500000, 'manager_id' => $this->otherPm->id]);
 
         $cat = InventoryCategory::create(['name' => 'Cement']);

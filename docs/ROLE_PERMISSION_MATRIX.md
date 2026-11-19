@@ -4,15 +4,18 @@ Every permission is enforced on the server (policies/gates in `app/Policies`, `a
 
 Roles (`users.role`): `admin` (Owner/Admin), `overall_manager`, `project_manager`, `storekeeper`, `staff`, `accountant`, `procurement` (Procurement Officer, Phase 3), `auditor` (read-only, Phase 5).
 
-"Assigned" means the user is the project's `manager_id` or appears in `project_user`.
+"Assigned" means the user is the project's `manager_id` or appears in `project_user` (ticked on the user record or on the
+project's team list). For a **storekeeper**, assigned projects also include the project of any site store they are
+assigned to. Procurement Officers (company-wide buying role) see every project.
 
 | Capability | Admin | Overall Mgr | Project Mgr | Storekeeper | Staff | Accountant |
 |---|---|---|---|---|---|---|
 | Manage users / settings | ✅ | — | — | — | — | — |
 | View activity log | ✅ | ✅ | — | — | — | — |
 | Create / edit projects, assign staff | ✅ | ✅ | — | — | — | — |
-| View projects | all | all | managed/assigned | all (name/code only, for issuing) | assigned | all |
-| Item catalog, categories, units | ✅ | view | view | ✅ | view | view |
+| View projects | all | all | managed/assigned | **assigned** (+ site store's project) | assigned | all |
+| Add / edit items, import items (CSV) | ✅ | view | view | ✅ | view | view |
+| Categories, units, delete items (Catalog setup) | ✅ | — | — | — | — | — |
 | Opening balances, stock receipts, adjustments | ✅ any store | — | — | ✅ assigned stores | — | — |
 | View stores & per-store balances | ✅ | ✅ | — | ✅ | — | ✅ |
 | Create store / edit store | ✅ | — | — | ✅ (creator is assigned; edit assigned stores) | — | — |
@@ -28,14 +31,17 @@ Roles (`users.role`): `admin` (Owner/Admin), `overall_manager`, `project_manager
 | Create / submit material request | ✅¹ | — | assigned projects | — | assigned projects | — |
 | PM-step approve/reject | ✅ any request, never own (recorded as substitute) | — | **own projects only**, never own request | — | — | — |
 | Overall-step approve/reject | ✅ any request, never own | ✅ (not requester, not PM-step approver) | — | — | — | — |
-| Issue materials | — | — | — | ✅ from assigned store (only OVERALL_APPROVED / PARTIALLY_ISSUED; site store only to its project) | — | — |
+| Issue materials | — | — | — | ✅ **assigned projects only**, from assigned store (only OVERALL_APPROVED / PARTIALLY_ISSUED; site store only to its project) | — | — |
 | Acknowledge receipt | — | — | requester | records named recipient | requester | — |
-| View requests | all | all | managed projects + own | approved/issuable + issued | own | all |
+| View requests | all | all | managed projects + own | approved/issuable + issued, assigned projects | own | all |
+| View issue vouchers | all | all | as requests | from assigned stores or for assigned projects | as requests | all |
 | Record / edit project expenses | ✅ | — | — | — | — | ✅ |
 | View expenses | all | all | managed projects | — | — | all |
 | Reports & CSV | all | all | managed projects | stock reports | — | all |
 
 ¹ Admin may request on any project. The Owner/Admin may approve any request at either step, but never their own: an admin request goes PM → Overall in the normal way.
+
+Procurement Officers may also add and edit catalogue items (not categories, units or deletions).
 
 ## Procurement (Phase 3)
 Full policy: `docs/PROCUREMENT.md`.
@@ -44,8 +50,8 @@ Full policy: `docs/PROCUREMENT.md`.
 |---|---|---|---|---|---|---|---|
 | View suppliers | ✅ | ✅ | — | ✅ | — | ✅ | ✅ |
 | Create / edit suppliers | ✅ | — | — | — | — | — | ✅ |
-| Raise purchase requisition | ✅ | — | own projects | ✅ | — | — | ✅ |
-| View requisitions | all | all | own + managed projects | own | — | all | all |
+| Raise purchase requisition | ✅ | — | own projects | ✅ delivering to assigned stores | — | — | ✅ any project |
+| View requisitions | all | all | own + managed projects | own + delivering to assigned stores (incl. automatic restocks) | — | all | all |
 | Approve / reject requisition | ✅ (not own) | ✅ (not own) | — | — | — | — | — |
 | Record quotes, select supplier, raise / cancel / close PO | ✅ | — | — | — | — | — | ✅ |
 | Approve / reject PO | ✅ (not own PO; required above threshold) | ✅ up to threshold (not own PO) | — | — | — | — | — |

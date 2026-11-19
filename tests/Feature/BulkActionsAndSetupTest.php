@@ -118,8 +118,8 @@ class BulkActionsAndSetupTest extends TestCase
         ExpenseCategory::create(['name' => 'Transport', 'is_active' => true]);
         $this->actingAs($this->admin)->get(route('catalog.setup'))->assertOk()
             ->assertSee('data-tabs="catalog-setup"', false)->assertSee('Item categories')->assertSee('Units of measure')->assertSee('Transport');
-        // Storekeepers manage the catalogue but not expense categories.
-        $this->actingAs($this->store)->get(route('catalog.setup'))->assertOk()->assertDontSee('Transport');
+        // Categories and units are the Owner/Admin's; storekeepers manage items only.
+        $this->actingAs($this->store)->get(route('catalog.setup'))->assertForbidden();
     }
 
     public function test_edit_and_delete_item_categories_and_units_unless_in_use(): void
@@ -128,22 +128,33 @@ class BulkActionsAndSetupTest extends TestCase
         $spare = InventoryCategory::create(['name' => 'Spare']);
         $unit = InventoryUnit::create(['name' => 'Litre', 'abbreviation' => 'L']);
 
-        $this->actingAs($this->store)->put(route('catalog.categories.update', $spare), ['name' => 'Paint'])->assertRedirect();
+        // Storekeepers and buyers cannot change categories or units.
+        foreach ([$this->store, $this->procurementUser()] as $u) {
+            $this->actingAs($u)->put(route('catalog.categories.update', $spare), ['name' => 'Paint'])->assertForbidden();
+            $this->actingAs($u)->delete(route('catalog.setup.destroy', ['units', $unit->id]))->assertForbidden();
+        }
+
+        $this->actingAs($this->admin)->put(route('catalog.categories.update', $spare), ['name' => 'Paint'])->assertRedirect();
         $this->assertSame('Paint', $spare->fresh()->name);
-        $this->actingAs($this->store)->put(route('catalog.units.update', $unit), ['name' => 'Litre', 'abbreviation' => 'ltr'])->assertRedirect();
+        $this->actingAs($this->admin)->put(route('catalog.units.update', $unit), ['name' => 'Litre', 'abbreviation' => 'ltr'])->assertRedirect();
         $this->assertSame('ltr', $unit->fresh()->abbreviation);
 
-        $this->actingAs($this->store)->delete(route('catalog.setup.destroy', ['categories', $used->id]))->assertSessionHasErrors('setup');
+        $this->actingAs($this->admin)->delete(route('catalog.setup.destroy', ['categories', $used->id]))->assertSessionHasErrors('setup');
         $this->assertNotNull($used->fresh());
 
-        $this->actingAs($this->store)->post(route('catalog.setup.bulk-delete', 'categories'), ['ids' => [$used->id, $spare->id]])->assertSessionHasErrors('setup');
+        $this->actingAs($this->admin)->post(route('catalog.setup.bulk-delete', 'categories'), ['ids' => [$used->id, $spare->id]])->assertSessionHasErrors('setup');
         $this->assertNull(InventoryCategory::find($spare->id));
         $this->assertNotNull($used->fresh());
 
-        $this->actingAs($this->store)->delete(route('catalog.setup.destroy', ['units', $unit->id]))->assertSessionHasNoErrors();
+        $this->actingAs($this->admin)->delete(route('catalog.setup.destroy', ['units', $unit->id]))->assertSessionHasNoErrors();
         $this->assertNull(InventoryUnit::find($unit->id));
 
         $this->actingAs($this->staff)->post(route('catalog.setup.bulk-delete', 'units'), ['ids' => [1]])->assertForbidden();
+    }
+
+    private function procurementUser(): \App\Models\User
+    {
+        return \App\Models\User::factory()->role(\App\Enums\Role::Procurement)->create();
     }
 
     public function test_expense_categories_edit_deactivate_and_delete_only_when_unused(): void

@@ -1,5 +1,21 @@
 # Changelog
 
+## Roles and permissions revised (20 Nov 2026)
+- **Storekeepers see and issue only for their assigned projects**: projects ticked on their user record or on the
+  project's team list, plus the project of any site store they run. Applies to the projects list, requests, the issue
+  queue (web, mobile, dashboard counts), vouchers, "ready to issue" e-mails and reminders, and is re-checked when
+  issuing. Vouchers issued from their stores stay visible.
+  Migration `assign_storekeepers_to_projects` ticks existing storekeepers (with no assignments) on every project, so
+  nothing changes on deploy; untick the projects they do not serve.
+- **Project team list** now includes storekeepers, and saving a project no longer drops members the form does not show
+  (e.g. an accountant ticked on their user record).
+- **Catalog setup**: storekeepers and Procurement Officers add and edit items (and import items); categories, units and
+  deleting items are for the Owner/Admin only (new `manage-items` gate; `manage-catalog` is Admin only).
+- **Purchase requisitions**: storekeepers see requisitions delivering to their stores (including automatic restocks),
+  and raise requisitions only for those stores.
+- **Procurement Officers see every project**, so they can raise requisitions for any project.
+- Tests: `RolePermissionsTest` (8); fixture storekeeper is now on the test project's team.
+
 ## Fingerprint / face sign-in on the web and mobile (20 Nov 2026)
 - **Web: passkeys.** "Sign in with fingerprint or face" on the sign-in page (Windows Hello, Touch ID, Android and iPhone
   screen lock, or a security key). Added from the new **Sign-in & security** page (top bar, formerly "Password") after

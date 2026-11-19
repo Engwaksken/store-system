@@ -46,7 +46,8 @@ class RemindersCommand extends Command
             $this->chase($n, $who, $r->submitted_at, $escalate, "material request {$r->request_no} ({$r->project->code}) - {$r->status->label()}", route('requests.show', $r));
         }
         foreach (MaterialRequest::with('project')->whereIn('status', [RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value])->where('updated_at', '<=', $remind)->get() as $r) {
-            $this->chase($n, $users->where('role', Role::Storekeeper), $r->updated_at, $escalate, "approved request {$r->request_no} ({$r->project->code}) not fully issued", route('requests.show', $r));
+            $keepers = $users->where('role', Role::Storekeeper)->filter(fn ($u) => \App\Models\Project::visibleTo($u)->whereKey($r->project_id)->exists());
+            $this->chase($n, $keepers, $r->updated_at, $escalate, "approved request {$r->request_no} ({$r->project->code}) not fully issued", route('requests.show', $r));
         }
         foreach (PurchaseRequisition::where('status', 'submitted')->where('submitted_at', '<=', $remind)->get() as $pr) {
             $this->chase($n, $users->filter(fn ($u) => Gate::forUser($u)->allows('decide-pr', $pr)), $pr->submitted_at, $escalate, "purchase requisition {$pr->pr_no} awaiting approval", route('prs.show', $pr));

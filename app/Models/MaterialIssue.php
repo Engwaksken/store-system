@@ -23,8 +23,13 @@ class MaterialIssue extends Model
     /** Store, management, finance and audit see every voucher; others only vouchers of requests they may see. */
     public function scopeVisibleTo($q, User $user)
     {
-        if ($user->hasRole(\App\Enums\Role::Admin, \App\Enums\Role::OverallManager, \App\Enums\Role::Storekeeper, \App\Enums\Role::Accountant, \App\Enums\Role::Auditor)) {
+        if ($user->hasRole(\App\Enums\Role::Admin, \App\Enums\Role::OverallManager, \App\Enums\Role::Accountant, \App\Enums\Role::Auditor)) {
             return $q;
+        }
+        if ($user->role === \App\Enums\Role::Storekeeper) {
+            // Vouchers from the stores they run, or for the projects they serve.
+            return $q->where(fn ($w) => $w->whereIn('store_id', Store::operableBy($user)->select('id'))
+                ->orWhereIn('project_id', Project::visibleTo($user)->select('id')));
         }
 
         return $q->whereHas('request', fn ($r) => $r->visibleTo($user));

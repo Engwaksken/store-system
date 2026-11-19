@@ -28,6 +28,7 @@
         <legend><i class="fas fa-diagram-project"></i> Projects</legend>
         <p class="hint" style="margin-top:0" data-role-hint>
             <strong>Staff</strong> and <strong>Project Managers</strong> only see, and can only request materials for, the projects ticked here.
+            <strong>Storekeepers</strong> only see and issue to the projects ticked here (plus the project of any site store they run).
             Other roles see every project; ticking a project adds them to its team list.
         </p>
         @if($projects->isEmpty())

@@ -35,7 +35,7 @@ class IssueController extends ApiController
     {
         Gate::authorize('issue-stock');
         $query = MaterialRequest::with('project', 'requester')->withCount('lines')
-            ->whereIn('status', [RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value])
+            ->readyToIssueBy($request->user())
             ->oldest('submitted_at');
 
         return $this->paginated($request, $query, fn ($r) => Present::requestSummary($r));

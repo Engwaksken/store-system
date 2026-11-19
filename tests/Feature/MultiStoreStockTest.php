@@ -145,9 +145,9 @@ class MultiStoreStockTest extends TestCase
         $this->assertSame($this->site->id, $issue->store_id);
         $this->assertSame('6.000', $this->cement->fresh()->onHand($this->site->id));
 
-        // ...but not to a different project.
+        // ...but not to a different project, even when the keeper is on that project's team.
         $other = \App\Models\Project::where('code', 'P-2')->sole();
-        $other->members()->attach($this->staff->id);
+        $other->members()->attach([$this->staff->id, $this->siteKeeper->id]);
         $r2 = $this->wf()->createDraft($this->staff, $other, 'x', null, [['item_id' => $this->cement->id, 'requested_qty' => 1]]);
         $this->wf()->submit($this->staff, $r2);
         $this->wf()->pmDecide($this->otherPm, $r2, 'approved', null);

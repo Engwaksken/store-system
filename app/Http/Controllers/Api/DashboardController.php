@@ -33,7 +33,7 @@ class DashboardController extends ApiController
             $cards[] = ['key' => 'my_open_requests', 'label' => 'My open requests', 'value' => $open, 'tone' => 'navy'];
         }
         if ($user->role === Role::Storekeeper) {
-            $ready = MaterialRequest::whereIn('status', [RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value])->count();
+            $ready = MaterialRequest::readyToIssueBy($user)->count();
             $cards[] = ['key' => 'ready_to_issue', 'label' => 'Ready to issue', 'value' => $ready, 'tone' => $ready ? 'gold' : ''];
         }
         if (Gate::allows('view-stock-ledger')) {

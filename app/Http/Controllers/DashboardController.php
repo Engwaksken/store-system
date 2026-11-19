@@ -39,7 +39,7 @@ class DashboardController extends Controller
             ->filter(fn ($r) => Gate::allows('pm-decide', $r) || Gate::allows('overall-decide', $r))->values();
 
         $readyToIssue = $user->role === Role::Storekeeper
-            ? MaterialRequest::with('project')->whereIn('status', [RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value])->oldest('submitted_at')->get()
+            ? MaterialRequest::with('project')->readyToIssueBy($user)->oldest('submitted_at')->get()
             : collect();
 
         $myRequests = MaterialRequest::with('project')->where('requester_id', $user->id)->latest()->limit(8)->get();

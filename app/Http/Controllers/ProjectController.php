@@ -54,7 +54,7 @@ class ProjectController extends Controller
         Gate::authorize('manage-projects');
         $data = $this->validated($request);
         $project = Project::create($data + ['created_by' => $request->user()->id]);
-        $project->members()->sync($request->input('member_ids', []));
+        $project->members()->sync($this->memberIds($request, $project));
         ActivityLog::record('project.created', "Project {$project->code} created", $project);
 
         return redirect()->route('projects.show', $project)->with('status', 'Project created.');
@@ -89,7 +89,7 @@ class ProjectController extends Controller
         $data = $this->validated($request, $project);
         $before = $project->only('manager_id', 'budget', 'status');
         $project->update($data);
-        $sync = $project->members()->sync($request->input('member_ids', []));
+        $sync = $project->members()->sync($this->memberIds($request, $project));
         ActivityLog::record('project.updated', "Project {$project->code} updated", $project, [
             'before' => $before, 'after' => $project->only('manager_id', 'budget', 'status'),
             'members_added' => $sync['attached'], 'members_removed' => $sync['detached'],
@@ -98,12 +98,25 @@ class ProjectController extends Controller
         return redirect()->route('projects.show', $project)->with('status', 'Project updated.');
     }
 
+    /** Roles picked on the project form's team list; other members (e.g. ticked on a user record) are kept as they are. */
+    private const TEAM_ROLES = [Role::Staff, Role::ProjectManager, Role::Storekeeper];
+
     private function formOptions(): array
     {
         return [
             'managers' => User::where('role', Role::ProjectManager)->where('is_active', true)->orderBy('name')->get(),
-            'staff' => User::whereIn('role', [Role::Staff, Role::ProjectManager])->where('is_active', true)->orderBy('name')->get(),
+            'staff' => User::whereIn('role', self::TEAM_ROLES)->where('is_active', true)->orderBy('role')->orderBy('name')->get(),
         ];
+    }
+
+    /** Ticked team members plus existing members the form does not list (other roles, deactivated users). */
+    private function memberIds(Request $request, Project $project): array
+    {
+        $listed = User::whereIn('role', self::TEAM_ROLES)->where('is_active', true)->pluck('id');
+        $kept = $project->members()->pluck('users.id')->diff($listed);
+        $ticked = collect($request->input('member_ids', []))->map(fn ($id) => (int) $id)->intersect($listed);
+
+        return $ticked->merge($kept)->unique()->values()->all();
     }
 
     private function validated(Request $request, ?Project $project = null): array

@@ -55,6 +55,9 @@ class PurchasingService
         if (! Store::whereKey($header['store_id'])->where('is_active', true)->exists()) {
             throw new WorkflowException('Choose an active delivery store.');
         }
+        if ($user->role === Role::Storekeeper && ! Store::operableBy($user)->whereKey($header['store_id'])->exists()) {
+            throw new AuthorizationException('Storekeepers raise requisitions for stores they are assigned to.');
+        }
         $norm = [];
         foreach ($lines as $l) {
             $id = (int) $l['item_id'];

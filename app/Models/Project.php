@@ -48,15 +48,24 @@ class Project extends Model
         return $this->hasMany(Expense::class);
     }
 
-    /** Projects a user may see (row-level scoping). */
+    /**
+     * Projects a user may see (row-level scoping).
+     * - Company-wide roles (Admin, Overall Manager, Accountant, Procurement, Auditor): every project.
+     * - Storekeeper: projects ticked on their user record, plus the project of any site store they are assigned to.
+     * - Project Manager / Staff: projects they manage or are a member of.
+     */
     public function scopeVisibleTo(Builder $q, User $user): Builder
     {
-        if ($user->hasRole(Role::Admin, Role::OverallManager, Role::Accountant, Role::Storekeeper, Role::Auditor)) {
+        if ($user->hasRole(Role::Admin, Role::OverallManager, Role::Accountant, Role::Procurement, Role::Auditor)) {
             return $q;
         }
 
-        return $q->where(fn ($w) => $w->where('manager_id', $user->id)
-            ->orWhereHas('members', fn ($m) => $m->whereKey($user->id)));
+        return $q->where(function ($w) use ($user) {
+            $w->where('manager_id', $user->id)->orWhereHas('members', fn ($m) => $m->whereKey($user->id));
+            if ($user->role === Role::Storekeeper) {
+                $w->orWhereIn('id', Store::operableBy($user)->whereNotNull('project_id')->select('project_id'));
+            }
+        });
     }
 
     /** Projects the user may raise material requests against. */

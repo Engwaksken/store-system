@@ -60,6 +60,17 @@ class MaterialRequest extends Model
         return $this->hasMany(PurchaseRequisition::class)->orderBy('id');
     }
 
+    /** Fully approved requests still to issue that this storekeeper may issue (their projects). Empty for other roles. */
+    public function scopeReadyToIssueBy(Builder $q, User $user): Builder
+    {
+        if ($user->role !== Role::Storekeeper || ! $user->is_active) {
+            return $q->whereRaw('1 = 0');
+        }
+
+        return $q->whereIn('status', [RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value])
+            ->whereIn('project_id', Project::visibleTo($user)->select('id'));
+    }
+
     public function currentApproval(string $step): ?MaterialApproval
     {
         return $this->approvals->first(fn ($a) => $a->version === $this->version && $a->step === $step);
@@ -69,9 +80,10 @@ class MaterialRequest extends Model
     {
         return match ($user->role) {
             Role::Admin, Role::OverallManager, Role::Accountant, Role::Auditor => $q,
+            // Storekeepers: approved / issued requests for the projects they serve (Project::visibleTo).
             Role::Storekeeper => $q->whereIn('status', [
                 RequestStatus::OverallApproved->value, RequestStatus::PartiallyIssued->value, RequestStatus::FullyIssued->value,
-            ]),
+            ])->whereIn('project_id', Project::visibleTo($user)->select('id')),
             Role::ProjectManager => $q->where(fn ($w) => $w->where('requester_id', $user->id)
                 ->orWhere('project_manager_id', $user->id)
                 ->orWhereHas('project', fn ($p) => $p->where('manager_id', $user->id))),

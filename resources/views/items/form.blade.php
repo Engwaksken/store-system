@@ -2,7 +2,7 @@
 @section('title', $item->exists ? 'Edit item' : 'New item')
 @section('content')
 <div class="page-head"><h1>{{ $item->exists ? 'Edit '.$item->sku : 'New item' }}</h1></div>
-@if($categories->isEmpty() || $units->isEmpty())<div class="alert warn">Create at least one category and unit first under <a href="{{ route('catalog.setup') }}">Categories &amp; units</a>.</div>@endif
+@if($categories->isEmpty() || $units->isEmpty())<div class="alert warn">@can('manage-catalog')Create at least one category and unit first under <a href="{{ route('catalog.setup') }}">Categories &amp; units</a>.@else There are no categories or units yet. Ask the Owner/Admin to set them up under Catalog setup.@endcan</div>@endif
 <form method="POST" action="{{ $item->exists ? route('items.update', $item) : route('items.store') }}" class="card" style="max-width:720px">
     @csrf @if($item->exists) @method('PUT') @endif
     <div class="form-grid">
