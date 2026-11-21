@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:store_system/app.dart';
 import 'package:store_system/core/fake/fake_backend.dart';
 import 'package:store_system/core/widgets/charts.dart';
+import 'package:store_system/core/widgets/collapsible.dart';
 import 'package:store_system/features/stock/presentation/item_widgets.dart';
 
 import '../helpers.dart';
@@ -36,7 +37,15 @@ void main() {
     expect(find.text('Out of stock'), findsWidgets);
     expect(find.byType(ItemTile), findsWidgets);
     await tester.scrollUntilVisible(find.text('Overview'), 300, scrollable: find.byType(Scrollable).first);
+    // Charts start folded to a row of figures; the chevron opens them.
+    expect(find.text('Stock status'), findsOneWidget);
+    expect(find.byType(ChartDigest), findsNWidgets(2));
+    expect(find.byType(DonutChart), findsNothing);
+    final stockCard = find.ancestor(of: find.text('Stock status'), matching: find.byType(CollapsibleCard));
+    await tester.tap(find.descendant(of: stockCard, matching: find.byType(ExpandChevron)));
+    await tester.pumpAndSettle();
     expect(find.byType(DonutChart), findsOneWidget);
+    expect(find.byType(ChartDigest), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -48,6 +57,9 @@ void main() {
     expect(find.text('Reports'), findsWidgets);
     expect(find.text('Stock status'), findsOneWidget);
     await tester.tap(find.text('12 months'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ColumnChart), findsNothing);
+    await tester.tap(find.text('Expand all'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.byType(ColumnChart), 300, scrollable: find.byType(Scrollable).last);
     expect(find.byType(ColumnChart), findsOneWidget);

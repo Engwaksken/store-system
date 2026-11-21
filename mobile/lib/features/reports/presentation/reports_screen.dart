@@ -5,6 +5,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/format/formatters.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/charts.dart';
+import '../../../core/widgets/collapsible.dart';
 import '../../../core/widgets/common.dart';
 import '../../auth/data/auth_controller.dart';
 import '../data/reports_repository.dart';
@@ -66,14 +67,25 @@ class ReportsScreen extends ConsumerWidget {
   }
 }
 
-class _ReportsBody extends ConsumerWidget {
+class _ReportsBody extends ConsumerStatefulWidget {
   const _ReportsBody({required this.summary});
   final ReportSummary summary;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ReportsBody> createState() => _ReportsBodyState();
+}
+
+class _ReportsBodyState extends ConsumerState<_ReportsBody> {
+  /// Charts open on arrival; the rest fold to a row of figures.
+  static const _openByDefault = 2;
+  bool _allExpanded = false;
+  int _epoch = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = widget.summary;
     final f = ref.watch(formattersProvider);
-    return ListView(
+    final list = ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
       children: [
@@ -98,10 +110,41 @@ class _ReportsBody extends ConsumerWidget {
               },
             ),
           ),
-        for (final chart in summary.charts) ...[
-          const SizedBox(height: 12),
+        if (summary.charts.isNotEmpty)
           ResponsiveCenter(
-            child: ChartCard(chart: chart, formatters: f),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Charts',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                    onPressed: () => setState(() {
+                      _allExpanded = !_allExpanded;
+                      _epoch++;
+                    }),
+                    icon: Icon(_allExpanded ? Icons.unfold_less : Icons.unfold_more, size: 18),
+                    label: Text(_allExpanded ? 'Collapse all' : 'Expand all'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        for (var i = 0; i < summary.charts.length; i++) ...[
+          const SizedBox(height: 8),
+          ResponsiveCenter(
+            child: ChartCard(
+              key: ValueKey('report-chart-${summary.charts[i].key}'),
+              chart: summary.charts[i],
+              formatters: f,
+              collapsible: true,
+              initiallyExpanded: i < _openByDefault,
+            ),
           ),
         ],
         const SizedBox(height: 16),
@@ -116,6 +159,7 @@ class _ReportsBody extends ConsumerWidget {
         ),
       ],
     );
+    return ExpandAllScope(expanded: _allExpanded, epoch: _epoch, child: list);
   }
 }
 

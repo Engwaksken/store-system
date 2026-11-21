@@ -58,6 +58,7 @@ class _IssuesScreenState extends ConsumerState<IssuesScreen> {
         ),
         Expanded(
           child: PagedListView<IssueSummary>(
+            expandAllToggle: true,
             controller: _vouchers,
             filterKey: (_q, _unacknowledged),
             fetch: (page) => repo.issues(page: page, q: _q, unacknowledged: _unacknowledged),
@@ -98,22 +99,19 @@ class _IssuesScreenState extends ConsumerState<IssuesScreen> {
         body: TabBarView(
           children: [
             PagedListView<RequestSummary>(
+              expandAllToggle: true,
               controller: _queue,
               fetch: (page) => repo.issueQueue(page: page),
               emptyIcon: Icons.task_alt,
               emptyTitle: 'Nothing waiting to issue',
               emptyMessage: 'Requests appear here once the Project Manager and Overall Manager have approved them.',
-              itemBuilder: (context, r) => Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  RequestCard(request: r),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: FilledButton.tonalIcon(
-                      onPressed: () => context.push('/request/${r.id}/issue'),
-                      icon: const Icon(Icons.outbox_outlined),
-                      label: Text('Issue ${r.requestNo}'),
-                    ),
+              itemBuilder: (context, r) => RequestCard(
+                request: r,
+                actions: [
+                  FilledButton.tonalIcon(
+                    onPressed: () => context.push('/request/${r.id}/issue'),
+                    icon: const Icon(Icons.outbox_outlined),
+                    label: Text('Issue ${r.requestNo}'),
                   ),
                 ],
               ),

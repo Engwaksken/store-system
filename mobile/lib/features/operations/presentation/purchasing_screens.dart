@@ -128,6 +128,7 @@ class _PurchasingScreenState extends ConsumerState<PurchasingScreen> {
                 ),
                 Expanded(
                   child: PagedListView<PrSummary>(
+                    expandAllToggle: true,
                     controller: _prs,
                     filterKey: (_prStatus, _restockOnly),
                     fetch: (page) => repo.requisitions(page: page, status: _prStatus, restockOnly: _restockOnly),
@@ -156,6 +157,7 @@ class _PurchasingScreenState extends ConsumerState<PurchasingScreen> {
                 FilterChipsBar<String?>(options: PurchaseStatuses.poFilters, selected: _poStatus, onSelected: (s) => setState(() => _poStatus = s)),
                 Expanded(
                   child: PagedListView<PoSummary>(
+                    expandAllToggle: true,
                     controller: _pos,
                     filterKey: _poStatus,
                     fetch: (page) => repo.orders(page: page, status: _poStatus),

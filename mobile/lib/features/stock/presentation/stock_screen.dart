@@ -88,9 +88,8 @@ class _StockScreenState extends ConsumerState<StockScreen> {
                 StockFilter.all => 'No items found',
               },
               emptyMessage: _q.isEmpty ? null : 'Try another search.',
-              itemBuilder: (context, item) => Card(
-                child: ItemTile(item: item, formatters: f, storeName: storeName),
-              ),
+              expandAllToggle: true,
+              itemBuilder: (context, item) => StockItemCard(item: item, formatters: f, storeName: storeName),
             ),
           ),
         ],

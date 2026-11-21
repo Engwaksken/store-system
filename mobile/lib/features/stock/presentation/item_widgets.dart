@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/format/formatters.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/collapsible.dart';
 import '../../../core/widgets/common.dart';
 import '../domain/stock_models.dart';
 
@@ -180,6 +181,95 @@ class ItemTile extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Collapsible stock-list card: closed it shows the state icon, name and on-hand quantity;
+/// open it adds SKU, category, store, stock state and the level against the minimum.
+class StockItemCard extends StatelessWidget {
+  const StockItemCard({super.key, required this.item, required this.formatters, this.storeName});
+  final Item item;
+  final Formatters formatters;
+  final String? storeName;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final f = formatters;
+    final state = StockState.of(item);
+    final stateColor = ToneColors.of(state.tone, theme.brightness).foreground;
+    final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final hasMin = stockLevelRatio(item) != null;
+
+    Widget row(String label, String value) => Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          SizedBox(width: 84, child: Text(label, style: muted)),
+          Expanded(child: Text(value, style: theme.textTheme.bodyMedium)),
+        ],
+      ),
+    );
+
+    return CollapsibleCard(
+      onTap: () => context.push('/item/${item.id}'),
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+      bodyPadding: const EdgeInsets.fromLTRB(62, 0, 14, 12),
+      header: Semantics(
+        label: '${item.name}, ${state.label}, on hand ${f.qty(item.onHand)} ${item.unit}'
+            '${storeName == null ? '' : ' in $storeName'}',
+        excludeSemantics: true,
+        child: Row(
+          children: [
+            ItemAvatar(state: state, size: 38),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  Text(item.sku, maxLines: 1, overflow: TextOverflow.ellipsis, style: muted),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: f.qty(item.onHand),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: state == StockState.out || state == StockState.low ? stateColor : null,
+                    ),
+                  ),
+                  TextSpan(text: ' ${item.unit}', style: muted),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [StatusBadge(label: state.label, tone: state.tone, dense: true)]),
+          if ((item.category ?? '').isNotEmpty) row('Category', item.category!),
+          if (storeName != null) row('Store', storeName!),
+          row('On hand', '${f.qty(item.onHand)} ${item.unit}'),
+          if (hasMin) ...[
+            row('Minimum', '${f.qty(item.minLevel)} ${item.unit}'),
+            const SizedBox(height: 8),
+            StockLevelBar(item: item, height: 5),
+          ],
+        ],
       ),
     );
   }

@@ -57,6 +57,7 @@ class _ReceiptsScreenState extends ConsumerState<ReceiptsScreen> {
           SearchField(hint: 'Receipt, supplier or reference', onChanged: (v) => setState(() => _q = v)),
           Expanded(
             child: PagedListView<ReceiptSummary>(
+              expandAllToggle: true,
               controller: _controller,
               filterKey: _q,
               fetch: (page) => repo.receipts(page: page, q: _q),
@@ -565,6 +566,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
           FilterChipsBar<String?>(options: TransferStatuses.filters, selected: _status, onSelected: (s) => setState(() => _status = s)),
           Expanded(
             child: PagedListView<TransferSummary>(
+              expandAllToggle: true,
               controller: _controller,
               filterKey: (_status, _q),
               fetch: (page) => repo.transfers(page: page, status: _status, q: _q),
@@ -876,6 +878,7 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen> {
           SearchField(hint: 'Return number or returned by', onChanged: (v) => setState(() => _q = v)),
           Expanded(
             child: PagedListView<ReturnSummary>(
+              expandAllToggle: true,
               controller: _controller,
               filterKey: _q,
               fetch: (page) => repo.returns(page: page, q: _q),

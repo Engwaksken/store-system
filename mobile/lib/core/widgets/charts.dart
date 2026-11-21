@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/reports/domain/report_models.dart';
 import '../format/formatters.dart';
+import 'collapsible.dart';
 
 /// Chart colours (validated data-viz palette). Status tones keep their meaning and are always
 /// shown with a text label; untoned series use the categorical order, never cycled.
@@ -421,50 +422,127 @@ class ReportChartView extends StatelessWidget {
 
 /// Card with a chart's title, subtitle and body.
 class ChartCard extends StatelessWidget {
-  const ChartCard({super.key, required this.chart, required this.formatters, this.maxBars, this.trailing});
+  const ChartCard({
+    super.key,
+    required this.chart,
+    required this.formatters,
+    this.maxBars,
+    this.trailing,
+    this.collapsible = false,
+    this.initiallyExpanded = true,
+    this.storageKey,
+  });
   final ReportChart chart;
   final Formatters formatters;
   final int? maxBars;
   final Widget? trailing;
 
+  /// Lets the chart fold away behind its title; closed, a row of figures stays visible.
+  final bool collapsible;
+  final bool initiallyExpanded;
+  final String? storageKey;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          header: true,
+          child: Text(chart.title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        ),
+        if (chart.subtitle.isNotEmpty)
+          Text(
+            chart.subtitle,
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+      ],
+    );
+    final view = ReportChartView(chart: chart, formatters: formatters, maxBars: maxBars);
+
+    if (collapsible) {
+      return CollapsibleCard(
+        initiallyExpanded: initiallyExpanded,
+        storageKey: storageKey,
+        padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
+        bodyPadding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        header: Row(children: [Expanded(child: title), ?trailing]),
+        body: view,
+        summary: ChartDigest(chart: chart, formatters: formatters),
+      );
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Semantics(
-                        header: true,
-                        child: Text(
-                          chart.title,
-                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      if (chart.subtitle.isNotEmpty)
-                        Text(
-                          chart.subtitle,
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                        ),
-                    ],
-                  ),
-                ),
-                ?trailing,
-              ],
-            ),
+            Row(children: [Expanded(child: title), ?trailing]),
             const SizedBox(height: 14),
-            ReportChartView(chart: chart, formatters: formatters, maxBars: maxBars),
+            view,
           ],
         ),
       ),
+    );
+  }
+}
+
+/// One-glance figures for a folded chart: a coloured dot, label and value per series point.
+class ChartDigest extends StatelessWidget {
+  const ChartDigest({super.key, required this.chart, required this.formatters, this.max = 4});
+  final ReportChart chart;
+  final Formatters formatters;
+  final int max;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final b = theme.brightness;
+    // Status charts keep their order; others show their largest points first.
+    final toned = chart.series.any((p) => p.tone.isNotEmpty);
+    final indexed = [
+      for (var i = 0; i < chart.series.length; i++)
+        if (chart.series[i].value > 0) (i, chart.series[i]),
+    ];
+    if (!toned) indexed.sort((x, y) => y.$2.value.compareTo(x.$2.value));
+    if (indexed.isEmpty) {
+      return Text('No data for this period', style: theme.textTheme.bodySmall);
+    }
+    final shown = indexed.take(max).toList();
+    final rest = indexed.length - shown.length;
+    final style = theme.textTheme.bodySmall;
+    return Wrap(
+      spacing: 14,
+      runSpacing: 6,
+      children: [
+        for (final (i, p) in shown)
+          Text.rich(
+            TextSpan(
+              children: [
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    margin: const EdgeInsets.only(right: 6),
+                    decoration: BoxDecoration(
+                      color: ChartColors.of(p, i, b, singleSeries: !toned && chart.type != ChartType.donut),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                TextSpan(text: '${p.label} ', style: style?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                TextSpan(
+                  text: chart.format.format(formatters, p.raw),
+                  style: style?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ),
+        if (rest > 0) Text('+$rest more', style: style?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+      ],
     );
   }
 }

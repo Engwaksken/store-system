@@ -52,6 +52,7 @@ class _RequestsListScreenState extends ConsumerState<RequestsListScreen> {
           ),
           Expanded(
             child: PagedListView<RequestSummary>(
+              expandAllToggle: true,
               controller: _controller,
               filterKey: (_status, _q),
               fetch: (page) => repo.list(page: page, status: _status, q: _q),

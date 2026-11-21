@@ -2,9 +2,13 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/collapsible.dart';
 import '../../../core/widgets/common.dart';
 
-/// Compact list card shared by the store-operation lists: number + badge, one or two lines, trailing figure.
+/// Collapsible list card shared by the store-operation lists.
+///
+/// Closed: number + badge, then one line of [subtitle] with the [trailing] figure.
+/// Open: the full [subtitle] and the [meta] line.
 class DocCard extends StatelessWidget {
   const DocCard({super.key, required this.title, this.badge, this.badgeTone, this.subtitle, this.meta, this.trailing, this.leadingIcon, required this.onTap});
 
@@ -21,42 +25,50 @@ class DocCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final sub = subtitle ?? '';
+    final hasMeta = meta != null && meta!.isNotEmpty;
+    final hasBody = hasMeta || sub.length > 40;
+    return CollapsibleCard(
+      onTap: onTap,
+      header: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  if (leadingIcon != null) ...[Icon(leadingIcon, size: 18, color: theme.colorScheme.primary), const SizedBox(width: 6)],
-                  Expanded(
-                    child: Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                  ),
-                  if (badge != null)
-                    Flexible(
-                      child: StatusBadge.status(label: badge!, statusTone: badgeTone, dense: true),
-                    ),
-                ],
+              if (leadingIcon != null) ...[Icon(leadingIcon, size: 18, color: theme.colorScheme.primary), const SizedBox(width: 6)],
+              Expanded(
+                child: Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               ),
-              if (subtitle != null && subtitle!.isNotEmpty) ...[const SizedBox(height: 6), Text(subtitle!, maxLines: 2, overflow: TextOverflow.ellipsis)],
-              if ((meta != null && meta!.isNotEmpty) || trailing != null) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(meta ?? '', style: muted, overflow: TextOverflow.ellipsis),
-                    ),
-                    if (trailing != null) Text(trailing!, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-                  ],
+              if (badge != null)
+                Flexible(
+                  child: StatusBadge.status(label: badge!, statusTone: badgeTone, dense: true),
                 ),
-              ],
             ],
           ),
-        ),
+          if (sub.isNotEmpty || trailing != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(child: Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                if (trailing != null) ...[
+                  const SizedBox(width: 8),
+                  Text(trailing!, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                ],
+              ],
+            ),
+          ],
+        ],
       ),
+      body: !hasBody
+          ? null
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (sub.length > 40) Text(sub),
+                if (sub.length > 40 && hasMeta) const SizedBox(height: 6),
+                if (hasMeta) Text(meta!, style: muted),
+              ],
+            ),
     );
   }
 }

@@ -36,6 +36,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
           SearchField(hint: 'Search number or purpose', onChanged: (v) => setState(() => _q = v)),
           Expanded(
             child: PagedListView<RequestSummary>(
+              expandAllToggle: true,
               controller: _controller,
               filterKey: _q,
               fetch: (page) => repo.approvals(page: page, q: _q),

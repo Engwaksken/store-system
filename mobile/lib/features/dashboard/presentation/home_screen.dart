@@ -8,6 +8,7 @@ import '../../../core/format/formatters.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/util/data_revision.dart';
 import '../../../core/widgets/charts.dart';
+import '../../../core/widgets/collapsible.dart';
 import '../../../core/widgets/common.dart';
 import '../../auth/data/auth_controller.dart';
 import '../../reports/data/reports_repository.dart';
@@ -121,7 +122,7 @@ class _DashboardBody extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [const _OutOfStockSection(), const _OverviewSection(), ..._approvalsAndActions(context, ref)],
+            children: [const _OverviewSection(), const _OutOfStockSection(), ..._approvalsAndActions(context, ref)],
           ),
         ),
       ],
@@ -131,32 +132,39 @@ class _DashboardBody extends ConsumerWidget {
   List<Widget> _approvalsAndActions(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     return [
-      if (user?.can.approveRequests ?? false) ...[
+      if (user?.can.approveRequests ?? false)
         ResponsiveCenter(
-          child: SectionTitle(
-            'Waiting for me',
+          child: CollapsibleSection(
+            title: 'Waiting for me',
+            storageKey: 'home-awaiting',
             trailing: dashboard.awaitingMe.isEmpty
                 ? null
-                : TextButton(onPressed: () => context.go('/approvals'), child: const Text('See all')),
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      StatusBadge(label: '${dashboard.awaitingMe.length}', tone: Tone.pending, dense: true),
+                      TextButton(onPressed: () => context.go('/approvals'), child: const Text('See all')),
+                    ],
+                  ),
+            child: dashboard.awaitingMe.isEmpty
+                ? const Card(
+                    child: ListTile(
+                      leading: Icon(Icons.task_alt, color: Colors.green),
+                      title: Text('You are all caught up'),
+                      subtitle: Text('No requests are waiting for your decision.'),
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var i = 0; i < dashboard.awaitingMe.length; i++) ...[
+                        if (i > 0) const SizedBox(height: 8),
+                        RequestCard(request: dashboard.awaitingMe[i]),
+                      ],
+                    ],
+                  ),
           ),
         ),
-        if (dashboard.awaitingMe.isEmpty)
-          const ResponsiveCenter(
-            child: Card(
-              child: ListTile(
-                leading: Icon(Icons.task_alt, color: Colors.green),
-                title: Text('You are all caught up'),
-                subtitle: Text('No requests are waiting for your decision.'),
-              ),
-            ),
-          )
-        else
-          for (final r in dashboard.awaitingMe)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: ResponsiveCenter(child: RequestCard(request: r)),
-            ),
-      ],
       const ResponsiveCenter(child: SectionTitle('Quick actions')),
       ResponsiveCenter(
         child: Wrap(
@@ -214,25 +222,20 @@ class _OutOfStockSection extends ConsumerWidget {
       context.go('/stock');
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ResponsiveCenter(
-          child: SectionTitle(
-            'Out of stock',
-            trailing: items.isEmpty
-                ? null
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      StatusBadge(label: '$total', tone: Tone.rejected, dense: true),
-                      TextButton(onPressed: seeAll, child: const Text('See all')),
-                    ],
-                  ),
-          ),
-        ),
-        ResponsiveCenter(
-          child: Card(
+    return ResponsiveCenter(
+      child: CollapsibleSection(
+        title: 'Out of stock',
+        storageKey: 'home-out-of-stock',
+        trailing: items.isEmpty
+            ? null
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  StatusBadge(label: '$total', tone: Tone.rejected, dense: true),
+                  TextButton(onPressed: seeAll, child: const Text('See all')),
+                ],
+              ),
+        child: Card(
             child: items.isEmpty
                 ? const ListTile(
                     leading: Icon(Icons.check_circle_outline, color: ChartColors.good),
@@ -259,14 +262,14 @@ class _OutOfStockSection extends ConsumerWidget {
                       ],
                     ],
                   ),
-          ),
         ),
-      ],
+      ),
     );
   }
 }
 
-/// Two headline charts from `GET /reports` (last 30 days), linking to the Reports screen.
+/// Stock status and requests by status from `GET /reports` (last 30 days), folded to a row of
+/// figures until opened, linking to the Reports screen.
 /// Hidden on servers without the reports endpoint.
 class _OverviewSection extends ConsumerWidget {
   const _OverviewSection();
@@ -292,9 +295,16 @@ class _OverviewSection extends ConsumerWidget {
           ),
         ),
         for (var i = 0; i < charts.length; i++) ...[
-          if (i > 0) const SizedBox(height: 10),
+          if (i > 0) const SizedBox(height: 8),
           ResponsiveCenter(
-            child: ChartCard(chart: charts[i], formatters: f, maxBars: 5),
+            child: ChartCard(
+              chart: charts[i],
+              formatters: f,
+              maxBars: 5,
+              collapsible: true,
+              initiallyExpanded: false,
+              storageKey: 'home-chart-${charts[i].key}',
+            ),
           ),
         ],
       ],
